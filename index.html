@@ -188,9 +188,41 @@ body.touch #actBtn kbd{display:none}
 #edHide:disabled{opacity:.35}
 #edOutTxt{width:100%;height:150px;box-sizing:border-box;margin-top:10px;font-size:12px;border-radius:10px;padding:8px;background:#120a2b;color:var(--paper);border:1px solid var(--line);-webkit-user-select:text;user-select:text}
 body.editing #quick{display:none}
+/* ===== もちた風スマホ操作UI（やわらかいクリーム色の丸ボタン・右下にまとめて配置） ===== */
+.mk-ic{width:34px;height:34px;flex:none;display:block;overflow:visible}
+.mk-k{stroke:#8f6e86;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;fill:none}
+.mk-fp{fill:#fffaf0}.mk-fa{fill:#f8b26a}.mk-fb{fill:#d8c6f5}
+body.touch{--ab:max(54px,calc(env(safe-area-inset-bottom,0px) + 48px));--ar:calc(46px + env(safe-area-inset-right,0px))}
+body.touch #tbtns{display:contents}
+body.touch .tb,body.touch #photoBtn,body.touch #broomBtn{position:absolute;margin:0;padding:0;display:grid;place-items:center;border-radius:50%;color:#8f6e86;border:1.5px solid rgba(255,255,255,.95);background:rgba(255,251,243,.82);-webkit-backdrop-filter:blur(10px) saturate(1.25);backdrop-filter:blur(10px) saturate(1.25);box-shadow:0 0 0 1px rgba(91,66,88,.16),0 4px 16px rgba(70,45,80,.18);transition:transform .12s,box-shadow .12s}
+body.touch .tb span,body.touch #broomBtn span{display:none}
+body.touch .tb,body.touch #photoBtn,body.touch #broomBtn{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none;-webkit-tap-highlight-color:transparent}
+body.touch #tbDash .mk-ic{width:38px;height:38px}
+body.touch #tbJump .mk-ic{width:32px;height:32px}
+body.touch .tb svg:not(.mk-ic),body.touch #broomBtn svg{width:30px;height:30px;stroke:#8f6e86!important}
+body.touch .tb svg:not(.mk-ic) *{stroke:#8f6e86!important}
+body.touch #tbJump{width:56px;height:56px;right:calc(var(--ar) + 52px);bottom:calc(var(--ab) - 28px);background:linear-gradient(180deg,#ebe0fb,#d8c6f5)}
+body.touch #tbDash{width:66px;height:66px;right:calc(var(--ar) - 33px);bottom:calc(var(--ab) - 33px);background:linear-gradient(180deg,#ffd9ad,#f8b26a)}
+body.touch #broomBtn{width:56px;height:56px;right:calc(var(--ar) + 29px);bottom:calc(var(--ab) + 29px);background:linear-gradient(180deg,#ebe0fb,#d8c6f5)}
+body.touch #photoBtn{width:62px;height:62px;right:calc(var(--ar) - 31px);bottom:calc(var(--ab) + 49px);background:linear-gradient(180deg,#ffd9ad,#f8b26a)}
+body.touch #broomBtn.on{background:linear-gradient(180deg,#ffd9ad,#f8b26a);color:#8f6e86;box-shadow:0 0 0 3px rgba(255,255,255,.75),0 0 0 4.5px #f8b26a,0 4px 16px rgba(70,45,80,.18)}
+body.touch .tb:active,body.touch .tb.hold{transform:scale(.92);border-color:rgba(255,255,255,.95);box-shadow:0 0 0 3px rgba(255,255,255,.8),0 0 18px 3px rgba(255,255,255,.85),0 4px 16px rgba(70,45,80,.18)}
+body.touch #photoBtn:active{transform:scale(.92)}
+body.touch #joy{left:calc(22px + env(safe-area-inset-left,0px));bottom:max(50px,calc(env(safe-area-inset-bottom,0px) + 44px));border:1.5px solid rgba(255,255,255,.9);background:radial-gradient(circle,rgba(255,255,255,.12) 0,rgba(70,45,80,.2) 100%);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);box-shadow:0 0 0 1px rgba(70,45,80,.14),inset 0 0 22px rgba(255,255,255,.2),0 4px 16px rgba(70,45,80,.14)}
+#knob{width:46px;height:46px;margin:-23px 0 0 -23px;background:radial-gradient(circle at 36% 30%,#fff 0,rgba(255,255,255,.88) 55%,rgba(255,236,214,.8) 100%);box-shadow:0 2px 10px rgba(70,45,80,.3),0 0 16px rgba(255,255,255,.6)}
+#joy .chev{position:absolute;width:0;height:0;border:5px solid transparent;opacity:.75;pointer-events:none}
+#joy .u{top:7px;left:calc(50% - 5px);border-bottom:7px solid #fff;border-top:0}
+#joy .d{bottom:7px;left:calc(50% - 5px);border-top:7px solid #fff;border-bottom:0}
+#joy .l{left:7px;top:calc(50% - 5px);border-right:7px solid #fff;border-left:0}
+#joy .r{right:7px;top:calc(50% - 5px);border-left:7px solid #fff;border-right:0}
 </style>
 
 <canvas id="c" tabindex="0"></canvas>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="mk-camera" viewBox="0 0 48 48"><path class="mk-k mk-fp" d="M7.6 17.8c0-2.7 1.6-4.1 4.3-4.1h5l2.6-3.9h8.7l2.6 3.9h5c2.7 0 4.3 1.4 4.3 4.1v15.6c0 2.8-1.7 4.3-4.3 4.3H11.9c-2.7 0-4.3-1.5-4.3-4.3z"/><circle class="mk-k mk-fa" cx="24.2" cy="26" r="7.6"/></symbol>
+<symbol id="mk-jump" viewBox="0 0 48 48"><ellipse class="mk-k mk-fb" cx="24" cy="40" rx="10" ry="3.2"/><path class="mk-k mk-fa" d="M24 7.6c.9 0 1.6.4 2.1 1.1l8.3 11.3c.9 1.3 0 3.1-1.6 3.1h-4.3v6.2c0 1.3-1.1 2.4-2.4 2.4h-4.2c-1.3 0-2.4-1.1-2.4-2.4v-6.2h-4.3c-1.6 0-2.5-1.8-1.6-3.1l8.3-11.3c.5-.7 1.2-1.1 2.1-1.1z"/></symbol>
+<symbol id="mk-dash" viewBox="0 0 48 48"><path class="mk-k mk-fa" d="M13 12.4c-.8-1.1.4-2.5 1.6-1.9l16.6 9.6c1.4.8 1.4 2.8 0 3.6l-16.6 9.6c-1.2.6-2.4-.8-1.6-1.9l7.4-9.5c.4-.5.4-1.2 0-1.7z" transform="translate(5 1)"/><path class="mk-k" d="M5.5 17h6M3.5 24h7M5.5 31h6"/></symbol>
+</defs></svg>
 
 <div id="hud">
   <div id="quest" class="card">
@@ -223,16 +255,16 @@ body.editing #quick{display:none}
   <div id="quick" class="card"><span class="qpc"><b>WASD</b> か <b>矢印</b> であるく</span><span class="qtc">左のスティックであるく</span><br><i>くわしい使い方は右上の歯車から</i></div>
 
   <button id="photoBtn" type="button" aria-label="写真をとる">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="4"/></svg>
+    <svg class="mk-ic" aria-hidden="true"><use href="#mk-camera"/></svg>
   </button>
 
   <button id="broomBtn" type="button" aria-label="ほうきにのる" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 3.5 11 13"/><path d="M11 13c-2.2-1-5.2.2-7 3.2L3 21l4.8-1c3-1.8 4.2-4.8 3.2-7z"/><path d="M6.2 17.2 8.4 15M8 19.6l2.2-2.2"/></svg><span id="broomTxt">ほうき</span></button>
   <div class="keys"><b>WASD</b>/<b>矢印</b> 移動　<b>Shift</b> ダッシュ　<b>Space</b> ジャンプ<br><b>ドラッグ</b> 視点　<b>ホイール</b> ズーム　<b>E</b> すわる・みる　<b>F</b> 写真　<b>H</b> ヒント</div>
 
-  <div id="joy"><div id="knob"></div></div>
+  <div id="joy"><i class="chev u"></i><i class="chev d"></i><i class="chev l"></i><i class="chev r"></i><div id="knob"></div></div>
   <div id="tbtns">
-    <div class="tb" id="tbDash"><svg viewBox="0 0 24 24" fill="none" stroke="#fff1d8" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3 5 14h6l-1 7 8-11h-6z"/></svg><span>ダッシュ</span></div>
-    <div class="tb big" id="tbJump"><svg viewBox="0 0 24 24" fill="none" stroke="#fff1d8" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6M6 11l6-6 6 6"/></svg><span>ジャンプ</span></div>
+    <div class="tb" id="tbDash"><svg class="mk-ic" aria-hidden="true"><use href="#mk-dash"/></svg><span>ダッシュ</span></div>
+    <div class="tb big" id="tbJump"><svg class="mk-ic" aria-hidden="true"><use href="#mk-jump"/></svg><span>ジャンプ</span></div>
   </div>
 
   <button id="actBtn" type="button"><span id="actTxt">みる</span><kbd>E</kbd></button>
@@ -1445,7 +1477,7 @@ function pumpkinsAt(C,lx,lz,k,faces){
       q[0]=n0;q[1]=n1}
     const tk=edBegin('pumpkin',q[0],q[1]);
     const pr=rand()*6,pc=pick(['#ff8a2a','#f2761c','#ff9a3a','#e8661a']),rep=GR()<.45; // some of them become the Meshy jack-o'-lantern
-    if(rep)PUMPS.push([q[0],groundY(q[0],q[1]),q[1],s,C.rot+(GR()-.5)*.8]);else B.pump.add(q[0],groundY(q[0],q[1])+s*.4,q[1],s,s*.8,s,pr,pc);
+    if(rep){const p=[q[0],groundY(q[0],q[1]),q[1],s,C.rot+(GR()-.5)*.8];p.ed=ED.cur;PUMPS.push(p)}else B.pump.add(q[0],groundY(q[0],q[1])+s*.4,q[1],s,s*.8,s,pr,pc);
     if(faces&&rand()<.75){const fq=C.W(lx+side*(1.5+0)+0,lz+.5);if(!rep)B.face.add(q[0]+C.s*s*.42,groundY(q[0],q[1])+s*.45,q[1]+C.c*s*.42,s*.62,s*.62,1,C.rot,'#ffffff');addGlow(q[0]+C.s*s*.6,groundY(q[0],q[1])+s*.45,q[1]+C.c*s*.6,1.8,'#ffa030');B.pool.add(q[0]+C.s*s,groundY(q[0],q[1])+.11,q[1]+C.c*s,2.4,1,2.4,0,'#6a3a10')}
     edEnd(tk);
   }
@@ -2499,7 +2531,7 @@ const RIDE={len:2.6,seat:.85,stickY:.12,bodyY:.08,pitch:-.08}; // broom length, 
     // Meshy castle on the north hill, arch gate in the north wall, and some jack-o'-lanterns instead of the plain round pumpkins
     {const CA=mk(PROPS.castle,28,40);put(CA,18,25.5,-123,0);
      const GA=mk(PROPS.gate,4.9,5.6);GA.mat.emissive.setHex(0x1c1c1c);put(GA,0,W.groundY(0,-41)-.05,-41,0);
-     const JK=mk(PROPS.jack,1,1);(W.pumps||[]).forEach(t=>{const k=t[3]*1.1;const m=put(JK,t[0],t[1]-.03,t[2],t[4],k,k,k);TD.push({m,x:t[0],z:t[2],r:50})})}
+     const JK=mk(PROPS.jack,1,1);(W.pumps||[]).forEach(t=>{const k=t[3]*1.1;const m=put(JK,t[0],t[1]-.03,t[2],t[4],k,k,k);if(t.ed)t.ed.objs.push(m);TD.push({m,x:t[0],z:t[2],r:50})})}
     cullTrees();setInterval(cullTrees,300);
     // magic broom: handle forward (+z), bristles behind; Piyo sits on the stick
     try{
@@ -2861,6 +2893,7 @@ canvas.addEventListener('pointerup',endPtr);canvas.addEventListener('pointercanc
   const end=e=>{if(e.pointerId!==id)return;id=null;knob.style.transform='';input.jx=0;input.jy=0};
   joy.addEventListener('pointerup',end);joy.addEventListener('pointercancel',end);
   const dash=$('tbDash'),jump=$('tbJump');
+  [dash,jump,$('photoBtn'),$('broomBtn')].forEach(b=>{if(b)b.addEventListener('contextmenu',e=>e.preventDefault())}); // long-press must not open the OS menu (it cancelled the held dash)
   dash.addEventListener('pointerdown',e=>{if(player.fly){input.down=true;e.preventDefault();return}input.dash=true;dash.classList.add('hold');dash.setPointerCapture(e.pointerId);e.preventDefault()});
   const dEnd=()=>{input.dash=false;dash.classList.remove('hold')};dash.addEventListener('pointerup',dEnd);dash.addEventListener('pointercancel',dEnd);
   jump.addEventListener('pointerdown',e=>{input.jump=true;e.preventDefault()});
