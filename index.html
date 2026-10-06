@@ -476,19 +476,32 @@ body.editing #quick{display:none}
 {"k":"pumpkin","x":-11.94,"z":-14.96,"dx":1.38,"dz":0.93},
 {"k":"pumpkin","x":-15.95,"z":-13.93,"dx":0.93,"dz":-0.06},
 {"k":"pumpkin","x":-11.22,"z":-15.15,"dx":0.77,"dz":0.36},
+{"k":"cafe","x":11.92,"z":1.62,"dx":1.3,"dz":-1.52},
+{"k":"cafe","x":15.47,"z":-0.98,"dx":2.06,"dz":-1.42},
+{"k":"lamp","x":3.04,"z":37.97,"dx":-0.12,"dz":2},
+{"k":"lamp","x":-7.59,"z":11.72,"dx":0.17,"dz":-1.48,"r":-15},
+{"k":"lamp","x":3.76,"z":10.38,"dx":4.35,"dz":1.15},
+{"k":"lamp","x":0.98,"z":1.62,"dx":-1.77,"dz":-3.48},
 {"k":"lamp","x":5.25,"z":-10.22,"dx":-0.15,"dz":-2.23},
+{"k":"lamp","x":-6.87,"z":-18.45,"dx":3.96,"dz":-3.22},
 {"k":"lamp","x":-8.08,"z":-30.77,"dx":-0.32,"dz":-2.21},
+{"k":"lamp","x":4.44,"z":-32.9,"dx":2.34,"dz":-0.49},
 {"k":"lamp","x":-29.57,"z":31.77,"dx":0.02,"dz":1.05},
+{"k":"lamp","x":4.95,"z":35.34,"dx":-8.58,"dz":4.99},
 {"k":"lamp","x":8.31,"z":-9.87,"dx":0.51,"dz":-0.4},
+{"k":"lamp","x":-13.56,"z":-18.51,"dx":-1.17,"dz":-1.06},
+{"k":"lamp","x":9.26,"z":8.25,"dx":1.99,"dz":-3.97,"dy":0.2},
+{"k":"lamp","x":8.28,"z":1.72,"dx":-2.6,"dz":-3.24},
 {"k":"barrel","x":-11.09,"z":32.38,"dx":-2.18,"dz":1.22},
 {"k":"bed","x":-31.65,"z":27.34,"dx":-2.57,"dz":2.15},
 {"k":"barrel","x":-30.45,"z":27.34,"dx":-4.09,"dz":1},
 {"k":"bed","x":9.63,"z":-9.28,"dx":0.35,"dz":-0.42,"r":-30},
 {"k":"bed","x":15.51,"z":-7.31,"dx":-0.29,"dz":-0.41},
+{"k":"bed","x":-18.01,"z":-18.79,"dx":1.78,"dz":4.67},
 {"k":"bed","x":-6.51,"z":-34.09,"dx":-0.63,"dz":0.32,"r":15},
 {"k":"panel","x":-32.53,"z":5.95,"dx":-1.9,"dz":-2.21,"r":-60},
-{"k":"panel","x":0.96,"z":-33.08,"dx":4.64,"dz":-3.37,"r":-45},
-{"id":"spot:zakka","dx":-0.4,"dz":0.8}
+{"k":"panel","x":0.96,"z":-33.08,"dx":5.67,"dz":-3.81,"dy":0.1,"r":-45},
+{"id":"spot:zakka","dx":-0.21,"dz":-0.99}
 ]}
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -1072,7 +1085,7 @@ function resolveXZ(p,r,y){
   p.x=clamp(p.x,-WORLD,WORLD);p.z=clamp(p.z,-WORLD,WORLD);
 }
 const glowList=[];
-const addGlow=(x,y,z,size,color)=>{const g={x,y,z,size,c:new THREE.Color(color)};glowList.push(g);if(ED.cur)ED.cur.glows.push(g)};
+const addGlow=(x,y,z,size,color)=>{const g={x,y,z,size,c:new THREE.Color(color)};glowList.push(g);if(ED.cur)ED.cur.glows.push(g);return g};
 const WORLD=40;
 
 /* ---------- terrain: three terraces joined by stairs ---------- */
@@ -1900,16 +1913,37 @@ function addLamp(x,z){
   const y0=groundY(x,z),tk=edBegin('lamp',x,z);
   /* post & lantern: Meshy lamppost model, placed by the second script from `lamps` */
   addGlow(x,y0+3.32,z,6.6,'#ffa845');B.pool.add(x,y0+.12,z,9,1,9,0,'#8a5018');
-  addCircle(x,z,.28);const lp=[x,y0+3.5,z];lp.ed=ED.cur;lamps.push(lp);edEnd(tk);
+  addCircle(x,z,.28);const lp=[x,y0+3.5,z];lp.ed=ED.cur;ED.cur.lamp=lp;lamps.push(lp);edEnd(tk);
 }
-function garland(a,b,sag,type){
-  const L=Math.hypot(b[0]-a[0],b[2]-a[2]),n=Math.max(4,Math.round(L/.8)),pts=[];
-  for(let i=0;i<=n;i++){const t=i/n;pts.push([lerp(a[0],b[0],t),lerp(a[1],b[1],t)-sag*4*t*(1-t),lerp(a[2],b[2],t)])}
+const GARL=[];let wireLines=null;
+function garlandPts(a,b,sag,n){const pts=[];for(let i=0;i<=n;i++){const t=i/n;pts.push([lerp(a[0],b[0],t),lerp(a[1],b[1],t)-sag*4*t*(1-t),lerp(a[2],b[2],t)])}return pts}
+/* la / lb: lamp (or null for a fixed end); the string follows a lamp when it is moved in the edit panel */
+function garland(a,b,sag,type,la,lb){
+  const L=Math.hypot(b[0]-a[0],b[2]-a[2]),n=Math.max(4,Math.round(L/.8)),pts=garlandPts(a,b,sag,n);
+  const G={a,b,sag,type,n,la,lb,w0:wire.length,items:[],oa:la?[a[0]-la[0],a[1]-la[1],a[2]-la[2]]:null,ob:lb?[b[0]-lb[0],b[1]-lb[1],b[2]-lb[2]]:null};
   for(let i=0;i<n;i++)wire.push(pts[i],pts[i+1]);
   const PC=['#ff8a2a','#8a5bd6','#fff1d8','#ff7aa8','#ffc95e'];
   for(let i=1;i<n;i++){const p=pts[i];
-    if(type==='bulb'){B.bulb.add(p[0],p[1]-.08,p[2],.1,.1,.1,0,GRP(['#ffe2a0','#ffc870','#ffd890']));if(i%2===0)addGlow(p[0],p[1]-.08,p[2],1.5,'#ffc060')}
-    else{B.flower.add(p[0],p[1]-.14,p[2],.17,.17,.17,0,PC[i%PC.length])}}
+    if(type==='bulb'){const ib=B.bulb;ib.add(p[0],p[1]-.08,p[2],.1,.1,.1,0,GRP(['#ffe2a0','#ffc870','#ffd890']));const it={i,ib,k:ib.m.length-1,dy:-.08,sc:.1};if(i%2===0){it.g=addGlow(p[0],p[1]-.08,p[2],1.5,'#ffc060')}G.items.push(it)}
+    else{const ib=B.flower;ib.add(p[0],p[1]-.14,p[2],.17,.17,.17,0,PC[i%PC.length]);G.items.push({i,ib,k:ib.m.length-1,dy:-.14,sc:.17})}}
+  GARL.push(G);
+}
+const _gm=new THREE.Matrix4(),_gp=new THREE.Vector3(),_gq=new THREE.Quaternion(),_gs=new THREE.Vector3();
+function garlandUpdate(lampE,pos){ // pos: {x,z,y} = new foot position of that lamp
+  const lp=lampE&&lampE.lamp;if(!lp)return;
+  lp.cur=[pos.x,pos.y+3.5,pos.z];
+  const touched=new Set(),gl=[];
+  GARL.forEach(G=>{
+    if(G.la!==lp&&G.lb!==lp)return;
+    const e=(l,o,fix)=>l?[(l.cur||l)[0]+o[0],(l.cur||l)[1]+o[1],(l.cur||l)[2]+o[2]]:fix;
+    const a=e(G.la,G.oa,G.a),b=e(G.lb,G.ob,G.b),pts=garlandPts(a,b,G.sag,G.n);
+    if(wireLines){const P=wireLines.geometry.attributes.position;for(let i=0;i<G.n;i++){P.setXYZ((G.w0+i*2),pts[i][0],pts[i][1],pts[i][2]);P.setXYZ((G.w0+i*2+1),pts[i+1][0],pts[i+1][1],pts[i+1][2])}P.needsUpdate=true}
+    G.items.forEach(it=>{const p=pts[it.i],x=p[0],y=p[1]+it.dy,z=p[2];
+      if(it.ib.im){_gp.set(x,y,z);_gq.identity();_gs.set(it.sc,it.sc,it.sc);_gm.compose(_gp,_gq,_gs);it.ib.m[it.k].copy(_gm);it.ib.im.setMatrixAt(it.k,_gm);touched.add(it.ib.im)}
+      if(it.g){it.g.x=x;it.g.y=y;it.g.z=z;gl.push(it.g)}});
+  });
+  touched.forEach(im=>{im.instanceMatrix.needsUpdate=true});
+  if(gl.length)glowRefresh(gl);
 }
 (function placeLamps(){
   ROADS.forEach(r=>{
@@ -1922,15 +1956,15 @@ function garland(a,b,sag,type){
       if(Math.abs(x)>38||Math.abs(z)>38||nearStairs(x,z,1.2)||inAwning(x,z,.6)||collidesAt(x,z,.7,groundY(x,z)+.5)||lamps.some(l=>Math.hypot(l[0]-x,l[2]-z)<3)){acc=7;continue}
       addLamp(x,z);list.push(lamps[lamps.length-1]);acc=0;side=-side;first=false;
     }
-    for(let i=0;i<list.length-1;i+=4){const A=list[i],Bq=list[i+1];if(Math.hypot(A[0]-Bq[0],A[2]-Bq[2])<13){garland([A[0],A[1]+.4,A[2]],[Bq[0],Bq[1]+.4,Bq[2]],.9,'bulb')}}
-    for(let i=0;i<list.length-2;i++){const A=list[i],Bq=list[i+2];if(Math.hypot(A[0]-Bq[0],A[2]-Bq[2])<17)garland([A[0],A[1]+.15,A[2]],[Bq[0],Bq[1]+.15,Bq[2]],1.3,'pom')}
+    for(let i=0;i<list.length-1;i+=4){const A=list[i],Bq=list[i+1];if(Math.hypot(A[0]-Bq[0],A[2]-Bq[2])<13){garland([A[0],A[1]+.4,A[2]],[Bq[0],Bq[1]+.4,Bq[2]],.9,'bulb',A,Bq)}}
+    for(let i=0;i<list.length-2;i++){const A=list[i],Bq=list[i+2];if(Math.hypot(A[0]-Bq[0],A[2]-Bq[2])<17)garland([A[0],A[1]+.15,A[2]],[Bq[0],Bq[1]+.15,Bq[2]],1.3,'pom',A,Bq)}
   });
   // plaza ring of lamps
   for(let i=0;i<7;i++){const a=i*PI*2/7+.3,x=2+Math.cos(a)*7.6,z=6+Math.sin(a)*7.6;
     if(collidesAt(x,z,.7,groundY(x,z)+.5)||inAwning(x,z,.6)||roadClear(x,z)<.2||nearStairs(x,z,1))continue;addLamp(x,z)}
   // plaza: strings from fountain top to ring lamps
   const ring=lamps.filter(l=>Math.hypot(l[0]-2,l[2]-6)<8.6&&Math.hypot(l[0]-2,l[2]-6)>6.5);
-  ring.forEach(l=>garland([l[0],l[1]+.3,l[2]],[2,groundY(2,6)+5.6,6],1.2,'bulb'));
+  ring.forEach(l=>garland([l[0],l[1]+.3,l[2]],[2,groundY(2,6)+5.6,6],1.2,'bulb',l,null));
 })();
 
 /* ---------- plants, planters, barrels, fences ---------- */
@@ -2187,7 +2221,7 @@ Object.keys(B).forEach(k=>B[k].build());
 (function(){
   const pos=[];wire.forEach(p=>pos.push(p[0],p[1],p[2]));
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
-  scene.add(new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:0x3a2430})));
+  wireLines=new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:0x3a2430}));wireLines.frustumCulled=false;scene.add(wireLines);
 })();
 const glowMat=new THREE.ShaderMaterial({
   transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
@@ -2209,7 +2243,7 @@ function buildGlow(){
 }
 window.__W={THREE,scene,camera,renderer,canvas,hemi,moon,warm,glowMat,buildGlow,ghosts,houses,lamps,
   util:{$,isTouch,rand,R,pick,clamp,lerp,angLerp,rr,cv,canvasTex,mulberry32,textTex},WORLD,MAT,glowTex,addGlow,sky,
-  groundY,baseY,collidesAt,cols,circs,camSph,camBox,resolveXZ,addCircle,addBoxCol,STAIRS,seats,slots,shopsOut,MAPROADS,PLAZAS,warnings,roadClear,fountainPos:[2,6],ivys:IVYS,crates:CRATES,trees:TREES,firs:FIRS,shrubs:SHRUBS,ED,edBegin,edEnd,glowRefresh};
+  groundY,baseY,collidesAt,cols,circs,camSph,camBox,resolveXZ,addCircle,addBoxCol,STAIRS,seats,slots,shopsOut,MAPROADS,PLAZAS,warnings,roadClear,fountainPos:[2,6],ivys:IVYS,crates:CRATES,trees:TREES,firs:FIRS,shrubs:SHRUBS,ED,edBegin,edEnd,glowRefresh,garlandUpdate};
 })();
 (function(){
 'use strict';
@@ -3081,7 +3115,7 @@ const ED=W.ED;
 const ED_LABEL={lamp:'街灯',barrel:'タル',crate:'かぼちゃ箱',pot:'植木鉢',bench:'ベンチ',lantern:'ランタン',pumpkin:'かぼちゃ',bed:'花だん',
   chalk:'OPENの黒板',bucket:'花バケツ',cafe:'カフェのテーブル',sign:'入口の看板',panel:'パネル',tv:'テレビ',board:'ショップの看板',present:'プレゼント'};
 const ED_NOHIDE={panel:1,tv:1,board:1,present:1};
-const ED_DRAFT='usapon-layout-draft-v1';
+const ED_DRAFT='usapon-layout-draft-v2'; // v1 drafts were made on the old tree layout and are ignored
 const _eM=new THREE.Matrix4(),_eA=new THREE.Matrix4(),_eR=new THREE.Matrix4(),_eC=new THREE.Matrix4(),_eT=new THREE.Matrix4(),_eZ=new THREE.Matrix4().makeScale(0,0,0);
 function edSt(e){return e.st||{dx:0,dz:0,dy:0,r:0,hide:false}}
 function edSnap(e){
@@ -3114,6 +3148,7 @@ function edApply(e){
   (e.seats||[]).forEach((q,k)=>{const o=s0.seats[k],w=tp(o.x,o.z);q.x=w[0];q.z=w[1];q.y=o.y+dY;q.face=o.face+th;if(q.table){const tt=tp(e.x0,e.z0);q.table=[tt[0],tt[1]]}});
   if(e.panel){const p=e.panel;p.x=nx;p.z=nz;p.rot=s0.p.rot+th;p.n.set(Math.sin(p.rot),0,Math.cos(p.rot));p.y0=s0.p.y0+dY}
   if(e.spot){e.spot.x=nx;e.spot.z=nz;e.spot.rot=s0.sp.rot+th}
+  if(e.lamp)W.garlandUpdate(e,{x:nx,z:nz,y:groundY(nx,nz)+st.dy});
 }
 function edFind(o){
   if(o.id)return ED.list.find(e=>e.id===o.id)||null;
@@ -3121,10 +3156,12 @@ function edFind(o){
   ED.list.forEach(e=>{if(e.id||e.kind!==o.k)return;const d=Math.hypot(e.x0-o.x,e.z0-o.z);if(d<bd){bd=d;best=e}});
   return best;
 }
-function edLoad(arr,tag){
+function edBase(e){return Object.assign({dx:0,dz:0,dy:0,r:0,hide:false},e.base||{})}
+function edChanged(e){const a=edSt(e),b=edBase(e);return Math.abs(a.dx-b.dx)>.001||Math.abs(a.dz-b.dz)>.001||Math.abs(a.dy-b.dy)>.001||Math.abs(a.r-b.r)>.01||!!a.hide!==!!b.hide}
+function edLoad(arr,tag,isBase){
   let miss=0;
   (arr||[]).forEach(o=>{const e=edFind(o);if(!e){miss++;return}
-    e.st={dx:+o.dx||0,dz:+o.dz||0,dy:+o.dy||0,r:+o.r||0,hide:!!o.hide};edApply(e)});
+    e.st={dx:+o.dx||0,dz:+o.dz||0,dy:+o.dy||0,r:+o.r||0,hide:!!o.hide};if(isBase)e.base=Object.assign({},e.st);edApply(e)});
   if(miss)warnings.push(tag+': '+miss+'件の小物が見つかりませんでした');
 }
 const r2=v=>Math.round(v*100)/100;
@@ -3134,7 +3171,7 @@ function edRow(e){const st=edSt(e),o=e.id?{id:e.id}:{k:e.kind,x:r2(e.x0),z:r2(e.
 function edExport(all){return ED.list.filter(e=>all?!!e.st:edIsSet(e)).map(edRow)}
 function layoutInit(){
   let base=[];try{base=JSON.parse($('layout-data').textContent).props||[]}catch(e){warnings.push('配置データを読めませんでした')}
-  edLoad(base,'配置データ');
+  edLoad(base,'配置データ',true);
   if(state.editOn)edUI();
   const bm=$('btnEditMode');
   if(!/github\.io$/.test(location.hostname)){const tb=$('btnTestBroom');tb.hidden=false;tb.addEventListener('click',()=>{save.broom=true;save.wand=false;persist();presentReset();flyUI();closeModal('mHelp');toast('テスト用：ほうきが使えるようになりました\n時計塔のプレゼントを とりにいこう',3600)});
@@ -3160,7 +3197,7 @@ function edUI(){
     nm.textContent=(ED_LABEL[sel.kind]||sel.kind)+(st.hide?'（かくし中）':'');
     tx.textContent='ずらし '+st.dx.toFixed(1)+', '+st.dz.toFixed(1)+'　高さ '+(st.dy>=0?'+':'')+st.dy.toFixed(2)+'　角度 '+Math.round(st.r)+'°';
     $('edHide').textContent=st.hide?'もとに見せる':'かくす';$('edHide').disabled=!!ED_NOHIDE[sel.kind];
-    const n=edExport(false).length;$('edCount').textContent=n?n+'件 変更中':'';
+    const n=ED.list.filter(edChanged).length;$('edCount').textContent=n?'今回 '+n+'件 変更中':'';
   }
   function pick(e){sel=e;info()}
   function change(fn){if(!sel)return toast('先に小物をえらんでね');sel.st=Object.assign({},edSt(sel));fn(sel.st);edApply(sel);saveDraft();info()}
@@ -3183,12 +3220,12 @@ function edUI(){
   $('edPrev').addEventListener('click',()=>cyc(-1));$('edNext').addEventListener('click',()=>cyc(1));
   function cyc(d){const l=near();if(!l.length)return toast('近くに動かせる小物がありません');let i=l.indexOf(sel);i=i<0?(d>0?0:l.length-1):(i+d+l.length)%l.length;pick(l[i])}
   $('edHide').addEventListener('click',()=>change(s=>{s.hide=!s.hide}));
-  $('edUndo').addEventListener('click',()=>change(s=>{s.dx=s.dz=s.dy=s.r=0;s.hide=false}));
+  $('edUndo').addEventListener('click',()=>change(s=>{Object.assign(s,edBase(sel))}));
   $('edMin').addEventListener('click',()=>{box.classList.toggle('min');$('edMin').textContent=box.classList.contains('min')?'＋':'－'});
   $('edAll').addEventListener('click',()=>{
     if(Date.now()-resetArm>2500){resetArm=Date.now();$('edAll').textContent='もう一度押すと全部もどす';setTimeout(()=>{$('edAll').textContent='ぜんぶもどす'},2500);return}
     resetArm=0;$('edAll').textContent='ぜんぶもどす';
-    ED.list.forEach(e=>{if(e.st){e.st={dx:0,dz:0,dy:0,r:0,hide:false};edApply(e)}});saveDraft();info();toast('ぜんぶ元の位置にもどしました');
+    ED.list.forEach(e=>{if(e.st&&edChanged(e)){e.st=edBase(e);edApply(e)}});saveDraft();info();toast('今回の変更を ぜんぶもどしました\n（公開中の配置にもどります）',3200);
   });
   $('edCopy').addEventListener('click',()=>{
     const txt=JSON.stringify({v:1,props:edExport(false)});
