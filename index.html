@@ -126,6 +126,9 @@ body.touch .keys{display:none}
 .teaserbox b{display:block;font-size:15px;color:var(--lantern);margin-bottom:2px}
 #photoSheet{width:min(460px,100%);text-align:center}
 #photoImg{display:block;width:100%;max-height:62vh;object-fit:contain;border-radius:6px;background:#000;-webkit-user-select:auto;user-select:auto;-webkit-touch-callout:default}
+#inAppWarn{margin:14px 0 0;padding:12px 14px;border-radius:14px;background:rgba(255,241,216,.96);color:#5b3b6e;font-size:13px;font-weight:700;line-height:1.65;text-align:left}
+#inAppWarn b{color:#c2410c}
+#inAppWarn .btn{margin-top:10px;padding:8px 18px;font-size:13px}
 #photoNote{font-size:12.5px;color:var(--mist);margin-top:10px;line-height:1.6}
 #flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:30;transition:opacity .5s ease-out}
 #flash.on{opacity:.9;transition:none}
@@ -221,8 +224,16 @@ body.cammode.selfie #joy{display:none!important}
 #camBack{top:max(14px,env(safe-area-inset-top,0px));left:calc(16px + env(safe-area-inset-left,0px));width:46px;height:46px}
 #camShut{bottom:max(30px,calc(env(safe-area-inset-bottom,0px) + 24px));left:50%;margin-left:-38px;width:76px;height:76px;border:5px solid #fff;background:linear-gradient(180deg,#ffd9ad,#f8b26a);box-shadow:0 0 0 2px rgba(91,66,88,.2),0 4px 18px rgba(70,45,80,.3)}
 #camShut i{display:block;width:48px;height:48px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 2px rgba(248,178,106,.8)}
-#camFlip{bottom:max(40px,calc(env(safe-area-inset-bottom,0px) + 34px));right:calc(22px + env(safe-area-inset-right,0px));width:56px;height:56px}
-body.selfie #camFlip{background:linear-gradient(180deg,#ffd9ad,#f8b26a);color:#fff}
+#camFlip{bottom:max(44px,calc(env(safe-area-inset-bottom,0px) + 38px));right:calc(16px + env(safe-area-inset-right,0px));width:54px;height:54px}
+#camFlip svg{width:30px;height:30px}
+body.selfie #camFlip{background:linear-gradient(180deg,#ffb869,#f08a2c);color:#fff;border-color:#fff}
+#camHelp{top:max(14px,env(safe-area-inset-top,0px));right:calc(16px + env(safe-area-inset-right,0px));width:40px;height:40px;font:900 20px/1 "Zen Maru Gothic",sans-serif}
+#camTour{position:absolute;inset:0;display:none;z-index:9;pointer-events:auto!important;touch-action:none}
+#camTour.on{display:block}
+#camTour svg{position:absolute;left:0;top:0;pointer-events:none}
+.ctl{position:absolute;background:#fff1d8;color:#5b3b6e;font:900 14px/1.45 "Zen Maru Gothic","Hiragino Maru Gothic ProN",sans-serif;padding:8px 12px;border-radius:14px;white-space:pre;text-align:center;box-shadow:0 3px 14px rgba(0,0,0,.35);pointer-events:none}
+.ctl.mid{left:50%;transform:translateX(-50%);background:rgba(255,255,255,.14);color:#fff;box-shadow:none;font-size:16px;text-shadow:0 1px 6px rgba(0,0,0,.6)}
+
 #camTag{position:absolute;top:max(22px,calc(env(safe-area-inset-top,0px) + 8px));left:50%;transform:translateX(-50%);padding:5px 14px;border-radius:999px;background:rgba(255,251,243,.78);color:#8f6e86;font-weight:900;font-size:13px;pointer-events:none;white-space:nowrap}
 body.touch #joy{left:calc(22px + env(safe-area-inset-left,0px));bottom:max(50px,calc(env(safe-area-inset-bottom,0px) + 44px));border:1.5px solid rgba(255,255,255,.9);background:radial-gradient(circle,rgba(255,255,255,.12) 0,rgba(70,45,80,.2) 100%);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);box-shadow:0 0 0 1px rgba(70,45,80,.14),inset 0 0 22px rgba(255,255,255,.2),0 4px 16px rgba(70,45,80,.14)}
 #knob{width:46px;height:46px;margin:-23px 0 0 -23px;background:radial-gradient(circle at 36% 30%,#fff 0,rgba(255,255,255,.88) 55%,rgba(255,236,214,.8) 100%);box-shadow:0 2px 10px rgba(70,45,80,.3),0 0 16px rgba(255,255,255,.6)}
@@ -288,7 +299,9 @@ body.touch #joy{left:calc(22px + env(safe-area-inset-left,0px));bottom:max(50px,
     <button class="cbtn" id="camBack" type="button" aria-label="カメラモードをおわる"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
     <div id="camTag">カメラモード</div>
     <button class="cbtn" id="camShut" type="button" aria-label="シャッター"><i></i></button>
-    <button class="cbtn" id="camFlip" type="button" aria-label="インカメ（自撮り）きりかえ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5V7a2 2 0 0 1 2-2h2.2l1.2-1.6h5.2L15.8 5H18a2 2 0 0 1 2 2v1.5"/><path d="M20 15.5V17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-1.5"/><path d="M9 11.5a3.2 3.2 0 0 1 5.6-1.6M15 12.5a3.2 3.2 0 0 1-5.6 1.6"/><path d="M14.8 8.2v2h-2M9.2 15.8v-2h2"/></svg></button>
+    <button class="cbtn" id="camFlip" type="button" aria-label="じどり（インカメ）とふつうをきりかえ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.9-3M4 5v3.5h3.5"/><path d="M4 13a8 8 0 0 0 14.9 3M20 19v-3.5h-3.5"/></svg></button>
+    <button class="cbtn" id="camHelp" type="button" aria-label="カメラモードのせつめい">?</button>
+    <div id="camTour"></div>
   </div>
   <div id="dbg" hidden></div>
   <div id="edPanel" class="card" hidden>
@@ -317,6 +330,7 @@ body.touch #joy{left:calc(22px + env(safe-area-inset-left,0px));bottom:max(50px,
     <h1 id="introTitle" hidden></h1>
     <p class="lead">小さな街を歩いて、ハロウィンを楽しもう。<br>パネルを見つけたら、写真を撮ってね。</p>
     <span id="introMission" hidden></span><span id="introTeaser" hidden></span>
+    <div id="inAppWarn" hidden><b>LINEやインスタのアプリ内で開いていませんか？</b><br>この画面だと、写真の保存がうまくいかないことがあります。あとでブラウザ（Safari・Chrome）で開き直すと、進み具合も引きつがれません。<br><b>はじめからブラウザで開いてあそんでね。</b><br><button class="btn sub" id="btnCopyUrl" type="button">URLをコピー</button></div>
     <div class="actions"><button class="btn" id="btnStart" type="button">街へ出かける</button></div>
   </div>
 </div>
@@ -2881,8 +2895,30 @@ function setCamMode(on){
   state.camMode=on;if(!on)state.selfie=false;
   document.body.classList.toggle('cammode',on);document.body.classList.toggle('selfie',!!state.selfie);
   input.jx=input.jy=0;
-  if(on)toast('カメラモード\nドラッグで角度、スティックで移動',2600);
+  $('camTag').textContent='カメラモード';
+  if(on){let seen=false;try{seen=localStorage.getItem('usapon-camtour')==='1'}catch(e){}
+    if(!seen)setTimeout(()=>{if(state.camMode)showCamTour()},350);else toast('カメラモード\nドラッグで角度、スティックで移動',2200)}
 }
+function showCamTour(){
+  const t=$('camTour'),W=window.innerWidth,H=window.innerHeight;let holes='',rings='',labs='';
+  [['camShut','しゃしんを とる','up'],['camFlip','じどり ⇔ ふつう\nきりかえ','up-r'],['camBack','カメラモードを\nおわる','down'],['joy','あるく','up-l'],['camHelp','この せつめい','down-r']].forEach(a=>{
+    const el=$(a[0]);if(!el)return;const r=el.getBoundingClientRect();if(r.width<4||r.height<4)return;
+    const x=r.left-6,y=r.top-6,w=r.width+12,h=r.height+12,rx=Math.min(w,h)/2;
+    holes+='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="'+rx+'" fill="#000"/>';
+    rings+='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="'+rx+'" fill="none" stroke="#fff" stroke-width="2.5"/>';
+    const p=a[2];let st='';
+    if(p==='up')st='left:'+(r.left+r.width/2)+'px;bottom:'+(H-r.top+16)+'px;transform:translateX(-50%)';
+    else if(p==='up-r')st='right:'+Math.max(8,W-r.right)+'px;bottom:'+(H-r.top+16)+'px';
+    else if(p==='up-l')st='left:'+Math.max(8,r.left)+'px;bottom:'+(H-r.top+16)+'px';
+    else if(p==='down')st='left:'+Math.max(8,r.left)+'px;top:'+(r.bottom+16)+'px';
+    else st='right:'+Math.max(8,W-r.right)+'px;top:'+(r.bottom+16)+'px';
+    labs+='<div class="ctl" style="'+st+'">'+a[1]+'</div>';
+  });
+  t.innerHTML='<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'"><defs><mask id="ctm"><rect width="'+W+'" height="'+H+'" fill="#fff"/>'+holes+'</mask></defs><rect width="'+W+'" height="'+H+'" fill="rgba(12,6,28,.76)" mask="url(#ctm)"/>'+rings+'</svg>'+labs+
+    '<div class="ctl mid" style="top:'+(H*.36)+'px">ドラッグで かくど\n2本指で ズーム（ひろげる＝ちかく）</div><div class="ctl mid" style="top:'+(H*.5)+'px">タップでとじる</div>';
+  t.classList.add('on');
+}
+function hideCamTour(){$('camTour').classList.remove('on');try{localStorage.setItem('usapon-camtour','1')}catch(e){}}
 function setSelfie(on){
   if(on&&player.fly){toast('空をとんでいる間は\n自撮りできないよ');return}
   if(!on&&state.selfie){cam.yaw=player.face+Math.PI;cam.cur=undefined}
@@ -2955,7 +2991,7 @@ window.addEventListener('keydown',e=>{
 window.addEventListener('keyup',e=>{input.keys[e.code]=false});
 window.addEventListener('blur',()=>{input.keys={};input.dash=false});
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
-canvas.addEventListener('wheel',e=>{if(state.mode!=='play')return;e.preventDefault();cam.dist=clamp(cam.dist+e.deltaY*.008,3.6,13)},{passive:false});
+canvas.addEventListener('wheel',e=>{if(state.mode!=='play')return;e.preventDefault();if(state.selfie)cam.sd=clamp((cam.sd||2.7)+e.deltaY*.004,1.2,5.5);else cam.dist=clamp(cam.dist+e.deltaY*.008,state.camMode?2.2:3.6,state.camMode?16:13)},{passive:false});
 const ptrs=new Map();let pinch0=0;
 canvas.addEventListener('pointerdown',e=>{
   if(state.mode!=='play')return;
@@ -2966,7 +3002,7 @@ canvas.addEventListener('pointerdown',e=>{
 canvas.addEventListener('pointermove',e=>{
   const p=ptrs.get(e.pointerId);if(!p||state.mode!=='play')return;
   const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
-  if(ptrs.size>=2){const a=[...ptrs.values()],d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);if(pinch0){cam.dist=clamp(cam.dist-(d-pinch0)*.03,3.6,13)}pinch0=d;return}
+  if(ptrs.size>=2){const a=[...ptrs.values()],d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);if(pinch0){if(state.selfie)cam.sd=clamp((cam.sd||2.7)-(d-pinch0)*.012,1.2,5.5);else cam.dist=clamp(cam.dist-(d-pinch0)*.03,state.camMode?2.2:3.6,state.camMode?16:13)}pinch0=d;return}
   if(state.selfie){if(ptrs.size<2){cam.sAng-=dx*.0068;cam.sp=clamp(cam.sp+dy*.003,-.12,.45)}return}
   cam.yaw-=dx*.0068;cam.pitch=clamp(cam.pitch+dy*.0052,.04,1.45);
 });
@@ -2988,6 +3024,8 @@ canvas.addEventListener('pointerup',endPtr);canvas.addEventListener('pointercanc
 $('photoBtn').addEventListener('click',()=>{if(state.mode!=='play')return;if(state.nearPanel)takePhoto(state.nearPanel,0);else setCamMode(true)});
 $('camShut').addEventListener('click',()=>{if(state.mode==='play'&&state.camMode)takeFreePhoto()});
 $('camFlip').addEventListener('click',()=>{if(state.mode==='play'&&state.camMode)setSelfie(!state.selfie)});
+$('camTour').addEventListener('click',hideCamTour);
+$('camHelp').addEventListener('click',()=>{if(state.mode==='play'&&state.camMode)showCamTour()});
 $('camBack').addEventListener('click',()=>{if(state.mode==='play')setCamMode(false)});
 $('btnToCam').addEventListener('click',()=>{closeModal('mPhoto');setCamMode(true)});
 $('btnToPanel').addEventListener('click',()=>{const p=lastShot.panel;closeModal('mPhoto');setCamMode(false);if(p)setTimeout(()=>takePhoto(p,0),30)});
@@ -3009,6 +3047,17 @@ $('btnHint').addEventListener('click',()=>showHint());
   b.addEventListener('click',()=>{off=!off;apply();try{localStorage.setItem('usapon-map-off',off?'1':'0')}catch(e){}});})();
 $('btnHelp').addEventListener('click',()=>openModal('mHelp'));
 $('btnHelpClose').addEventListener('click',()=>closeModal('mHelp'));
+(function(){
+  const inApp=/Line\/|Instagram|FBAN|FBAV|FB_IAB|MicroMessenger|TikTok|musical_ly|Twitter|Snapchat|KAKAOTALK|NAVER\(inapp/i.test(navigator.userAgent||'')||/[#&]inapp\b/.test(location.hash);
+  if(!inApp)return;
+  $('inAppWarn').hidden=false;
+  $('photoNote').textContent='このアプリ内の画面だと「保存」がうまくいかないことがあります。画像を長押しするか、ブラウザ（Safari・Chrome）で開き直してね。';
+  $('btnCopyUrl').addEventListener('click',()=>{
+    const u=location.href.split('#')[0];
+    const ok=()=>{$('btnCopyUrl').textContent='コピーしたよ！SafariかChromeに貼りつけてね'};
+    try{navigator.clipboard.writeText(u).then(ok,()=>{window.prompt('このURLをコピーしてブラウザで開いてね',u)})}catch(e){window.prompt('このURLをコピーしてブラウザで開いてね',u)}
+  });
+})();
 $('btnStart').addEventListener('click',()=>{closeModal('mIntro');quickPop();state.mode='play';if(state.pendingDone){state.pendingDone=false;showComplete()}});
 $('btnReset').addEventListener('click',()=>{closeModal('mBook');openModal('mReset')});
 $('btnResetNo').addEventListener('click',()=>{closeModal('mReset');refreshBook();openModal('mBook')});
@@ -3173,7 +3222,7 @@ function update(dt){
       if(ok>best||lift===0){best=ok;bp=p2}
       if(ok>=d-.01){best=d;bp=p2;break}
     }
-    d=Math.max(2.4,best);pe=bp;
+    d=Math.max(state.camMode?1.8:2.4,best);pe=bp;
   }
   cam.pe=cam.pe===undefined?pe:cam.pe+(pe-cam.pe)*Math.min(1,dt*3);
   cam.cur=cam.cur===undefined?d:cam.cur+(d-cam.cur)*Math.min(1,dt*(d<cam.cur?6:1.6));
@@ -3181,8 +3230,8 @@ function update(dt){
   camera.position.set(tgt.x+Math.sin(cam.yaw)*cp*cam.cur,Math.max(groundY(tgt.x,tgt.z)+.5,tgt.y+sp2*cam.cur),tgt.z+Math.cos(cam.yaw)*cp*cam.cur);
   camera.lookAt(tgt);
   if(state.selfie){
-    const a=cam.sAng;let sd=2.7,cx=0,cz=0;
-    for(;sd>1.3;sd-=.3){cx=player.pos.x+Math.sin(a)*sd;cz=player.pos.z+Math.cos(a)*sd;if(!collidesAt(cx,cz,.45,groundY(cx,cz)+1.2))break}
+    const a=cam.sAng;let sd=cam.sd||2.7,cx=0,cz=0;
+    for(;sd>1.2;sd-=.3){cx=player.pos.x+Math.sin(a)*sd;cz=player.pos.z+Math.cos(a)*sd;if(!collidesAt(cx,cz,.45,groundY(cx,cz)+1.2))break}
     cx=player.pos.x+Math.sin(a)*sd;cz=player.pos.z+Math.cos(a)*sd;
     camera.position.set(cx,Math.max(groundY(cx,cz)+.6,player.pos.y+1.2+cam.sp*3),cz);
     camera.lookAt(player.pos.x,player.pos.y+1.0,player.pos.z);
