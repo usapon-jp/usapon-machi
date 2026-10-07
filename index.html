@@ -209,6 +209,21 @@ body.touch #broomBtn.on{background:linear-gradient(180deg,#ffd9ad,#f8b26a);color
 body.touch .tb:active,body.touch .tb.hold{transform:scale(.92);border-color:rgba(255,255,255,.95);box-shadow:0 0 0 3px rgba(255,255,255,.8),0 0 18px 3px rgba(255,255,255,.85),0 4px 16px rgba(70,45,80,.18)}
 body.touch #photoBtn:active{transform:scale(.92)}
 #photoBtn.near{box-shadow:0 0 0 3px rgba(255,255,255,.8),0 0 18px 4px rgba(248,178,106,.95)!important}
+#camUI{display:none;position:absolute;inset:0;pointer-events:none}
+#camUI>*{pointer-events:auto}
+body.cammode #camUI{display:block}
+body.cammode #hud>*:not(#camUI):not(#joy):not(#toast){display:none!important}
+body.cammode #joy{opacity:.5}
+body.cammode.selfie #joy{display:none!important}
+.cbtn{position:absolute;margin:0;padding:0;display:grid;place-items:center;border-radius:50%;color:#8f6e86;border:1.5px solid rgba(255,255,255,.95);background:rgba(255,251,243,.82);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 0 0 1px rgba(91,66,88,.16),0 4px 16px rgba(70,45,80,.18);touch-action:manipulation;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+.cbtn:active{transform:scale(.92)}
+.cbtn svg{width:26px;height:26px}
+#camBack{top:max(14px,env(safe-area-inset-top,0px));left:calc(16px + env(safe-area-inset-left,0px));width:46px;height:46px}
+#camShut{bottom:max(30px,calc(env(safe-area-inset-bottom,0px) + 24px));left:50%;margin-left:-38px;width:76px;height:76px;border:5px solid #fff;background:linear-gradient(180deg,#ffd9ad,#f8b26a);box-shadow:0 0 0 2px rgba(91,66,88,.2),0 4px 18px rgba(70,45,80,.3)}
+#camShut i{display:block;width:48px;height:48px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 2px rgba(248,178,106,.8)}
+#camFlip{bottom:max(40px,calc(env(safe-area-inset-bottom,0px) + 34px));right:calc(22px + env(safe-area-inset-right,0px));width:56px;height:56px}
+body.selfie #camFlip{background:linear-gradient(180deg,#ffd9ad,#f8b26a);color:#fff}
+#camTag{position:absolute;top:max(22px,calc(env(safe-area-inset-top,0px) + 8px));left:50%;transform:translateX(-50%);padding:5px 14px;border-radius:999px;background:rgba(255,251,243,.78);color:#8f6e86;font-weight:900;font-size:13px;pointer-events:none;white-space:nowrap}
 body.touch #joy{left:calc(22px + env(safe-area-inset-left,0px));bottom:max(50px,calc(env(safe-area-inset-bottom,0px) + 44px));border:1.5px solid rgba(255,255,255,.9);background:radial-gradient(circle,rgba(255,255,255,.12) 0,rgba(70,45,80,.2) 100%);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);box-shadow:0 0 0 1px rgba(70,45,80,.14),inset 0 0 22px rgba(255,255,255,.2),0 4px 16px rgba(70,45,80,.14)}
 #knob{width:46px;height:46px;margin:-23px 0 0 -23px;background:radial-gradient(circle at 36% 30%,#fff 0,rgba(255,255,255,.88) 55%,rgba(255,236,214,.8) 100%);box-shadow:0 2px 10px rgba(70,45,80,.3),0 0 16px rgba(255,255,255,.6)}
 #joy .chev{position:absolute;width:0;height:0;border:5px solid transparent;opacity:.75;pointer-events:none}
@@ -269,6 +284,12 @@ body.touch #joy{left:calc(22px + env(safe-area-inset-left,0px));bottom:max(50px,
   </div>
 
   <button id="actBtn" type="button"><span id="actTxt">みる</span><kbd>E</kbd></button>
+  <div id="camUI">
+    <button class="cbtn" id="camBack" type="button" aria-label="カメラモードをおわる"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    <div id="camTag">カメラモード</div>
+    <button class="cbtn" id="camShut" type="button" aria-label="シャッター"><i></i></button>
+    <button class="cbtn" id="camFlip" type="button" aria-label="インカメ（自撮り）きりかえ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5V7a2 2 0 0 1 2-2h2.2l1.2-1.6h5.2L15.8 5H18a2 2 0 0 1 2 2v1.5"/><path d="M20 15.5V17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-1.5"/><path d="M9 11.5a3.2 3.2 0 0 1 5.6-1.6M15 12.5a3.2 3.2 0 0 1-5.6 1.6"/><path d="M14.8 8.2v2h-2M9.2 15.8v-2h2"/></svg></button>
+  </div>
   <div id="dbg" hidden></div>
   <div id="edPanel" class="card" hidden>
     <div class="edHead"><b id="edName">小物をえらんでね</b><button id="edMin" type="button" aria-label="たたむ">－</button></div>
@@ -358,8 +379,8 @@ body.touch #joy{left:calc(22px + env(safe-area-inset-left,0px));bottom:max(50px,
 <div class="modal" id="mPhoto">
   <div class="sheet" id="photoSheet">
     <img id="photoImg" alt="撮影した写真">
-    <div id="photoNote">画像を長押し（パソコンは右クリック）して保存できます。</div>
-    <div class="actions"><button class="btn sub" id="btnRetake" type="button">ポーズをかえてもう1枚</button><button class="btn" id="btnPhotoClose" type="button">とじる</button></div>
+    <div id="photoNote">「保存」ボタンか、画像を長押し（パソコンは右クリック）して保存できます。</div>
+    <div class="actions"><button class="btn" id="btnSave" type="button">保存</button><button class="btn sub" id="btnRetake" type="button">ポーズをかえてもう1枚</button><button class="btn sub" id="btnToCam" type="button" hidden>カメラモードでとる</button><button class="btn sub" id="btnToPanel" type="button" hidden>パネルでとる</button><button class="btn sub" id="btnPhotoClose" type="button">とじる</button></div>
   </div>
 </div>
 
@@ -2848,15 +2869,29 @@ function takePhoto(p,k){
   warm.position.copy(sv.wl);p.group.children.forEach(c=>{if(c.isSprite)c.visible=true});
   piyo.group.rotation.y=sv.ry;setWings(false,0);if(broomG)broomG.visible=bv;
   if(url){
-    $('btnRetake').textContent='ポーズをかえてもう1枚';
+    $('btnRetake').textContent='ポーズをかえてもう1枚';$('btnToCam').hidden=false;$('btnToPanel').hidden=true;
     $('photoImg').src=url;save.photos[p.id]=(save.photos[p.id]||0)+1;persist();
     const fl=$('flash');fl.classList.add('on');requestAnimationFrame(()=>requestAnimationFrame(()=>fl.classList.remove('on')));
     burst(px,pgy+1.6,pz,40,SPARK,3.5,2);openModal('mPhoto');
   }else toast('写真をとれませんでした\nもう一度ためしてね');
 }
 
+function setCamMode(on){
+  if(!on&&state.selfie){state.selfie=false;cam.yaw=player.face+Math.PI;cam.cur=undefined}
+  state.camMode=on;if(!on)state.selfie=false;
+  document.body.classList.toggle('cammode',on);document.body.classList.toggle('selfie',!!state.selfie);
+  input.jx=input.jy=0;
+  if(on)toast('カメラモード\nドラッグで角度、スティックで移動',2600);
+}
+function setSelfie(on){
+  if(on&&player.fly){toast('空をとんでいる間は\n自撮りできないよ');return}
+  if(!on&&state.selfie){cam.yaw=player.face+Math.PI;cam.cur=undefined}
+  state.selfie=on;document.body.classList.toggle('selfie',on);
+  if(on){cam.sAng=player.face;cam.sp=.14;input.jx=input.jy=0;input.dash=false}
+  $('camTag').textContent=on?'じどりモード':'カメラモード';
+}
 function takeFreePhoto(){
-  lastShot={free:true};
+  lastShot={free:true,panel:state.nearPanel};
   const SS=renderer.capabilities.maxTextureSize>=4096?1.5:1,PW=1080*SS|0,PH=1440*SS|0;
   const oldPR=renderer.getPixelRatio();let url=null;
   try{
@@ -2870,13 +2905,13 @@ function takeFreePhoto(){
     g.fillStyle='#1a1033';g.textAlign='center';g.textBaseline='alphabetic';
     g.font='400 56px "Mochiy Pop One","Zen Maru Gothic",sans-serif';g.fillText(DATA.title||'うさぽんのハロウィン街',600,1590);
     g.font='700 32px "Zen Maru Gothic","Hiragino Maru Gothic ProN",sans-serif';g.fillStyle='#6b3b8e';
-    const d=new Date();g.fillText('ピヨちゃんの 街さんぽ　'+d.getFullYear()+'.'+(d.getMonth()+1)+'.'+d.getDate(),600,1644);
+    const d=new Date();g.fillText((state.selfie?'ピヨちゃんの じどり　':'ピヨちゃんの 街さんぽ　')+d.getFullYear()+'.'+(d.getMonth()+1)+'.'+d.getDate(),600,1644);
     [[110,1560],[1090,1560]].forEach(a=>{g.fillStyle='#ff8a2a';g.beginPath();g.ellipse(a[0],a[1],26,21,0,0,6.3);g.fill();g.fillStyle='#3f5a2a';g.fillRect(a[0]-3,a[1]-30,6,12)});
     url=out.toDataURL('image/jpeg',.92);
   }catch(e){console.error(e)}
   renderer.setPixelRatio(oldPR);onResize();
   if(url){
-    $('photoImg').src=url;$('btnRetake').textContent='もう1枚とる';
+    $('photoImg').src=url;$('btnRetake').textContent='つづけてとる';$('btnToCam').hidden=true;$('btnToPanel').hidden=!lastShot.panel;
     const fl=$('flash');fl.classList.add('on');requestAnimationFrame(()=>requestAnimationFrame(()=>fl.classList.remove('on')));
     burst(player.pos.x,player.pos.y+1.6,player.pos.z,30,SPARK,3.5,2);openModal('mPhoto');
   }else toast('写真をとれませんでした\nもう一度ためしてね');
@@ -2902,13 +2937,14 @@ function doAct(){
 /* ---------- input ---------- */
 const GAMEKEYS=['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','ShiftLeft','ShiftRight','KeyQ','KeyC'];
 window.addEventListener('keydown',e=>{
-  if(e.code==='Escape'){['mBook','mReset','mPhoto','mDone','mSpot'].forEach(id=>{if($(id).classList.contains('on'))closeModal(id)});return}
+  if(e.code==='Escape'){if(state.camMode&&state.mode==='play'){setCamMode(false);return}['mBook','mReset','mPhoto','mDone','mSpot'].forEach(id=>{if($(id).classList.contains('on'))closeModal(id)});return}
   if(state.mode!=='play'){return}
   if(GAMEKEYS.includes(e.code))e.preventDefault();
   input.keys[e.code]=true;
   if(e.code==='Space')input.jump=true;
   if((e.code==='KeyF'||e.code==='Enter')&&state.nearPanel&&!e.repeat)takePhoto(state.nearPanel,0);
-  if(e.code==='KeyP'&&state.mode==='play'&&!e.repeat){if(state.nearPanel)takePhoto(state.nearPanel,0);else takeFreePhoto()}
+  if(e.code==='KeyP'&&state.mode==='play'&&!e.repeat){if(state.camMode)takeFreePhoto();else if(state.nearPanel)takePhoto(state.nearPanel,0);else setCamMode(true)}
+  if(e.code==='KeyV'&&state.mode==='play'&&state.camMode&&!e.repeat)setSelfie(!state.selfie)
   if(e.code==='KeyE'&&!e.repeat)doAct();
   if(e.code==='KeyH'&&!e.repeat)showHint();
   if(e.code==='KeyQ'&&!e.repeat)setFly(!player.fly);
@@ -2931,6 +2967,7 @@ canvas.addEventListener('pointermove',e=>{
   const p=ptrs.get(e.pointerId);if(!p||state.mode!=='play')return;
   const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
   if(ptrs.size>=2){const a=[...ptrs.values()],d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);if(pinch0){cam.dist=clamp(cam.dist-(d-pinch0)*.03,3.6,13)}pinch0=d;return}
+  if(state.selfie){if(ptrs.size<2){cam.sAng-=dx*.0068;cam.sp=clamp(cam.sp+dy*.003,-.12,.45)}return}
   cam.yaw-=dx*.0068;cam.pitch=clamp(cam.pitch+dy*.0052,.04,1.45);
 });
 const endPtr=e=>{ptrs.delete(e.pointerId);pinch0=0};
@@ -2948,7 +2985,20 @@ canvas.addEventListener('pointerup',endPtr);canvas.addEventListener('pointercanc
   const dEnd=()=>{input.dash=false;dash.classList.remove('hold')};dash.addEventListener('pointerup',dEnd);dash.addEventListener('pointercancel',dEnd);
   jump.addEventListener('pointerdown',e=>{input.jump=true;e.preventDefault()});
 })();
-$('photoBtn').addEventListener('click',()=>{if(state.mode!=='play')return;if(state.nearPanel)takePhoto(state.nearPanel,0);else takeFreePhoto()});
+$('photoBtn').addEventListener('click',()=>{if(state.mode!=='play')return;if(state.nearPanel)takePhoto(state.nearPanel,0);else setCamMode(true)});
+$('camShut').addEventListener('click',()=>{if(state.mode==='play'&&state.camMode)takeFreePhoto()});
+$('camFlip').addEventListener('click',()=>{if(state.mode==='play'&&state.camMode)setSelfie(!state.selfie)});
+$('camBack').addEventListener('click',()=>{if(state.mode==='play')setCamMode(false)});
+$('btnToCam').addEventListener('click',()=>{closeModal('mPhoto');setCamMode(true)});
+$('btnToPanel').addEventListener('click',()=>{const p=lastShot.panel;closeModal('mPhoto');setCamMode(false);if(p)setTimeout(()=>takePhoto(p,0),30)});
+$('btnSave').addEventListener('click',async()=>{
+  try{
+    const b=await (await fetch($('photoImg').src)).blob(),f=new File([b],'usapon-photo-'+Date.now()+'.jpg',{type:'image/jpeg'});
+    if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f]});return}
+    const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=f.name;document.body.appendChild(a);a.click();
+    setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);
+  }catch(e){if(e&&e.name==='AbortError')return;toast('保存できなかったよ\n画像を長押ししてね')}
+});
 $('actBtn').addEventListener('click',doAct);
 $('btnBook').addEventListener('click',()=>{refreshBook();openModal('mBook')});
 $('btnBookClose').addEventListener('click',()=>closeModal('mBook'));
@@ -2967,7 +3017,7 @@ $('btnResetYes').addEventListener('click',()=>{
   panels.forEach(p=>{p.found=false;setFace(p);setPlate(p)});refreshHUD();closeModal('mReset');toast('はじめからスタート！');
 });
 $('btnPhotoClose').addEventListener('click',()=>{closeModal('mPhoto');if(state.pendingDone){state.pendingDone=false;setTimeout(showComplete,500)}});
-$('btnRetake').addEventListener('click',()=>{closeModal('mPhoto');setTimeout(()=>{if(lastShot.free)takeFreePhoto();else takePhoto(lastShot.p,lastShot.k+1)},30)});
+$('btnRetake').addEventListener('click',()=>{closeModal('mPhoto');if(lastShot.free)return;setTimeout(()=>takePhoto(lastShot.p,lastShot.k+1),30)});
 $('broomBtn').addEventListener('click',()=>{if(state.mode==='play'){$('broomBtn').classList.remove('pulse');setFly(!player.fly)}});
 $('btnDoneClose').addEventListener('click',()=>{closeModal('mDone');if(save.broom&&!player.fly){const b=$('broomBtn');b.classList.remove('pulse');void b.offsetWidth;b.classList.add('pulse')}});
 $('btnSpotClose').addEventListener('click',()=>closeModal('mSpot'));
@@ -3041,6 +3091,7 @@ function update(dt){
     ix=(k.KeyD||k.ArrowRight?1:0)-(k.KeyA||k.ArrowLeft?1:0)+input.jx;
     iy=(k.KeyW||k.ArrowUp?1:0)-(k.KeyS||k.ArrowDown?1:0)+input.jy;
   }
+  if(state.selfie){ix=0;iy=0}
   let mag=Math.hypot(ix,iy);if(mag>1){ix/=mag;iy/=mag;mag=1}
   if(player.sit){if(playing&&(mag>.35||input.jump))standUp();else{mag=0;ix=iy=0;input.jump=false}}
   const dash=playing&&(input.keys.ShiftLeft||input.keys.ShiftRight||input.dash);
@@ -3085,6 +3136,10 @@ function update(dt){
     const fl=player.ground?(speed>.4?Math.sin(player.phase*2)*.25:0):-1.1;
     piyo.wings[0].rotation.z=-.15+(player.ground?fl*.4:fl);piyo.wings[1].rotation.z=.15-(player.ground?fl*.4:fl);
   }
+  if(state.selfie&&!player.fly){
+    player.face=angLerp(player.face,cam.sAng,Math.min(1,dt*10));g.rotation.y=player.face;
+    if(!player.sit){piyo.wings[1].rotation.z=1.9-Math.sin(t*9)*.08;piyo.feet[0].rotation.x=piyo.feet[1].rotation.x=0}
+  }
   blob.position.set(player.pos.x,gy+.12,player.pos.z);const bs=1-Math.min(.5,(player.pos.y-gy)*.25);blob.scale.set(bs,1,bs);
   // camera
   const ty0=player.pos.y+1.35;
@@ -3125,6 +3180,15 @@ function update(dt){
   const cp=Math.cos(cam.pe),sp2=Math.sin(cam.pe);
   camera.position.set(tgt.x+Math.sin(cam.yaw)*cp*cam.cur,Math.max(groundY(tgt.x,tgt.z)+.5,tgt.y+sp2*cam.cur),tgt.z+Math.cos(cam.yaw)*cp*cam.cur);
   camera.lookAt(tgt);
+  if(state.selfie){
+    const a=cam.sAng;let sd=2.7,cx=0,cz=0;
+    for(;sd>1.3;sd-=.3){cx=player.pos.x+Math.sin(a)*sd;cz=player.pos.z+Math.cos(a)*sd;if(!collidesAt(cx,cz,.45,groundY(cx,cz)+1.2))break}
+    cx=player.pos.x+Math.sin(a)*sd;cz=player.pos.z+Math.cos(a)*sd;
+    camera.position.set(cx,Math.max(groundY(cx,cz)+.6,player.pos.y+1.2+cam.sp*3),cz);
+    camera.lookAt(player.pos.x,player.pos.y+1.0,player.pos.z);
+  }
+  { const bf=(window.innerWidth/window.innerHeight<.8)?66:58,wf=state.selfie?76:bf;
+    if(Math.abs(camera.fov-wf)>.05){camera.fov+=(wf-camera.fov)*Math.min(1,dt*8);camera.updateProjectionMatrix()}}
   { // ghosts standing between camera and Piyo become see-through (camera-local, no wall transparency)
     const cx=camera.position.x,cy=camera.position.y,cz=camera.position.z,vx=tgt.x-cx,vy=tgt.y-cy,vz=tgt.z-cz,vl=vx*vx+vy*vy+vz*vz||1;
     for(const o of ghosts){const p=o.g.position,sc=o.g.scale.x;
