@@ -29,7 +29,8 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 #quest{position:absolute;left:16px;top:max(12px,env(safe-area-inset-top,0px));height:38px;box-sizing:border-box;padding:0 14px;display:flex;align-items:center;max-width:min(300px,calc(100vw - 236px));pointer-events:none;border-radius:19px}
 #quest{justify-content:center;white-space:nowrap;width:max-content}
 #quest .q-row{margin-top:0;flex-wrap:nowrap;justify-content:center;gap:9px}
-#dots{flex-wrap:nowrap}
+#dots{display:none!important}
+#qCount .ql{margin:0 5px 0 0;font-size:11px;color:var(--paper)}
 @media (max-width:520px){
   #quest{padding:0 10px;max-width:calc(100vw - 196px)}
   #quest .q-row{gap:6px}#qCount{font-size:15px}#qCount small{font-size:10px;margin-left:2px}
@@ -2796,7 +2797,7 @@ function quickPop(){let seen=0;try{seen=localStorage.getItem('usapon-quick-seen'
 function toast(msg,ms){const t=$('toast');t.textContent=msg;t.classList.add('on');clearTimeout(state.toastT);state.toastT=setTimeout(()=>t.classList.remove('on'),ms||2600)}
 function refreshHUD(){
   const n=panels.length,f=panels.filter(p=>p.found).length;
-  $('qCount').innerHTML=f+'<small>/ '+n+' みつけた</small>';
+  $('qCount').innerHTML='<small class="ql">見つけたパネル</small>'+f+'<small>/ '+n+'</small>';
   $('dots').innerHTML=panels.map(p=>'<i class="'+(p.found?'on':'')+'"></i>').join('');
   const done=f>=n&&n>0;
   $('qTeaser').classList.toggle('done',done);
@@ -2892,12 +2893,12 @@ function takePhoto(p,k){
 
 function setCamMode(on){
   if(!on&&state.selfie){state.selfie=false;cam.yaw=player.face+Math.PI;cam.cur=undefined}
-  state.camMode=on;if(!on)state.selfie=false;
+  state.camMode=on;if(!on){state.selfie=false;piyo.group.visible=true;blob.visible=true}else{cam.fp=.05;cam.zoom=1}
   document.body.classList.toggle('cammode',on);document.body.classList.toggle('selfie',!!state.selfie);
   input.jx=input.jy=0;
   $('camTag').textContent='カメラモード';
   if(on){let seen=false;try{seen=localStorage.getItem('usapon-camtour')==='1'}catch(e){}
-    if(!seen)setTimeout(()=>{if(state.camMode)showCamTour()},350);else toast('カメラモード\nドラッグで角度、スティックで移動',2200)}
+    if(!seen)setTimeout(()=>{if(state.camMode)showCamTour()},350);else toast('カメラモード（ピヨちゃんの目線）\nドラッグでむき、スティックで移動',2400)}
 }
 function showCamTour(){
   const t=$('camTour'),W=window.innerWidth,H=window.innerHeight;let holes='',rings='',labs='';
@@ -2915,7 +2916,7 @@ function showCamTour(){
     labs+='<div class="ctl" style="'+st+'">'+a[1]+'</div>';
   });
   t.innerHTML='<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'"><defs><mask id="ctm"><rect width="'+W+'" height="'+H+'" fill="#fff"/>'+holes+'</mask></defs><rect width="'+W+'" height="'+H+'" fill="rgba(12,6,28,.76)" mask="url(#ctm)"/>'+rings+'</svg>'+labs+
-    '<div class="ctl mid" style="top:'+(H*.36)+'px">ドラッグで かくど\n2本指で ズーム（ひろげる＝ちかく）</div><div class="ctl mid" style="top:'+(H*.5)+'px">タップでとじる</div>';
+    '<div class="ctl mid" style="top:'+(H*.36)+'px">ドラッグで むきをかえる\n2本指で ズーム（ひろげる＝ちかく）</div><div class="ctl mid" style="top:'+(H*.5)+'px">タップでとじる</div>';
   t.classList.add('on');
 }
 function hideCamTour(){$('camTour').classList.remove('on');try{localStorage.setItem('usapon-camtour','1')}catch(e){}}
@@ -2991,7 +2992,7 @@ window.addEventListener('keydown',e=>{
 window.addEventListener('keyup',e=>{input.keys[e.code]=false});
 window.addEventListener('blur',()=>{input.keys={};input.dash=false});
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
-canvas.addEventListener('wheel',e=>{if(state.mode!=='play')return;e.preventDefault();if(state.selfie)cam.sd=clamp((cam.sd||2.7)+e.deltaY*.004,1.2,5.5);else cam.dist=clamp(cam.dist+e.deltaY*.008,state.camMode?2.2:3.6,state.camMode?16:13)},{passive:false});
+canvas.addEventListener('wheel',e=>{if(state.mode!=='play')return;e.preventDefault();if(state.selfie)cam.sd=clamp((cam.sd||2.7)+e.deltaY*.004,1.2,5.5);else if(state.camMode)cam.zoom=clamp((cam.zoom||1)+e.deltaY*.001,.3,1.25);else cam.dist=clamp(cam.dist+e.deltaY*.008,3.6,13)},{passive:false});
 const ptrs=new Map();let pinch0=0;
 canvas.addEventListener('pointerdown',e=>{
   if(state.mode!=='play')return;
@@ -3002,8 +3003,9 @@ canvas.addEventListener('pointerdown',e=>{
 canvas.addEventListener('pointermove',e=>{
   const p=ptrs.get(e.pointerId);if(!p||state.mode!=='play')return;
   const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
-  if(ptrs.size>=2){const a=[...ptrs.values()],d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);if(pinch0){if(state.selfie)cam.sd=clamp((cam.sd||2.7)-(d-pinch0)*.012,1.2,5.5);else cam.dist=clamp(cam.dist-(d-pinch0)*.03,state.camMode?2.2:3.6,state.camMode?16:13)}pinch0=d;return}
+  if(ptrs.size>=2){const a=[...ptrs.values()],d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);if(pinch0){if(state.selfie)cam.sd=clamp((cam.sd||2.7)-(d-pinch0)*.012,1.2,5.5);else if(state.camMode)cam.zoom=clamp((cam.zoom||1)-(d-pinch0)*.004,.3,1.25);else cam.dist=clamp(cam.dist-(d-pinch0)*.03,3.6,13)}pinch0=d;return}
   if(state.selfie){if(ptrs.size<2){cam.sAng-=dx*.0068;cam.sp=clamp(cam.sp+dy*.003,-.12,.45)}return}
+  if(state.camMode){const zf=Math.max(.4,cam.zoom||1);cam.yaw-=dx*.0068*zf;cam.fp=clamp((cam.fp||0)+dy*.0052*zf,-1.1,1.25);return}
   cam.yaw-=dx*.0068;cam.pitch=clamp(cam.pitch+dy*.0052,.04,1.45);
 });
 const endPtr=e=>{ptrs.delete(e.pointerId);pinch0=0};
@@ -3229,6 +3231,11 @@ function update(dt){
   const cp=Math.cos(cam.pe),sp2=Math.sin(cam.pe);
   camera.position.set(tgt.x+Math.sin(cam.yaw)*cp*cam.cur,Math.max(groundY(tgt.x,tgt.z)+.5,tgt.y+sp2*cam.cur),tgt.z+Math.cos(cam.yaw)*cp*cam.cur);
   camera.lookAt(tgt);
+  const fpv=!!state.camMode&&!state.selfie; // camera mode = Piyo's own eyes: Piyo and her shadow are hidden
+  piyo.group.visible=!fpv;blob.visible=!fpv;
+  if(fpv){const ey=player.pos.y+(player.sit?1.0:1.45),q=cam.fp||0,cq=Math.cos(q);
+    camera.position.set(player.pos.x,ey,player.pos.z);
+    camera.lookAt(player.pos.x-Math.sin(cam.yaw)*cq,ey-Math.sin(q),player.pos.z-Math.cos(cam.yaw)*cq)}
   if(state.selfie){
     const a=cam.sAng;let sd=cam.sd||2.7,cx=0,cz=0;
     for(;sd>1.2;sd-=.3){cx=player.pos.x+Math.sin(a)*sd;cz=player.pos.z+Math.cos(a)*sd;if(!collidesAt(cx,cz,.45,groundY(cx,cz)+1.2))break}
@@ -3236,7 +3243,7 @@ function update(dt){
     camera.position.set(cx,Math.max(groundY(cx,cz)+.6,player.pos.y+1.2+cam.sp*3),cz);
     camera.lookAt(player.pos.x,player.pos.y+1.0,player.pos.z);
   }
-  { const bf=(window.innerWidth/window.innerHeight<.8)?66:58,wf=state.selfie?76:bf;
+  { const bf=(window.innerWidth/window.innerHeight<.8)?66:58,wf=state.selfie?76:bf*(fpv?(cam.zoom||1):1);
     if(Math.abs(camera.fov-wf)>.05){camera.fov+=(wf-camera.fov)*Math.min(1,dt*8);camera.updateProjectionMatrix()}}
   { // ghosts standing between camera and Piyo become see-through (camera-local, no wall transparency)
     const cx=camera.position.x,cy=camera.position.y,cz=camera.position.z,vx=tgt.x-cx,vy=tgt.y-cy,vz=tgt.z-cz,vl=vx*vx+vy*vy+vz*vz||1;
