@@ -3060,6 +3060,7 @@ function buildBoard(x,z,rot,title){
 }
 function buildSpots(){
   (DATA.spots||[]).forEach(sp=>{
+    if(sp.type==='tv')return; // うさぽんTVは今は非表示
     let x=sp.x,z=sp.z,rot=(sp.rot||0)*PI/180;
     if(sp.shop){const s=shopsOut.find(q=>q.shop===sp.shop);if(s){x=s.x+Math.cos(s.rot)*2.6;z=s.z-Math.sin(s.rot)*2.6;rot=s.rot}}
     if(x===undefined||z===undefined)return;
