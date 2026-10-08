@@ -3576,35 +3576,34 @@ function cafeBuild(){
   for(const z of [-3.3,0,3.3])box(DARK,0,H-.16,z,HW*2,.3,.3);
   for(const x of [-3,3])box(DARK,x,H-.16,0,.3,.3,HD*2);
   const plasterT=tex(plasterC,.3,.3),wallMat=new THREE.MeshLambertMaterial({map:plasterT});
-  const arch=(cx,y0,w,top,hole)=>{const r=w/2,yt=top-r;hole.moveTo(cx-r,y0);hole.lineTo(cx+r,y0);hole.lineTo(cx+r,yt);hole.absarc(cx,yt,r,0,PI,false);hole.lineTo(cx-r,y0)};
+  const arch=(cx,y0,w,top,hole,rect)=>{const r=w/2,yt=top-r;hole.moveTo(cx-r,y0);hole.lineTo(cx+r,y0);if(rect){hole.lineTo(cx+r,top);hole.lineTo(cx-r,top)}else{hole.lineTo(cx+r,yt);hole.absarc(cx,yt,r,0,PI,false)}hole.lineTo(cx-r,y0)};
   const WALLS={N:{len:HW*2,x:0,z:-HD,ry:0,sg:1,c:0},S:{len:HW*2,x:0,z:HD,ry:PI,sg:-1,c:0},W:{len:HD*2,x:-HW,z:0,ry:PI/2,sg:-1,c:0},E:{len:HD*2,x:HW,z:0,ry:-PI/2,sg:1,c:0}};
-  const EZ=2.6,OPEN={N:[{u:-3.2,y0:0,w:1.7,top:2.5}],S:[{u:DX,y0:0,w:1.9,top:2.7},{u:3.4,y0:.95,w:1.8,top:2.75}],W:[{u:-1,y0:.9,w:3.4,top:3.0}],E:[{u:EZ,y0:0,w:1.3,top:2.6}]};
+  const EZ=2.6,OPEN={N:[{u:-3.2,y0:0,w:1.7,top:2.5}],S:[{u:DX,y0:0,w:1.9,top:2.7},{u:DX-2.6,y0:1.0,w:1.5,top:2.5,rect:1},{u:DX+2.6,y0:1.0,w:1.5,top:2.5,rect:1}],W:[{u:0,y0:.95,w:2.4,top:2.55,rect:1}],E:[{u:EZ,y0:0,w:1.3,top:2.6}]}; // 外観に合わせる: 正面=アーチの左右に四角い窓、左の側面=中央に四角い窓、広場側=扉
   for(const k in WALLS){const w=WALLS[k],sh=new THREE.Shape();sh.moveTo(-w.len/2,0);sh.lineTo(w.len/2,0);sh.lineTo(w.len/2,H);sh.lineTo(-w.len/2,H);sh.closePath();
-    OPEN[k].forEach(o=>{const h=new THREE.Path();arch(w.sg*(o.u-w.c),o.y0,o.w,o.top,h);sh.holes.push(h)});
+    OPEN[k].forEach(o=>{const h=new THREE.Path();arch(w.sg*(o.u-w.c),o.y0,o.w,o.top,h,o.rect);sh.holes.push(h)});
     place(new THREE.Mesh(new THREE.ShapeGeometry(sh,10),wallMat),w.x,0,w.z,w.ry)}
   // wall-relative helpers: u along the wall, depth into the room
   const wxz=(k,u,d)=>k==='N'?[u,-HD+d]:k==='S'?[u,HD-d]:k==='W'?[-HW+d,u]:[HW-d,u];
   const wbox=(col,k,u,y,d,wu,hy,dd)=>{const p=wxz(k,u,d),ns=k==='N'||k==='S';box(col,p[0],y,p[1],ns?wu:dd,hy,ns?dd:wu)};
   const wry=k=>WALLS[k].ry;
-  const opening=(k,o,mull)=>{ // frame: jambs + arch ring + sill + mullions
-    const r=o.w/2,yt=o.top-r;
+  const opening=(k,o,mull)=>{ // frame: jambs + arch ring (or lintel for a square window) + mullions
+    const r=o.w/2,yt=o.rect?o.top:o.top-r;
     wbox(WOOD,k,o.u-r-.07,(o.y0+yt)/2,.04,.14,yt-o.y0,.34);wbox(WOOD,k,o.u+r+.07,(o.y0+yt)/2,.04,.14,yt-o.y0,.34);
+    if(o.rect){wbox(WOOD,k,o.u,o.top+.07,.04,o.w+.28,.14,.34);if(mull){wbox(WOOD,k,o.u,(o.y0+o.top)/2,.03,.06,o.top-o.y0,.06);wbox(WOOD,k,o.u,o.y0+(o.top-o.y0)*.55,.03,o.w,.05,.05)}return}
     const rg=new THREE.RingGeometry(r,r+.14,20,1,0,PI);const p=wxz(k,o.u,.01);
-    add(rg,WOOD,p[0]-OX*0+0,yt,p[1],1,1,1,wry(k));
-    if(mull){wbox(WOOD,k,o.u,yt/2+o.y0/2,.03,.06,yt-o.y0,.06);wbox(WOOD,k,o.u-r/2.1,(o.y0+yt)/2,.03,.05,yt-o.y0,.05);wbox(WOOD,k,o.u+r/2.1,(o.y0+yt)/2,.03,.05,yt-o.y0,.05);
-      wbox(WOOD,k,o.u,o.y0+(yt-o.y0)*.62,.03,o.w,.05,.05);}
+    add(rg,WOOD,p[0],yt,p[1],1,1,1,wry(k));
   };
-  opening('W',OPEN.W[0],true);opening('S',OPEN.S[1],true);opening('S',OPEN.S[0],false);opening('N',OPEN.N[0],false);opening('E',OPEN.E[0],false);
+  opening('W',OPEN.W[0],true);opening('S',OPEN.S[1],true);opening('S',OPEN.S[2],true);opening('S',OPEN.S[0],false);opening('N',OPEN.N[0],false);opening('E',OPEN.E[0],false);
   // sills
-  wbox(WOOD,'W',-1,.9,.17,3.9,.07,.5);wbox(WOOD,'S',3.4,.95,.17,2.2,.07,.5);
+  wbox(WOOD,'W',0,.93,.17,2.9,.07,.5);wbox(WOOD,'S',DX-2.6,.98,.17,2.0,.07,.5);wbox(WOOD,'S',DX+2.6,.98,.17,2.0,.07,.5);
   // skirting
-  [['N',-6,6],['E',-5,EZ-.8],['E',EZ+.8,5],['W',-5,-2.75],['W',.75,5],['S',-6,DX-.8],['S',DX+.8,6]].forEach(a=>{const k=a[0];wbox(DARK,k,(a[1]+a[2])/2,.07,.03,a[2]-a[1],.14,.06)});
+  [['N',-6,6],['E',-5,EZ-.8],['E',EZ+.8,5],['W',-5,5],['S',-6,DX-1.05],['S',DX+1.05,6]].forEach(a=>{const k=a[0];wbox(DARK,k,(a[1]+a[2])/2,.07,.03,a[2]-a[1],.14,.06)});
 
   /* ---- backdrops seen through the windows ---- */
   const bdMat=new THREE.MeshBasicMaterial({map:tex(skyC),fog:false});
-  const bdW=new THREE.Mesh(new THREE.PlaneGeometry(18,9),bdMat);bdW.rotation.y=PI/2;bdW.position.set(OX-HW-9,3.2,OZ-1);root.add(bdW);
-  const bdS=new THREE.Mesh(new THREE.PlaneGeometry(14,7),bdMat);bdS.rotation.y=PI;bdS.position.set(OX+3.4,2.4,OZ+HD+8);root.add(bdS);
-  const bdE=new THREE.Mesh(new THREE.PlaneGeometry(10,6),bdMat);bdE.rotation.y=-PI/2;bdE.position.set(OX+HW+8,2.0,OZ+EZ);root.add(bdE);
+  const bdW=new THREE.Mesh(new THREE.PlaneGeometry(30,10),bdMat);bdW.rotation.y=PI/2;bdW.position.set(OX-HW-9,3.2,OZ);root.add(bdW);
+  const bdS=new THREE.Mesh(new THREE.PlaneGeometry(30,9),bdMat);bdS.rotation.y=PI;bdS.position.set(OX+DX,2.4,OZ+HD+8);root.add(bdS);
+  const bdE=new THREE.Mesh(new THREE.PlaneGeometry(24,9),bdMat);bdE.rotation.y=-PI/2;bdE.position.set(OX+HW+8,2.0,OZ+EZ);root.add(bdE);
   const bdD=new THREE.Mesh(new THREE.PlaneGeometry(10,6),bdMat);bdD.rotation.y=PI;bdD.position.set(OX+DX,2.0,OZ+HD+8);root.add(bdD);
 
   /* ---- green arched door (噴水広場側 = 東の壁) ---- */
@@ -3615,6 +3614,9 @@ function cafeBuild(){
     box('#566f60',HW,1.3+(yt-1.3)/2+.2,EZ,.03,yt-1.3,.04);box('#566f60',HW,1.75,EZ,.03,.04,.92);
     box('#5a7767',HW-.01,.62,EZ,.03,.9,.8);box('#5a7767',HW-.02,.62,EZ,.02,.72,.62);
     ell('#d8a24a',HW-.08,1.05,EZ-.5,.05,.05,.05)}
+  // 外観と同じ扉モデルを店内の光で(Lambert)つける。失敗しても上の基本形の扉が残る
+  try{const dm=cafeGLB(CAFE_DOOR_GLB);dm.traverse(o=>{if(o.isMesh){o.geometry.computeVertexNormals();o.material=new THREE.MeshLambertMaterial({map:o.material.map,side:THREE.DoubleSide})}});
+    dm.scale.setScalar(1.45);dm.position.set(OX+HW-.12,.95*1.45,OZ+EZ);dm.rotation.y=-PI/2;root.add(dm)}catch(e){console.warn('cafe inner door failed',e)}
   // door mat
   place(new THREE.Mesh(new THREE.PlaneGeometry(1.1,.7),new THREE.MeshLambertMaterial({map:tex(matC)})),HW-.8,.012,EZ,PI/2,-PI/2);
   // rug
@@ -3665,8 +3667,8 @@ function cafeBuild(){
   plant(-5.35,4.35,1.9);plant(5.35,4.4,1.5,'#d9cfb8');plant(-1.1,-.6,1.4,'#e8dcc4');
   addCircle(OX-5.35,OZ+4.35,.4);addCircle(OX+5.35,OZ+4.4,.34);addCircle(OX-1.1,OZ-.6,.3);
   // window sill: books + flower pot + ivy
-  [['#a85a4a',-1.2],['#6a8a9a',-1.12]].forEach((b,i)=>box(b[0],-HW+.17,1.0+i*.09,-1.7+(i?.05:0),.2,.1,.24));
-  box('#d9b88a',-HW+.18,.97,-1.7,.2,.04,.26);box('#c9a050',-HW+.17,1.2,-1.55,.18,.09,.22);
+  [['#a85a4a',-1.2],['#6a8a9a',-1.12]].forEach((b,i)=>box(b[0],-HW+.17,1.0+i*.09,-.95+(i?.05:0),.2,.1,.24));
+  box('#d9b88a',-HW+.18,.97,-.95,.2,.04,.26);box('#c9a050',-HW+.17,1.2,-.8,.18,.09,.22);
   cyl(CREAM,-HW+.22,1.07,-.2,.1,.13);for(let i=0;i<5;i++)ell(i%2?'#ffffff':'#fff7dd',-HW+.18+rnd()*.1,1.25+rnd()*.12,-.28+rnd()*.2,.05,.025,.05);for(let i=0;i<7;i++)ell(LEAF[i%3],-HW+.28+rnd()*.08,1.16-i*.05,-.15+rnd()*.12,.045,.05,.045);
   // shelf on the east wall with plants + hanging ivy
   box(WOOD,HW-.12,1.9,-.6,.3,.05,1.7);box(DARK,HW-.14,1.78,-1.2,.04,.2,.04);box(DARK,HW-.14,1.78,0,.04,.2,.04);
@@ -3687,7 +3689,7 @@ function cafeBuild(){
   // glass dome
   const dome=new THREE.Mesh(new THREE.SphereGeometry(.3,14,8,0,6.2832,0,1.5708),new THREE.MeshBasicMaterial({color:'#dff3f5',transparent:true,opacity:.25,depthWrite:false,side:THREE.DoubleSide}));place(dome,1.5,1.2,-2.6);root.add(dome);
   // window light falling on the floor (additive, no real light needed)
-  const patch=new THREE.Mesh(new THREE.PlaneGeometry(5.2,2.6),new THREE.MeshBasicMaterial({map:tex(patchC),transparent:true,opacity:.28,blending:THREE.AdditiveBlending,depthWrite:false,fog:false,color:'#ffd9a0'}));place(patch,-3.0,.02,-1.4,0,-PI/2);
+  const patch=new THREE.Mesh(new THREE.PlaneGeometry(5.2,2.6),new THREE.MeshBasicMaterial({map:tex(patchC),transparent:true,opacity:.28,blending:THREE.AdditiveBlending,depthWrite:false,fog:false,color:'#ffd9a0'}));place(patch,-3.0,.02,-.2,0,-PI/2);
   // soft contact shadows
   const sh=new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.22,depthWrite:false}),shg=new THREE.CircleGeometry(1,16).rotateX(-PI/2);
   tables.forEach(t=>{const m=new THREE.Mesh(shg,sh);m.scale.set(1.1,1,1.1);place(m,t.x,.015,t.z)});
@@ -3707,7 +3709,8 @@ function cafeSet(on){
     CAFE.in=true;cafeBuild();
     CAFE.hid=[];scene.children.forEach(c=>{if(c===CAFE.root||c===piyo.group||c===blob||c===pPts||c.isLight)return;if(c.visible){c.visible=false;CAFE.hid.push(c)}});
     CAFE.root.visible=true;CAFE.lights.forEach(l=>scene.add(l));
-    CAFE.saved={mp:moon.position.clone(),mi:moon.intensity,mc:moon.color.getHex(),hc:hemi.color.getHex(),hg:hemi.groundColor.getHex(),wi:warm.intensity,wd:warm.distance,dist:cam.dist};
+    CAFE.saved={clear:renderer.getClearColor(new THREE.Color()).getHex(),mp:moon.position.clone(),mi:moon.intensity,mc:moon.color.getHex(),hc:hemi.color.getHex(),hg:hemi.groundColor.getHex(),wi:warm.intensity,wd:warm.distance,dist:cam.dist};
+    renderer.setClearColor(0xcfe3ee); // 窓の外の絵からはみ出した所は空色に
     moon.position.set(-40,24,-8);moon.intensity=.5;moon.color.set(0xffc890);
     hemi.color.set(0xfff2e0);hemi.groundColor.set(0x9a7048);
     warm.intensity=.4;warm.distance=7;
@@ -3716,6 +3719,7 @@ function cafeSet(on){
     const S=CAFE.saved;CAFE.in=false;
     CAFE.root.visible=false;CAFE.lights.forEach(l=>scene.remove(l));
     CAFE.hid.forEach(c=>{c.visible=true});CAFE.hid=[];
+    renderer.setClearColor(S.clear);
     moon.position.copy(S.mp);moon.intensity=S.mi;moon.color.set(S.mc);hemi.color.set(S.hc);hemi.groundColor.set(S.hg);warm.intensity=S.wi;warm.distance=S.wd;cam.dist=S.dist;
     INTERIOR.on=false;state.inCafe=false;document.body.classList.remove('incafe');
   }
