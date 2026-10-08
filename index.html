@@ -1510,7 +1510,7 @@ function windowAt(C,lx,ly,lz,yaw,ww,wh,arch,flowerBox,shutters){
   }
   const q=C.W(lx+nx*.9,lz+nz*.9);addGlow(q[0],C.y0+ly,q[1],2.0,gc);
 }
-function archDoor(C,lx,lz,yaw,open,doorC){
+function archDoor(C,lx,lz,yaw,open,doorC,noLeaf){
   const nx=Math.sin(yaw),nz=Math.cos(yaw),rx=Math.cos(yaw),rz=-Math.sin(yaw);
   bx('cyl',C,lx+nx*.04,2.0,lz+nz*.04,.78,.12,.78,'#d8c4a8',yaw,Math.PI/2);
   bx('wall',C,lx+nx*.04,.97,lz+nz*.04,1.56,1.94,.12,'#d8c4a8',yaw);
@@ -1519,9 +1519,9 @@ function archDoor(C,lx,lz,yaw,open,doorC){
     bx('glass',C,lx-nx*.02,.95,lz-nz*.02,1.2,1.9,.1,'#ffd27a',yaw);
     bx('cylg',C,lx-nx*.02,1.9,lz-nz*.02,.6,.1,.6,'#ffd27a',yaw,Math.PI/2);
     // open door leaf swung to the side
-    const q=C.W(lx+rx*.6+nx*.55,lz+rz*.6+nz*.55);
+    if(!noLeaf){const q=C.W(lx+rx*.6+nx*.55,lz+rz*.6+nz*.55);
     B.wood.add(q[0],C.y0+.97,q[1],.1,1.94,1.1,C.rot+yaw+.0,doorC);
-    B.cylw.add(q[0],C.y0+1.93,q[1],.55,.1,.55,C.rot+yaw,doorC,0,Math.PI/2);   // arched top so the leaf fits the round opening
+    B.cylw.add(q[0],C.y0+1.93,q[1],.55,.1,.55,C.rot+yaw,doorC,0,Math.PI/2)}   // arched top so the leaf fits the round opening
     const gq=C.W(lx+nx*1.4,lz+nz*1.4);addGlow(gq[0],C.y0+1.1,gq[1],4.4,'#ffc060');
     poolAt(C,lx+nx*1.6,lz+nz*1.6,4.2,'#9a6020');
   }else{
@@ -1640,7 +1640,7 @@ function buildHouse(h){
     // front facade: door + windows
     let winX=[-w*.33,w*.33];
     if(h.kind==='shop'){
-      archDoor(C,0,d/2+.04,0,true,pick(DOORC));
+      archDoor(C,0,d/2+.04,0,true,pick(DOORC),h.shop==='cupcake'); // カフェ正面(屋外テーブル側)は扉なしのアーチ
       windowAt(C,winX[0],by+1.5,d/2,0,1.1,1.3,true,false,false);windowAt(C,winX[1],by+1.5,d/2,0,1.1,1.3,true,false,false);
     }else{
       archDoor(C,dx,doorZ+.04,0,false,pick(DOORC));
@@ -1663,11 +1663,13 @@ function buildHouse(h){
     // side windows
     for(let f=0;f<fl;f++){for(const sx of [-1,1]){
       const sw=w;
+      if(h.shop==='cupcake'&&sx===1&&f===0){const sn=SNAP();windowAt(C,sx*sw/2,by+f*fh+1.5,0,sx*Math.PI/2,.85,1.1,f===0,false,false);UNSNAP(sn); // 乱数は同じだけ進め、窓は消して噴水広場側に扉をつける
+        archDoor(C,sw/2,0,Math.PI/2,false,DOORC[0]);continue}
       windowAt(C,sx*sw/2,by+f*fh+1.5,0,sx*Math.PI/2,.85,1.1,f===0,false,false);
     }}
     pumpkinsAt(C,dx,doorZ+.8,h.kind==='shop'?1:(1+(rand()<.6?1:0)+(rand()<.4?1:0)),true);
     poolAt(C,dx,doorZ+2.4,5.4,'#7a4a1a');
-    if(rand()<.8){ivy(C,w/2+.04,0,Math.PI/2,H-.5,8,-d/2+.45,d/2-.45);ivy(C,-w/2-.04,0,-Math.PI/2,H-.8,6,-d/2+.45,d/2-.45)}
+    if(rand()<.8){if(h.shop!=='cupcake')ivy(C,w/2+.04,0,Math.PI/2,H-.5,8,-d/2+.45,d/2-.45); /* カフェは噴水広場側にドアをつけるので、その壁のツタは省く */ ivy(C,-w/2-.04,0,-Math.PI/2,H-.8,6,-d/2+.45,d/2-.45)}
     if(rand()<.45)ivy(C,-w*.45,d/2+.05,0,fl>1?4.2:2.4,7,-w*.05+.45,w*.95-.45);
     if(h.kind!=='shop'){ // frontage clutter
       const kinds=['barrel','crate','pot','bench','pot','barrel','lantern'];
@@ -1885,7 +1887,7 @@ HOUSE_LIST.forEach(h=>{
   const kill=false,snap=null;
   const C=buildHouse(h);
   if(kill){UNSNAP(snap);h.__kill=1;return}
-  if(h.kind==='shop'){shopExtras(C,h);shopsOut.push({id:h.id,x:h.x+C.s*(h.d/2+1.8),z:h.z+C.c*(h.d/2+1.8),rot:h.rot,shop:h.shop,house:h})}});
+  if(h.kind==='shop'){shopExtras(C,h);shopsOut.push({id:h.id,x:h.x+C.s*(h.d/2+1.8),z:h.z+C.c*(h.d/2+1.8),sx:h.x+C.c*(h.w/2+1.8),sz:h.z-C.s*(h.w/2+1.8),rot:h.rot,shop:h.shop,house:h})}});
 for(let i=HOUSE_LIST.length-1;i>=0;i--)if(HOUSE_LIST[i].__kill)HOUSE_LIST.splice(i,1);
 ['flower','zakka','cupcake'].forEach(k=>{if(!shopsOut.find(s=>s.shop===k))warnings.push('お店 '+k+' を置けませんでした')});
 
@@ -3139,8 +3141,8 @@ function standUp(){
 }
 function doAct(){
   const a=state.act;if(!a||state.mode!=='play')return;
-  if(a.type==='cafeEnter'){cafeEnter();return}
-  if(a.type==='cafeExit'){cafeExit();return}
+  if(a.type==='cafeEnter'){cafeEnter(a.via);return}
+  if(a.type==='cafeExit'){cafeExit(a.via);return}
   if(a.type==='stand'){standUp();return}
   if(a.type==='sit'){const s=a.obj;player.sit=s;player.pos.set(s.x,s.y+.05,s.z);player.vx=player.vz=0;player.face=s.face;player.ground=true;toast('すわったよ\n動くと立ち上がるよ');return}
   if(a.type==='spot'){
@@ -3575,7 +3577,7 @@ function cafeBuild(){
   const plasterT=tex(plasterC,.3,.3),wallMat=new THREE.MeshLambertMaterial({map:plasterT});
   const arch=(cx,y0,w,top,hole)=>{const r=w/2,yt=top-r;hole.moveTo(cx-r,y0);hole.lineTo(cx+r,y0);hole.lineTo(cx+r,yt);hole.absarc(cx,yt,r,0,PI,false);hole.lineTo(cx-r,y0)};
   const WALLS={N:{len:HW*2,x:0,z:-HD,ry:0,sg:1,c:0},S:{len:HW*2,x:0,z:HD,ry:PI,sg:-1,c:0},W:{len:HD*2,x:-HW,z:0,ry:PI/2,sg:-1,c:0},E:{len:HD*2,x:HW,z:0,ry:-PI/2,sg:1,c:0}};
-  const OPEN={N:[{u:-3.2,y0:0,w:1.7,top:2.5}],S:[{u:DX,y0:0,w:1.3,top:2.6},{u:3.4,y0:.95,w:1.8,top:2.75}],W:[{u:-1,y0:.9,w:3.4,top:3.0}],E:[]};
+  const EZ=2.6,OPEN={N:[{u:-3.2,y0:0,w:1.7,top:2.5}],S:[{u:DX,y0:0,w:1.9,top:2.7},{u:3.4,y0:.95,w:1.8,top:2.75}],W:[{u:-1,y0:.9,w:3.4,top:3.0}],E:[{u:EZ,y0:0,w:1.3,top:2.6}]};
   for(const k in WALLS){const w=WALLS[k],sh=new THREE.Shape();sh.moveTo(-w.len/2,0);sh.lineTo(w.len/2,0);sh.lineTo(w.len/2,H);sh.lineTo(-w.len/2,H);sh.closePath();
     OPEN[k].forEach(o=>{const h=new THREE.Path();arch(w.sg*(o.u-w.c),o.y0,o.w,o.top,h);sh.holes.push(h)});
     place(new THREE.Mesh(new THREE.ShapeGeometry(sh,10),wallMat),w.x,0,w.z,w.ry)}
@@ -3591,29 +3593,29 @@ function cafeBuild(){
     if(mull){wbox(WOOD,k,o.u,yt/2+o.y0/2,.03,.06,yt-o.y0,.06);wbox(WOOD,k,o.u-r/2.1,(o.y0+yt)/2,.03,.05,yt-o.y0,.05);wbox(WOOD,k,o.u+r/2.1,(o.y0+yt)/2,.03,.05,yt-o.y0,.05);
       wbox(WOOD,k,o.u,o.y0+(yt-o.y0)*.62,.03,o.w,.05,.05);}
   };
-  opening('W',OPEN.W[0],true);opening('S',OPEN.S[1],true);opening('S',OPEN.S[0],false);opening('N',OPEN.N[0],false);
+  opening('W',OPEN.W[0],true);opening('S',OPEN.S[1],true);opening('S',OPEN.S[0],false);opening('N',OPEN.N[0],false);opening('E',OPEN.E[0],false);
   // sills
   wbox(WOOD,'W',-1,.9,.17,3.9,.07,.5);wbox(WOOD,'S',3.4,.95,.17,2.2,.07,.5);
   // skirting
-  [['N',-6,6],['E',-5,5],['W',-5,-2.75],['W',.75,5],['S',-6,DX-.8],['S',DX+.8,6]].forEach(a=>{const k=a[0];wbox(DARK,k,(a[1]+a[2])/2,.07,.03,a[2]-a[1],.14,.06)});
+  [['N',-6,6],['E',-5,EZ-.8],['E',EZ+.8,5],['W',-5,-2.75],['W',.75,5],['S',-6,DX-.8],['S',DX+.8,6]].forEach(a=>{const k=a[0];wbox(DARK,k,(a[1]+a[2])/2,.07,.03,a[2]-a[1],.14,.06)});
 
   /* ---- backdrops seen through the windows ---- */
   const bdMat=new THREE.MeshBasicMaterial({map:tex(skyC),fog:false});
   const bdW=new THREE.Mesh(new THREE.PlaneGeometry(18,9),bdMat);bdW.rotation.y=PI/2;bdW.position.set(OX-HW-9,3.2,OZ-1);root.add(bdW);
   const bdS=new THREE.Mesh(new THREE.PlaneGeometry(14,7),bdMat);bdS.rotation.y=PI;bdS.position.set(OX+3.4,2.4,OZ+HD+8);root.add(bdS);
+  const bdE=new THREE.Mesh(new THREE.PlaneGeometry(10,6),bdMat);bdE.rotation.y=-PI/2;bdE.position.set(OX+HW+8,2.0,OZ+EZ);root.add(bdE);
   const bdD=new THREE.Mesh(new THREE.PlaneGeometry(10,6),bdMat);bdD.rotation.y=PI;bdD.position.set(OX+DX,2.0,OZ+HD+8);root.add(bdD);
 
-  /* ---- green arched door ---- */
+  /* ---- green arched door (噴水広場側 = 東の壁) ---- */
   {const w=1.3,r=w/2,yt=2.6-r,sh=new THREE.Shape();sh.moveTo(-r,0);sh.lineTo(r,0);sh.lineTo(r,yt);sh.absarc(0,yt,r,0,PI,false);sh.closePath();
-    place(new THREE.Mesh(new THREE.ShapeGeometry(sh,12),new THREE.MeshLambertMaterial({color:'#6f8f7c'})),DX,0,HD+.03,PI);
+    place(new THREE.Mesh(new THREE.ShapeGeometry(sh,12),new THREE.MeshLambertMaterial({color:'#6f8f7c'})),HW+.03,0,EZ,-PI/2);
     const gl=new THREE.Shape();gl.moveTo(-.46,1.3);gl.lineTo(.46,1.3);gl.lineTo(.46,yt);gl.absarc(0,yt,.46,0,PI,false);gl.closePath();
-    place(new THREE.Mesh(new THREE.ShapeGeometry(gl,12),new THREE.MeshBasicMaterial({map:tex(skyC),fog:false})),DX,0,HD+.025,PI);
-    // glass bars + lower panels + knob
-    box('#566f60',DX,1.3+(yt-1.3)/2+.2,HD-.0,.04,yt-1.3,.03);box('#566f60',DX,1.75,HD,.92,.04,.03);
-    box('#5a7767',DX,.62,HD-.01,.8,.9,.03);box('#5a7767',DX+.0,.62,HD-.02,.62,.72,.02);
-    ell('#d8a24a',DX+.5,1.05,HD-.08,.05,.05,.05)}
+    place(new THREE.Mesh(new THREE.ShapeGeometry(gl,12),new THREE.MeshBasicMaterial({map:tex(skyC),fog:false})),HW+.025,0,EZ,-PI/2);
+    box('#566f60',HW,1.3+(yt-1.3)/2+.2,EZ,.03,yt-1.3,.04);box('#566f60',HW,1.75,EZ,.03,.04,.92);
+    box('#5a7767',HW-.01,.62,EZ,.03,.9,.8);box('#5a7767',HW-.02,.62,EZ,.02,.72,.62);
+    ell('#d8a24a',HW-.08,1.05,EZ-.5,.05,.05,.05)}
   // door mat
-  place(new THREE.Mesh(new THREE.PlaneGeometry(1.1,.7),new THREE.MeshLambertMaterial({map:tex(matC)})),DX,.012,HD-.8,0,-PI/2);
+  place(new THREE.Mesh(new THREE.PlaneGeometry(1.1,.7),new THREE.MeshLambertMaterial({map:tex(matC)})),HW-.8,.012,EZ,PI/2,-PI/2);
   // rug
   place(new THREE.Mesh(new THREE.PlaneGeometry(4.2,2.6),new THREE.MeshLambertMaterial({map:tex(rugC)})),1.5,.011,2.1,0,-PI/2);
 
@@ -3677,7 +3679,7 @@ function cafeBuild(){
   // picture frames
   const frame=(k,u,y)=>{const p=wxz(k,u,.02),ry=wry(k);const f=new THREE.Mesh(new THREE.BoxGeometry(.5,.62,.04),new THREE.MeshLambertMaterial({color:WOOD2}));place(f,p[0],y,p[1],ry);
     const a=new THREE.Mesh(new THREE.PlaneGeometry(.4,.52),new THREE.MeshLambertMaterial({map:tex(artC)}));const q=wxz(k,u,.045);place(a,q[0],y,q[1],ry)};
-  frame('N',-.9,1.7);frame('E',-3.4,1.7);frame('E',1.6,1.6);frame('W',3.5,1.8);
+  frame('N',-.9,1.7);frame('E',-3.4,1.7);frame('E',.9,1.6);frame('W',3.5,1.8);
   // rooftop-level bits done — bake the batches
   mergeTo(P,new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide}));
   mergeTo(PL,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.DoubleSide,fog:false}));
@@ -3719,21 +3721,25 @@ function cafeSet(on){
 }
 function cafeResetCam(yaw,pitch){setFly(false);player.vx=player.vz=0;player.vy=0;player.sit=null;player.ground=true;cam.yaw=yaw;cam.pitch=pitch;state.topdown=false;cam.ty=undefined;cam.pe=undefined;cam.cur=undefined}
 function cafeDoor(){return shopsOut.find(q=>q.shop==='cupcake')}
-function cafeEnter(){
+function cafeEnter(via){
   if(CAFE.busy||CAFE.in||!cafeDoor())return;CAFE.busy=true;CAFE.fade.classList.add('on');
   setTimeout(()=>{
     cafeSet(true);
-    player.pos.set(CAFE.X+CAFE.DOOR,0,CAFE.Z+3.5);player.face=PI;cafeResetCam(0,.26);cam.dist=5.2;
-    CAFE.fade.classList.remove('on');toast('カフェに はいったよ\nドアのそばで「でる」をおすと そとへ出られるよ',3600);
+    if(via==='side'){player.pos.set(CAFE.X+CAFE.HW-1.9,0,CAFE.Z+2.6);player.face=-PI/2;cafeResetCam(PI/2,.26)}
+    else{player.pos.set(CAFE.X+CAFE.DOOR,0,CAFE.Z+3.5);player.face=PI;cafeResetCam(0,.26)}
+    cam.dist=5.2;
+    CAFE.fade.classList.remove('on');toast('カフェに はいったよ\n入口のそばで「でる」をおすと そとへ出られるよ',3600);
     setTimeout(()=>{CAFE.busy=false},380);
   },400);
 }
-function cafeExit(){
+function cafeExit(via){
   if(CAFE.busy||!CAFE.in)return;CAFE.busy=true;CAFE.fade.classList.add('on');
   setTimeout(()=>{
     cafeSet(false);const s=cafeDoor(),sn=Math.sin(s.rot),cs=Math.cos(s.rot);
-    player.pos.set(s.x+sn*.8,0,s.z+cs*.8);resolveXZ(player.pos,.38,0);player.pos.y=groundY(player.pos.x,player.pos.z);
-    player.face=s.rot;cafeResetCam(s.rot+PI,.3);
+    let px=s.x+sn*.8,pz=s.z+cs*.8,fc=s.rot;
+    if(via==='side'){const rx=Math.cos(s.rot),rz=-Math.sin(s.rot);px=s.sx+rx*.2;pz=s.sz+rz*.2;fc=Math.atan2(rx,rz)}
+    player.pos.set(px,0,pz);resolveXZ(player.pos,.38,0);player.pos.y=groundY(player.pos.x,player.pos.z);
+    player.face=fc;cafeResetCam(fc+PI,.3);
     CAFE.fade.classList.remove('on');setTimeout(()=>{CAFE.busy=false},380);
   },400);
 }
@@ -3741,11 +3747,16 @@ function cafeExit(){
 function cafeAct(act,playing){
   if(!playing||CAFE.busy)return CAFE.busy?null:act;
   if(CAFE.in){
-    const dx=player.pos.x-(CAFE.X+CAFE.DOOR),dz=player.pos.z-(CAFE.Z+CAFE.HD);
-    return(Math.abs(dx)<1.5&&dz>-2.0)?{type:'cafeExit',label:'そとへ でる'}:null;
+    const lx=player.pos.x-CAFE.X,lz=player.pos.z-CAFE.Z;
+    if(Math.abs(lx-CAFE.DOOR)<1.5&&lz>CAFE.HD-2.0)return{type:'cafeExit',via:'front',label:'テラスへ でる'};
+    if(Math.abs(lz-2.6)<1.5&&lx>CAFE.HW-2.0)return{type:'cafeExit',via:'side',label:'広場へ でる'};
+    return null;
   }
   const s=cafeDoor();
-  if(s&&!player.fly&&!act&&Math.hypot(player.pos.x-s.x,player.pos.z-s.z)<2.6)return{type:'cafeEnter',label:'カフェに はいる'};
+  if(s&&!player.fly&&!act){
+    if(Math.hypot(player.pos.x-s.x,player.pos.z-s.z)<2.6)return{type:'cafeEnter',via:'front',label:'カフェに はいる'};
+    if(Math.hypot(player.pos.x-s.sx,player.pos.z-s.sz)<2.2)return{type:'cafeEnter',via:'side',label:'カフェに はいる'};
+  }
   return act;
 }
 function cafeTick(dt,t){
