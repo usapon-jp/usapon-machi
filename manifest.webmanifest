@@ -7,7 +7,7 @@
   "display": "fullscreen",
   "display_override": ["fullscreen", "standalone"],
   "orientation": "any",
-  "background_color": "#1a1033",
+  "background_color": "#e9e9ec",
   "theme_color": "#1a1033",
   "lang": "ja",
   "icons": [
