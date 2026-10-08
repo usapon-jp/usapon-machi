@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1a1033"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="うさぽん街"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><link rel="icon" href="icons/icon-192.png"><link rel="apple-touch-icon" href="icons/apple-touch-icon.png"><script>if("serviceWorker" in navigator&&/^https:/.test(location.protocol)&&/github\.io$/.test(location.hostname)){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}</script><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>うさぽん街 うねうね版</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -263,6 +263,160 @@ body.touch #joy{left:calc(22px + env(safe-area-inset-left,0px));bottom:max(50px,
 #joy .d{bottom:7px;left:calc(50% - 5px);border-top:7px solid #fff;border-bottom:0}
 #joy .l{left:7px;top:calc(50% - 5px);border-right:7px solid #fff;border-left:0}
 #joy .r{right:7px;top:calc(50% - 5px);border-left:7px solid #fff;border-right:0}
+/* ===== LANDSCAPE (横持ち) UI ===== */
+@media (orientation:landscape) and (max-height:540px){
+  #hud{padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px))}
+  #quest{left:calc(12px + env(safe-area-inset-left,0px));top:max(8px,env(safe-area-inset-top,0px));max-width:calc(100vw - 300px)}
+  #rightTop{right:calc(12px + env(safe-area-inset-right,0px));top:max(8px,env(safe-area-inset-top,0px));gap:6px}
+  #mini{width:92px;height:92px;border-radius:12px}
+  .rbtns{gap:4px}.rbtns .chip{width:34px;height:34px}
+  #bgmRow{padding:2px 8px}#bgmRow input{width:72px}
+  body.touch{--ab:max(46px,calc(env(safe-area-inset-bottom,0px) + 40px));--ar:calc(44px + env(safe-area-inset-right,0px))}
+  body.touch #joy{width:112px;height:112px;left:calc(26px + env(safe-area-inset-left,0px));bottom:max(22px,calc(env(safe-area-inset-bottom,0px) + 16px))}
+  #knob{width:50px;height:50px;margin:-25px 0 0 -25px}
+  #toast{bottom:calc(max(10px,env(safe-area-inset-bottom,0px)) + 8px);max-width:min(380px,calc(100vw - 340px));padding:8px 14px;font-size:13px}
+  #quick{bottom:calc(max(10px,env(safe-area-inset-bottom,0px)) + 8px);max-width:calc(100vw - 340px);padding:8px 14px;font-size:13px}
+  #actBtn{bottom:calc(max(10px,env(safe-area-inset-bottom,0px)) + 44px);padding:9px 18px}
+  #hintBox{top:max(48px,calc(env(safe-area-inset-top,0px) + 44px));padding:6px 12px 6px 10px}
+  #hintArrow{width:28px;height:28px}
+  .modal{padding:max(8px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(8px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
+  .sheet{width:min(720px,100%);padding:14px 18px 14px;border-radius:16px;max-height:100%}
+  .sheet h1{font-size:20px}.sheet h2{font-size:17px}
+  .sheet p{margin-top:6px;line-height:1.6}
+  .mission{margin-top:8px;padding:8px 12px;font-size:15px}
+  .how{grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+  .how div{font-size:11.5px;line-height:1.5;padding:6px 8px}
+  .actions{margin-top:10px;gap:8px}
+  .btn{font-size:14px;padding:9px 20px}.btn.sub,.btn.warn{font-size:13px;padding:8px 14px}
+  #mBook .sheet{width:min(780px,100%);height:100%;max-height:100%}
+  #bookTabs{margin-top:8px}#bookTabs button{padding:6px 0;font-size:13px}
+  #albumGrid{grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px}
+  #albumChips{margin-top:8px}
+  #albumSheet{width:min(560px,100%)}
+  #albumImg{max-height:calc(100vh - 120px)}
+  #photoSheet{width:min(780px,100%);display:grid;grid-template-columns:minmax(0,1fr) 200px;gap:12px;align-items:center}
+  #photoImg{max-height:calc(100vh - 56px);grid-row:1/3}
+  #photoNote{font-size:11.5px;line-height:1.6}
+  #photoSheet .actions{flex-direction:column;align-items:stretch;margin-top:6px}
+  #photoSheet .actions .btn{width:100%;padding-left:8px;padding-right:8px}
+  /* camera mode */
+  #camBack{top:max(10px,env(safe-area-inset-top,0px));left:calc(14px + env(safe-area-inset-left,0px));width:42px;height:42px}
+  #camHelp{top:max(10px,env(safe-area-inset-top,0px));right:calc(14px + env(safe-area-inset-right,0px));width:38px;height:38px}
+  #camTag{top:max(12px,calc(env(safe-area-inset-top,0px) + 4px))}
+  #camShut{left:auto;bottom:auto;right:calc(22px + env(safe-area-inset-right,0px));top:50%;margin:-34px 0 0 0;width:68px;height:68px;border-width:4px}
+  #camShut i{width:42px;height:42px}
+  #camFlip{left:auto;bottom:auto;right:calc(29px + env(safe-area-inset-right,0px));top:calc(50% + 52px);width:54px;height:54px}
+  #camTour .ctl{font-size:12.5px;padding:6px 10px}
+}
+/* ===== MINIMAL WHITE TOUCH UI (しろ・はんとうめい) ===== */
+body.touch #tbJump,body.touch #tbDash,body.touch #photoBtn,body.touch #broomBtn{background:rgba(255,255,255,.13);border:1.5px solid rgba(255,255,255,.55);color:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.14);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+body.touch #broomBtn.on{background:rgba(255,255,255,.34);border-color:#fff;color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.45),0 0 12px rgba(255,226,168,.7)}
+body.touch .tb:active,body.touch .tb.hold{background:rgba(255,226,168,.36);border-color:#ffe2a8;box-shadow:0 0 0 1px rgba(0,0,0,.14),0 0 14px rgba(255,226,168,.55)}
+body.touch #photoBtn:active{background:rgba(255,226,168,.36)}
+.mk-k{stroke:#fff;stroke-width:2.4}
+.mk-fp,.mk-fa,.mk-fb{fill:rgba(255,255,255,.22)}
+body.touch .tb svg:not(.mk-ic),body.touch #broomBtn svg{stroke:#fff!important}
+body.touch .tb svg:not(.mk-ic) *{stroke:#fff!important}
+body.touch #joy{background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.42);box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+#knob{background:rgba(255,255,255,.42);border:1.5px solid rgba(255,255,255,.75);box-shadow:none;transition:background .12s,border-color .12s}
+#joy.act{border-color:rgba(255,226,168,.85)}
+#joy.act #knob{background:rgba(255,226,168,.68);border-color:#ffe2a8;box-shadow:0 0 12px rgba(255,226,168,.55)}
+#joy .chev{opacity:.5}
+.rbtns .chip{background:rgba(0,0,0,.26);border-color:rgba(255,255,255,.38);color:#fff}
+#bgmRow{background:rgba(0,0,0,.26);border-color:rgba(255,255,255,.3)}
+#quest.card{background:rgba(0,0,0,.28);border-color:rgba(255,255,255,.3)}
+#mini{opacity:.9;position:fixed;left:calc(16px + env(safe-area-inset-left,0px));top:calc(max(12px,env(safe-area-inset-top,0px)) + 46px);width:108px;height:108px}
+.cbtn{background:rgba(255,255,255,.14);color:#fff;border:1.5px solid rgba(255,255,255,.6);box-shadow:0 0 0 1px rgba(0,0,0,.14);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+#camShut{background:rgba(255,255,255,.12);border:4px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.14)}
+#camShut i{background:#fff;box-shadow:none}
+body.selfie #camFlip{background:rgba(255,226,168,.42);border-color:#ffe2a8;color:#fff}
+#camTag{background:rgba(0,0,0,.3);color:#fff}
+@media (orientation:landscape) and (max-height:540px){
+  body.touch #joy{width:96px;height:96px;left:calc(28px + env(safe-area-inset-left,0px));bottom:max(20px,calc(env(safe-area-inset-bottom,0px) + 14px))}
+  #knob{width:40px;height:40px;margin:-20px 0 0 -20px}
+  body.touch #tbDash{width:54px;height:54px;right:calc(22px + env(safe-area-inset-right,0px));bottom:max(22px,calc(env(safe-area-inset-bottom,0px) + 16px))}
+  body.touch #tbJump{width:48px;height:48px;right:calc(86px + env(safe-area-inset-right,0px));bottom:max(18px,calc(env(safe-area-inset-bottom,0px) + 12px))}
+  body.touch #photoBtn{width:50px;height:50px;right:calc(24px + env(safe-area-inset-right,0px));bottom:max(84px,calc(env(safe-area-inset-bottom,0px) + 78px))}
+  body.touch #broomBtn{width:46px;height:46px;right:calc(84px + env(safe-area-inset-right,0px));bottom:max(76px,calc(env(safe-area-inset-bottom,0px) + 70px))}
+  body.touch #tbDash .mk-ic{width:30px;height:30px}body.touch #tbJump .mk-ic{width:26px;height:26px}
+  #photoBtn svg{width:24px;height:24px}body.touch #broomBtn svg{width:24px;height:24px}
+  #mini{width:76px;height:76px}
+  #rightTop{gap:5px}
+  .rbtns .chip{width:32px;height:32px;min-height:32px}
+  #quest{height:32px;border-radius:16px}
+  #camShut{width:60px;height:60px;margin-top:-30px}#camShut i{width:36px;height:36px}
+  #camFlip{width:46px;height:46px;top:calc(50% + 46px)}
+}
+@media (orientation:landscape) and (max-height:540px){
+  #mini{position:fixed;left:calc(12px + env(safe-area-inset-left,0px));top:calc(max(8px,env(safe-area-inset-top,0px)) + 40px);width:84px;height:84px}
+}
+@media (orientation:landscape) and (max-height:300px){
+  #mini{display:none}
+}
+.helpIntro{margin:8px 0 0;line-height:1.75;font-size:14px;font-weight:700}
+.hsec{margin-top:14px;color:var(--lantern);font-weight:900;font-size:13px}
+#helpTabs{display:flex;gap:6px;margin-top:8px}
+#helpTabs button{flex:1;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--paper);font-weight:900;font-size:13px;border-radius:999px;padding:8px 4px;white-space:nowrap;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#helpTabs button[hidden]{display:none}
+#helpTabs button.on{background:linear-gradient(180deg,#ffa23d,#f06a14);color:#2a1200;border-color:#ffe2a8}
+#helpSheet .hp{display:none;margin-top:8px}
+#helpSheet .hp.on{display:flex}
+.setrow{margin-top:8px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.05)}
+.setl{font-weight:900;font-size:14px}
+.setl small{display:block;margin-top:3px;font-size:11.5px;font-weight:700;line-height:1.6;color:var(--mist)}
+.seg{display:flex;gap:6px;margin-top:8px}
+.seg button{flex:1;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--paper);font-weight:900;font-size:13px;border-radius:999px;padding:8px 2px;white-space:nowrap;touch-action:manipulation}
+.seg button.on{background:linear-gradient(180deg,#ffa23d,#f06a14);color:#2a1200;border-color:#ffe2a8}
+.seg.dis{opacity:.5}
+.sethint{margin-top:6px;font-size:12px;font-weight:700;color:var(--lantern)}
+.dlbtn{display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.dlic{width:18px;height:18px;flex:none}
+#photoNote.first{padding:9px 11px;border-radius:12px;background:rgba(255,226,168,.16);border:1px solid rgba(255,226,168,.55);color:#ffe2a8;font-weight:900}
+@media (orientation:landscape) and (max-height:540px){
+  .helpIntro{font-size:12.5px;line-height:1.6;margin-top:4px}
+  .hsec{margin-top:8px}
+  #helpSheet .rows{margin:6px 0 0;gap:5px}
+  #helpSheet .rows .r{padding:6px 11px;font-size:13px}
+  .setrow{margin-top:6px;padding:8px 11px}
+}
+.nb{white-space:nowrap}
+.acc{width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:0;padding:0;color:var(--paper);font-weight:900;font-size:14px;text-align:left;touch-action:manipulation}
+.acc i{flex:none;box-sizing:content-box;width:9px;height:9px;border-right:2.5px solid var(--paper);border-bottom:2.5px solid var(--paper);transform:rotate(45deg);margin:-3px 4px 0 0;transition:transform .15s}
+.acc[aria-expanded=true] i{transform:rotate(-135deg);margin-top:4px}
+#photoAboutBody{margin-top:8px}
+.frameopts{display:flex;gap:10px;margin-top:8px}
+.frameopts button{flex:1;border:2px solid var(--line);background:rgba(255,255,255,.05);border-radius:12px;padding:8px 6px 6px;color:var(--paper);font-weight:900;font-size:13px;display:flex;flex-direction:column;align-items:center;gap:6px;touch-action:manipulation}
+.frameopts button.on{border-color:#ffd36a;background:rgba(255,211,106,.14);box-shadow:0 0 0 1px rgba(255,211,106,.4)}
+.fs{width:64px;aspect-ratio:3/4;position:relative;background:#fff1d8;border-radius:3px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.fs b{position:absolute;inset:0;background:radial-gradient(circle at 70% 28%,#ffd77a 0 12%,transparent 13%),linear-gradient(180deg,#6d5aa8 0,#c9855a 62%,#5a7a42 62%,#4a6a38 100%)}
+.fs.framed b{inset:4px 4px 17px}
+.fs u,.fs s{position:absolute;left:0;right:0;text-align:center;text-decoration:none;color:#1a1033;line-height:1}
+.fs u{bottom:9px;font-size:4.5px;font-weight:900}
+.fs s{bottom:3px;font-size:3.5px;color:#6b3b8e}
+#albumBar{display:flex;gap:8px;align-items:flex-start;justify-content:space-between;margin-top:12px}
+#albumBar #albumChips{margin-top:0;flex:1}
+#albumSel{flex:none;font-weight:900}
+#albumSelBar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:12px;padding:8px 10px;border-radius:12px;background:rgba(255,226,168,.12);border:1px solid rgba(255,226,168,.4)}
+#albumSelBar[hidden]{display:none}
+#selCount{font-weight:900;font-size:13px;margin-right:auto;color:#ffe2a8}
+.ach.act{display:inline-flex;align-items:center;gap:5px;font-weight:900}
+.ach.act .dlic{width:15px;height:15px}
+.ach:disabled{opacity:.4}
+.ach.del.armed{background:#7a1f3a;border-color:#ff9db8;color:#fff}
+.at{position:relative}
+.at .fv{position:absolute;right:4px;top:2px;color:#ffd36a;font-size:15px;font-style:normal;text-shadow:0 1px 3px #000;pointer-events:none}
+.at .ck{position:absolute;left:5px;top:5px;width:20px;height:20px;border-radius:50%;border:2px solid #fff;background:rgba(0,0,0,.35);display:none;pointer-events:none;box-sizing:border-box}
+#albumGrid.selmode .ck{display:block}
+.at.sel{outline:3px solid var(--pumpkin);outline-offset:-3px}
+.at.sel .ck{background:var(--pumpkin)}
+.at.sel .ck::after{content:"";position:absolute;left:5px;top:1px;width:5px;height:10px;border:solid #2a1200;border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
+#helpSheet .hpwrap{display:grid;margin-top:8px}
+#helpSheet .hpwrap .hp{display:flex;grid-area:1/1;margin-top:0;visibility:hidden;align-content:flex-start}
+#helpSheet .hpwrap .hp.on{visibility:visible}
+#opBody,#oriBody{margin-top:8px}
+#helpSheet{display:flex;flex-direction:column}
+#helpSheet>*{flex:none}
+#helpSheet .actions:has(#btnHelpClose){margin-top:auto;padding-top:16px}
 </style>
 
 <canvas id="c" tabindex="0"></canvas>
@@ -357,10 +511,15 @@ body.touch #joy{left:calc(22px + env(safe-area-inset-left,0px));bottom:max(50px,
 </div>
 
 <div class="modal" id="mHelp">
-  <div class="sheet">
+  <div class="sheet" id="helpSheet">
     <h2>あそびかた</h2>
-    <div class="rows">
-      <div class="rh">パソコン</div>
+    <p class="helpIntro">パネルや かくれおばけちゃんを さがそう。<br>パネルは 見つけたら 写真を とってね。<br>ぜんぶ 見つけると、いいこと あるかも…</p>
+    <div class="setrow">
+      <button type="button" class="acc" data-body="opBody" aria-expanded="false"><span>そうさ方法</span><i></i></button>
+      <div id="opBody" hidden>
+        <div id="helpTabs"><button type="button" data-t="pc">パソコン</button><button type="button" data-t="sp">スマホ</button><button type="button" data-t="br" class="needBroom" hidden>まほうのほうき</button></div>
+        <div class="hpwrap">
+    <div class="rows hp" id="hp-pc">
       <div class="r"><span><kbd>WASD</kbd> / <kbd>矢印</kbd></span><em>あるく</em></div>
       <div class="r"><span><kbd>Shift</kbd></span><em>ダッシュ</em></div>
       <div class="r"><span><kbd>Space</kbd></span><em>ジャンプ</em></div>
@@ -368,15 +527,40 @@ body.touch #joy{left:calc(22px + env(safe-area-inset-left,0px));bottom:max(50px,
       <div class="r"><span>ホイール</span><em>ズーム</em></div>
       <div class="r"><span><kbd>F</kbd></span><em>パネルの前で写真</em></div>
       <div class="r"><span><kbd>E</kbd></span><em>いす・テレビで行動</em></div>
-      <div class="rh">スマホ</div>
+    </div>
+    <div class="rows hp" id="hp-sp">
       <div class="r"><span>左のスティック</span><em>あるく</em></div>
       <div class="r"><span>右下のボタン</span><em>ダッシュ・ジャンプ</em></div>
       <div class="r"><span>画面をなぞる</span><em>視点をまわす</em></div>
       <div class="r"><span>カメラボタン</span><em>パネルの近くで写真</em></div>
-      <div class="rh needBroom" hidden>まほうのほうき</div>
-      <div class="r needBroom" hidden><span><kbd>Q</kbd> / ほうきボタン</span><em>のる・おりる</em></div>
-      <div class="r needBroom" hidden><span><kbd>Space</kbd> / ▲ボタン</span><em>うえへ</em></div>
-      <div class="r needBroom" hidden><span><kbd>C</kbd> / ▼ボタン</span><em>したへ</em></div>
+    </div>
+    <div class="rows hp" id="hp-br">
+      <div class="r"><span><kbd>Q</kbd> / ほうきボタン</span><em>のる・おりる</em></div>
+      <div class="r"><span><kbd>Space</kbd> / ▲ボタン</span><em>うえへ</em></div>
+      <div class="r"><span><kbd>C</kbd> / ▼ボタン</span><em>したへ</em></div>
+    </div>
+        </div>
+      </div>
+    </div>
+    <div class="setrow">
+      <button type="button" class="acc" data-body="oriBody" aria-expanded="false"><span>画面のむき</span><i></i></button>
+      <div id="oriBody" hidden>
+        <div class="setl"><small>※Androidのみ（ホーム画面に追加したアプリで使えます）</small></div>
+        <div class="seg" id="segOrient"><button type="button" data-o="auto">じどう</button><button type="button" data-o="portrait">たて固定</button><button type="button" data-o="landscape">よこ固定</button></div>
+        <div class="sethint">スマホは、よこむきにすると あそびやすいよ。</div>
+      </div>
+    </div>
+    <div class="setrow">
+      <button type="button" class="acc" id="photoAbout" data-body="photoAboutBody" aria-expanded="false"><span>写真について</span><i></i></button>
+      <div id="photoAboutBody" hidden>
+        <div class="setl"><small>とった写真は、自動で<span class="nb">「ずかん → アルバム」</span>に入るよ。スマホにも入れたいときは、写真の「ダウンロード」ボタン（下向きの矢印）を押してね。</small></div>
+        <div class="setl" style="margin-top:10px">ふつうに とった写真に わくを…</div>
+        <div class="frameopts" id="frameOpts">
+          <button type="button" data-f="0"><div class="fs plain"><b></b></div><span>つけない</span></button>
+          <button type="button" data-f="1"><div class="fs framed"><b></b><u>うさぽんのハロウィン街</u><s>2026.10.8</s></div><span>つける</span></button>
+        </div>
+        <div class="sethint" style="color:var(--mist)">※パネルの写真には、いつも わくがつきます。</div>
+      </div>
     </div>
     <div class="actions"><button class="btn sub" id="btnHelpClose" type="button">とじる</button></div>
     <div class="actions"><button class="btn sub" id="btnEditMode" type="button" hidden style="font-size:12px;opacity:.8">配置を編集する（おとな用）</button><button class="btn sub" id="btnTestBroom" type="button" hidden style="font-size:12px;opacity:.8">テスト用：ほうきを使えるようにする</button></div>
@@ -401,7 +585,7 @@ body.touch #joy{left:calc(22px + env(safe-area-inset-left,0px));bottom:max(50px,
     <div id="bookBody">
     <div id="tab_zukan"><div id="grid"></div>
     <div class="teaserbox" id="bookTeaser"></div></div>
-    <div id="tab_album" hidden><div id="albumChips"></div><div id="albumGrid"></div><div id="albumEmpty">まだ写真がないよ。<br>パネルの近くで写真ボタンを押すか、カメラモードで撮ってみよう。</div><div id="albumNote">地図の ピンクの丸は、写真をとったパネルだよ。</div></div>
+    <div id="tab_album" hidden><div id="albumBar"><div id="albumChips"></div><button type="button" class="ach" id="albumSel">選択</button></div><div id="albumSelBar" hidden><span id="selCount">0まい えらんだ</span><button type="button" class="ach" id="selAll">ぜんぶ</button><button type="button" class="ach act" id="selDl"><svg class="dlic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>ダウンロード</button><button type="button" class="ach act del" id="selDel"><svg class="dlic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg><b>ゴミ箱</b></button><button type="button" class="ach" id="selCancel">やめる</button></div><div id="albumGrid"></div><div id="albumEmpty">まだ写真がないよ。<br>パネルの近くで写真ボタンを押すか、カメラモードで撮ってみよう。</div><div id="albumNote">地図の ピンクの丸は、写真をとったパネルだよ。</div></div>
     <div id="tab_obake" hidden><div id="ghostGrid"></div><div id="albumNote">かくれお化けちゃんは、街のどこかに かくれているよ。見つけた子は地図にも出るよ。</div></div>
     </div>
     <div class="actions"><button class="btn sub" id="btnReset" type="button">はじめからやり直す</button><button class="btn" id="btnBookClose" type="button">とじる</button></div>
@@ -412,7 +596,7 @@ body.touch #joy{left:calc(22px + env(safe-area-inset-left,0px));bottom:max(50px,
   <div class="sheet" id="albumSheet">
     <img id="albumImg" alt="アルバムの写真">
     <div id="albumCap"></div>
-    <div class="actions"><button class="btn" id="btnAlbumSave" type="button">保存</button><button class="btn sub" id="btnAlbumDel" type="button">けす</button><button class="btn sub" id="btnAlbumClose" type="button">とじる</button></div>
+    <div class="actions"><button class="btn sub" id="btnAlbumFav" type="button">☆ お気に入り</button><button class="btn dlbtn" id="btnAlbumSave" type="button"><svg class="dlic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>ダウンロード</button><button class="btn sub" id="btnAlbumDel" type="button">けす</button><button class="btn sub" id="btnAlbumClose" type="button">とじる</button></div>
   </div>
 </div>
 
@@ -427,8 +611,8 @@ body.touch #joy{left:calc(22px + env(safe-area-inset-left,0px));bottom:max(50px,
 <div class="modal" id="mPhoto">
   <div class="sheet" id="photoSheet">
     <img id="photoImg" alt="撮影した写真">
-    <div id="photoNote">「保存」ボタンか、画像を長押し（パソコンは右クリック）して保存できます。写真は ずかんの「アルバム」にも入ります。</div>
-    <div class="actions"><button class="btn" id="btnSave" type="button">保存</button><button class="btn sub" id="btnRetake" type="button">ポーズをかえてもう1枚</button><button class="btn sub" id="btnToCam" type="button" hidden>カメラモードでとる</button><button class="btn sub" id="btnToPanel" type="button" hidden>パネルでとる</button><button class="btn sub" id="btnPhotoClose" type="button">とじる</button></div>
+    <div id="photoNote"><span class="nb">「ずかん → アルバム」</span>に 保存しました</div>
+    <div class="actions"><button class="btn dlbtn" id="btnSave" type="button"><svg class="dlic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>ダウンロード</button><button class="btn sub" id="btnRetake" type="button">ポーズをかえてもう1枚</button><button class="btn sub" id="btnCamEnd" type="button" hidden>カメラをおわる</button><button class="btn sub" id="btnToCam" type="button" hidden>カメラモードでとる</button><button class="btn sub" id="btnToPanel" type="button" hidden>パネルでとる</button><button class="btn sub" id="btnPhotoClose" type="button">とじる</button></div>
   </div>
 </div>
 
@@ -2838,7 +3022,10 @@ function refreshHUD(){
   $('qTeaser').classList.toggle('done',done);
   $('qTeaserTxt').textContent=done?'ぜんぶ見つけた！ ずかんでごほうびを見よう':DATA.teaser;
 }
-function openModal(id){$(id).classList.add('on');state.mode='modal'}
+function openModal(id){$(id).classList.add('on');state.mode='modal';if(id==='mPhoto')photoGuide();if(id==='mHelp')fixHelpHeight()}
+function fixHelpHeight(){const sh=$('helpSheet'),m=$('mHelp'),bs=['opBody','oriBody','photoAboutBody'].map(x=>$(x));if(!sh||!m.classList.contains('on'))return;const pv=bs.map(b=>b.hidden);sh.style.height='';sh.style.maxHeight='none';bs.forEach(b=>b.hidden=false);const full=sh.scrollHeight+2;bs.forEach((b,i)=>b.hidden=pv[i]);sh.style.maxHeight='';const cs=getComputedStyle(m),av=m.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);sh.style.height=Math.min(full,av)+'px'}
+window.addEventListener('resize',()=>{if($('mHelp').classList.contains('on'))fixHelpHeight()});
+function photoGuide(){const n=$('photoNote');if(!n||n.dataset.inapp)return;let first=true;try{first=localStorage.getItem('usapon-photo-guide')!=='1';localStorage.setItem('usapon-photo-guide','1')}catch(e){}n.classList.toggle('first',first)}
 function closeModal(id){$(id).classList.remove('on');if(!document.querySelector('.modal.on'))state.mode='play'}
 let bookTab='zukan',albumFilter='all';
 const SIL={};
@@ -2847,7 +3034,7 @@ function panelSil(p){ // dark silhouette of a found-but-not-yet-photographed pan
   if(p.thumb){const im=new Image();im.onload=()=>{try{const c=cv(im.naturalWidth,im.naturalHeight),g=c.getContext('2d');g.drawImage(im,0,0);g.globalCompositeOperation='source-in';g.fillStyle='rgba(20,12,40,.9)';g.fillRect(0,0,c.width,c.height);SIL[p.id]=c.toDataURL('image/png');if($('mBook').classList.contains('on'))refreshBook()}catch(e){}};im.src=p.thumb}
   return '';
 }
-function setBookTab(t){
+function setBookTab(t){if(t!=='album'&&typeof albumSelMode!=='undefined'&&albumSelMode){albumSelMode=false;albumSel.clear();albumSelDelArmed=false}
   bookTab=t;['zukan','album','obake'].forEach(k=>{$('tab_'+k).hidden=(k!==t)});
   $('bookTabs').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));$('bookBody').scrollTop=0;refreshBook();
 }
@@ -2893,28 +3080,50 @@ async function albumAdd(url,pid,kind){
   if(!thumb)return;
   const meta={id,pid:pid||'',kind:kind||'panel',ts:Date.now(),thumb};
   ALBUM.list.unshift(meta);albumPut(meta,url);
-  while(ALBUM.list.length>ALBUM.max)albumRemove(ALBUM.list.pop().id);
+  while(ALBUM.list.length>ALBUM.max){let k=-1;for(let i=ALBUM.list.length-1;i>=0;i--)if(!ALBUM.list[i].fav){k=i;break}if(k<0)break;albumRemove(ALBUM.list.splice(k,1)[0].id)}
 }
 function albumGetFull(id){
   if(ALBUM.mem[id])return Promise.resolve(ALBUM.mem[id]);if(!ALBUM.ok)return Promise.resolve(null);
   return new Promise(res=>{try{const r=ALBUM.db.transaction('full').objectStore('full').get(id);r.onsuccess=()=>res(r.result?r.result.url:null);r.onerror=()=>res(null)}catch(e){res(null)}});
 }
+let albumSelMode=false,albumSel=new Set(),albumSelDelArmed=false;
+function albumVisible(){
+  const f=albumFilter;
+  return ALBUM.list.filter(m=>f==='all'||(f==='panel'?!!m.pid:f==='free'?!m.pid:f==='fav'?!!m.fav:m.pid===f));
+}
+function albumPutMeta(m){if(!ALBUM.ok)return;try{ALBUM.db.transaction('meta','readwrite').objectStore('meta').put(m)}catch(e){}}
 function renderAlbum(){
-  const L=ALBUM.list,pids=[];L.forEach(m=>{if(m.pid&&pids.indexOf(m.pid)<0)pids.push(m.pid)});
-  const chips=[['all','ぜんぶ']];pids.forEach(id=>{const p=panels.find(q=>q.id===id);chips.push([id,p?p.def.name:id])});
-  if(L.some(m=>!m.pid))chips.push(['free','じゆう']);
-  if(!chips.some(c=>c[0]===albumFilter))albumFilter='all';
+  const chips=[['all','ぜんぶ'],['panel','パネル撮影'],['free','自由撮影'],['fav','★ お気に入り']];
+  if(!chips.some(c=>c[0]===albumFilter)){const p=panels.find(q=>q.id===albumFilter);if(p)chips.push([albumFilter,p.def.name]);else albumFilter='all'}
   const ac=$('albumChips');ac.innerHTML=chips.map(c=>'<button type="button" class="ach'+(c[0]===albumFilter?' on':'')+'" data-f="'+c[0]+'"></button>').join('');
   ac.querySelectorAll('.ach').forEach((b,i)=>{b.textContent=chips[i][1]});
-  const vis=L.filter(m=>albumFilter==='all'||(albumFilter==='free'?!m.pid:m.pid===albumFilter));
-  $('albumGrid').innerHTML=vis.map(m=>'<button type="button" class="at" data-id="'+m.id+'"><img alt="" src="'+m.thumb+'"></button>').join('');
+  const vis=albumVisible();
+  const vids=new Set(vis.map(m=>m.id));albumSel.forEach(id=>{if(!vids.has(id))albumSel.delete(id)});
+  $('albumGrid').classList.toggle('selmode',albumSelMode);
+  $('albumGrid').innerHTML=vis.map(m=>'<button type="button" class="at'+(albumSel.has(m.id)?' sel':'')+'" data-id="'+m.id+'"><img alt="" src="'+m.thumb+'">'+(m.fav?'<i class="fv">★</i>':'')+'<i class="ck"></i></button>').join('');
   $('albumEmpty').hidden=vis.length>0;
+  $('albumSel').hidden=albumSelMode||!vis.length;
+  $('albumSelBar').hidden=!albumSelMode;
+  $('selCount').textContent=albumSel.size+'まい えらんだ';
+  $('selDl').disabled=$('selDel').disabled=!albumSel.size;
+  $('selDel').querySelector('b').textContent=albumSelDelArmed?'ほんとうに けす？':'ゴミ箱';
+  $('selDel').classList.toggle('armed',albumSelDelArmed);
+  if(vis.length&&albumSel.size===vis.length)$('selAll').textContent='ぜんぶ はずす';else $('selAll').textContent='ぜんぶ';
+}
+function albumSelExit(){albumSelMode=false;albumSel.clear();albumSelDelArmed=false;renderAlbum()}
+async function albumDownloadMany(ids){
+  const files=[];
+  for(const id of ids){const u=await albumGetFull(id);if(!u)continue;try{const b=await (await fetch(u)).blob();files.push(new File([b],'usapon-photo-'+id+'.jpg',{type:'image/jpeg'}))}catch(e){}}
+  if(!files.length){toast('写真をよみこめなかったよ');return}
+  try{if(navigator.canShare&&navigator.canShare({files})){await navigator.share({files});return}}catch(e){if(e&&e.name==='AbortError')return}
+  files.forEach((f,i)=>setTimeout(()=>{const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)},i*350));
+  toast(files.length+'まい ダウンロードします');
 }
 let albumCur=null,albumDelArmed=false;
 async function openAlbum(id){
   const m=ALBUM.list.find(q=>q.id===id);if(!m)return;
   const url=await albumGetFull(id);if(!url){toast('写真をよみこめなかったよ');return}
-  albumCur=id;albumDelArmed=false;$('btnAlbumDel').textContent='けす';
+  albumCur=id;albumDelArmed=false;$('btnAlbumDel').textContent='けす';$('btnAlbumFav').textContent=m.fav?'★ お気に入り':'☆ お気に入り';
   const p=m.pid?panels.find(q=>q.id===m.pid):null,d=new Date(m.ts);
   $('albumCap').textContent=(p?p.def.name+' と ピヨちゃん':(m.kind==='selfie'?'ピヨちゃんの じどり':'ピヨちゃんの 街さんぽ'))+'　'+d.getFullYear()+'.'+(d.getMonth()+1)+'.'+d.getDate();
   $('albumImg').src=url;openModal('mAlbum');
@@ -3060,7 +3269,7 @@ function takePhoto(p,k){
   warm.position.copy(sv.wl);p.group.children.forEach(c=>{if(c.isSprite)c.visible=true});
   piyo.group.rotation.y=sv.ry;setWings(false,0);if(broomG)broomG.visible=bv;
   if(url){
-    $('btnRetake').textContent='ポーズをかえてもう1枚';$('btnToCam').hidden=false;$('btnToPanel').hidden=true;
+    $('btnRetake').textContent='ポーズをかえてもう1枚';$('btnToCam').hidden=false;$('btnToPanel').hidden=true;$('btnPhotoClose').hidden=false;$('btnCamEnd').hidden=true;
     $('photoImg').src=url;save.photos[p.id]=(save.photos[p.id]||0)+1;persist();albumAdd(url,p.id,'panel');
     const fl=$('flash');fl.classList.add('on');requestAnimationFrame(()=>requestAnimationFrame(()=>fl.classList.remove('on')));
     burst(px,pgy+1.6,pz,40,SPARK,3.5,2);openModal('mPhoto');
@@ -3103,28 +3312,30 @@ function setSelfie(on){
   if(on){cam.sAng=player.face;cam.sp=.14;input.jx=input.jy=0;input.dash=false}
   $('camTag').textContent=on?'じどりモード':'カメラモード';
 }
+function photoFrame(){try{return localStorage.getItem('usapon-photo-frame')==='1'}catch(e){return false}}
 function takeFreePhoto(){
   lastShot={free:true,panel:state.nearPanel};
-  const SS=renderer.capabilities.maxTextureSize>=4096?1.5:1,PW=1080*SS|0,PH=1440*SS|0;
+  const SS=renderer.capabilities.maxTextureSize>=4096?1.5:1,LS=window.innerWidth>window.innerHeight*1.15,IW=LS?1440:1080,IH=LS?1080:1440,PW=IW*SS|0,PH=IH*SS|0,OW=IW+120,OH=IH+260;
   const oldPR=renderer.getPixelRatio();let url=null;
   try{
     renderer.setPixelRatio(1);renderer.setSize(PW,PH,false);camera.aspect=PW/PH;camera.updateProjectionMatrix();
     glowMat.uniforms.scale.value=PH/2;sky.position.copy(camera.position);
     renderer.render(scene,camera);
-    const out=cv(1200,1700),g=out.getContext('2d');
-    g.fillStyle='#fff1d8';g.fillRect(0,0,1200,1700);
-    g.drawImage(renderer.domElement,0,0,PW,PH,60,60,1080,1440);
-    g.strokeStyle='rgba(26,16,51,.25)';g.lineWidth=3;g.strokeRect(60,60,1080,1440);
+    if(!photoFrame()){const o2=cv(IW,IH);o2.getContext('2d').drawImage(renderer.domElement,0,0,PW,PH,0,0,IW,IH);url=o2.toDataURL('image/jpeg',.92)}else{
+    const out=cv(OW,OH),g=out.getContext('2d');
+    g.fillStyle='#fff1d8';g.fillRect(0,0,OW,OH);
+    g.drawImage(renderer.domElement,0,0,PW,PH,60,60,IW,IH);
+    g.strokeStyle='rgba(26,16,51,.25)';g.lineWidth=3;g.strokeRect(60,60,IW,IH);
     g.fillStyle='#1a1033';g.textAlign='center';g.textBaseline='alphabetic';
-    g.font='400 56px "Mochiy Pop One","Zen Maru Gothic",sans-serif';g.fillText(DATA.title||'うさぽんのハロウィン街',600,1590);
+    g.font='400 56px "Mochiy Pop One","Zen Maru Gothic",sans-serif';g.fillText(DATA.title||'うさぽんのハロウィン街',OW/2,IH+150);
     g.font='700 32px "Zen Maru Gothic","Hiragino Maru Gothic ProN",sans-serif';g.fillStyle='#6b3b8e';
-    const d=new Date();g.fillText((state.selfie?'ピヨちゃんの じどり　':'ピヨちゃんの 街さんぽ　')+d.getFullYear()+'.'+(d.getMonth()+1)+'.'+d.getDate(),600,1644);
-    [[110,1560],[1090,1560]].forEach(a=>{g.fillStyle='#ff8a2a';g.beginPath();g.ellipse(a[0],a[1],26,21,0,0,6.3);g.fill();g.fillStyle='#3f5a2a';g.fillRect(a[0]-3,a[1]-30,6,12)});
-    url=out.toDataURL('image/jpeg',.92);
+    const d=new Date();g.fillText((state.selfie?'ピヨちゃんの じどり　':'ピヨちゃんの 街さんぽ　')+d.getFullYear()+'.'+(d.getMonth()+1)+'.'+d.getDate(),OW/2,IH+204);
+    [[110,IH+120],[OW-110,IH+120]].forEach(a=>{g.fillStyle='#ff8a2a';g.beginPath();g.ellipse(a[0],a[1],26,21,0,0,6.3);g.fill();g.fillStyle='#3f5a2a';g.fillRect(a[0]-3,a[1]-30,6,12)});
+    url=out.toDataURL('image/jpeg',.92);}
   }catch(e){console.error(e)}
   renderer.setPixelRatio(oldPR);onResize();
   if(url){
-    $('photoImg').src=url;albumAdd(url,'',state.selfie?'selfie':'free');$('btnRetake').textContent='つづけてとる';$('btnToCam').hidden=true;$('btnToPanel').hidden=!lastShot.panel;
+    $('photoImg').src=url;albumAdd(url,'',state.selfie?'selfie':'free');$('btnRetake').textContent='つづけてとる';$('btnToCam').hidden=true;$('btnToPanel').hidden=!lastShot.panel;$('btnPhotoClose').hidden=true;$('btnCamEnd').hidden=!state.camMode;
     const fl=$('flash');fl.classList.add('on');requestAnimationFrame(()=>requestAnimationFrame(()=>fl.classList.remove('on')));
     burst(player.pos.x,player.pos.y+1.6,player.pos.z,30,SPARK,3.5,2);openModal('mPhoto');
   }else toast('写真をとれませんでした\nもう一度ためしてね');
@@ -3188,10 +3399,10 @@ const endPtr=e=>{ptrs.delete(e.pointerId);pinch0=0};
 canvas.addEventListener('pointerup',endPtr);canvas.addEventListener('pointercancel',endPtr);
 (function(){
   const joy=$('joy'),knob=$('knob');let id=null,cx=0,cy=0;const RAD=48;
-  const set=(x,y)=>{let dx=x-cx,dy=y-cy;const m=Math.hypot(dx,dy);if(m>RAD){dx=dx/m*RAD;dy=dy/m*RAD}knob.style.transform='translate('+dx+'px,'+dy+'px)';input.jx=dx/RAD;input.jy=-dy/RAD};
+  const set=(x,y)=>{let dx=x-cx,dy=y-cy;const m=Math.hypot(dx,dy);if(m>RAD){dx=dx/m*RAD;dy=dy/m*RAD}knob.style.transform='translate('+dx+'px,'+dy+'px)';joy.classList.toggle('act',m>8);input.jx=dx/RAD;input.jy=-dy/RAD};
   joy.addEventListener('pointerdown',e=>{if(id!==null)return;id=e.pointerId;joy.setPointerCapture(e.pointerId);const r=joy.getBoundingClientRect();cx=r.left+r.width/2;cy=r.top+r.height/2;set(e.clientX,e.clientY);e.preventDefault()});
   joy.addEventListener('pointermove',e=>{if(e.pointerId===id)set(e.clientX,e.clientY)});
-  const end=e=>{if(e.pointerId!==id)return;id=null;knob.style.transform='';input.jx=0;input.jy=0};
+  const end=e=>{if(e.pointerId!==id)return;id=null;knob.style.transform='';joy.classList.remove('act');input.jx=0;input.jy=0};
   joy.addEventListener('pointerup',end);joy.addEventListener('pointercancel',end);
   const dash=$('tbDash'),jump=$('tbJump');
   [dash,jump,$('photoBtn'),$('broomBtn')].forEach(b=>{if(b)b.addEventListener('contextmenu',e=>e.preventDefault())}); // long-press must not open the OS menu (it cancelled the held dash)
@@ -3205,6 +3416,7 @@ $('camFlip').addEventListener('click',()=>{if(state.mode==='play'&&state.camMode
 $('camTour').addEventListener('click',hideCamTour);
 $('camHelp').addEventListener('click',()=>{if(state.mode==='play'&&state.camMode)showCamTour()});
 $('camBack').addEventListener('click',()=>{if(state.mode==='play')setCamMode(false)});
+$('btnCamEnd').addEventListener('click',()=>{closeModal('mPhoto');setCamMode(false);if(state.pendingDone){state.pendingDone=false;setTimeout(showComplete,500)}});
 $('btnToCam').addEventListener('click',()=>{closeModal('mPhoto');setCamMode(true)});
 $('btnToPanel').addEventListener('click',()=>{const p=lastShot.panel;closeModal('mPhoto');setCamMode(false);if(p)setTimeout(()=>takePhoto(p,0),30)});
 $('btnSave').addEventListener('click',()=>savePhotoSrc($('photoImg').src));
@@ -3215,8 +3427,26 @@ $('btnAlbumDel').addEventListener('click',()=>{
   const k=ALBUM.list.findIndex(q=>q.id===albumCur);if(k>=0)ALBUM.list.splice(k,1);albumRemove(albumCur);albumCur=null;closeModal('mAlbum');refreshBook();toast('写真をけしたよ');
 });
 $('bookTabs').addEventListener('click',e=>{const b=e.target.closest('button[data-tab]');if(b)setBookTab(b.dataset.tab)});
-$('albumChips').addEventListener('click',e=>{const b=e.target.closest('.ach');if(b){albumFilter=b.dataset.f;renderAlbum()}});
-$('albumGrid').addEventListener('click',e=>{const b=e.target.closest('.at');if(b)openAlbum(b.dataset.id)});
+$('albumChips').addEventListener('click',e=>{const b=e.target.closest('.ach');if(b){albumFilter=b.dataset.f;albumSel.clear();albumSelDelArmed=false;renderAlbum()}});
+$('albumGrid').addEventListener('click',e=>{const b=e.target.closest('.at');if(!b)return;
+  if(albumSelMode){const id=b.dataset.id;if(albumSel.has(id))albumSel.delete(id);else albumSel.add(id);albumSelDelArmed=false;renderAlbum();return}
+  openAlbum(b.dataset.id)});
+$('albumSel').addEventListener('click',()=>{albumSelMode=true;albumSel.clear();albumSelDelArmed=false;renderAlbum()});
+$('selCancel').addEventListener('click',albumSelExit);
+$('selAll').addEventListener('click',()=>{const vis=albumVisible();if(albumSel.size===vis.length)albumSel.clear();else vis.forEach(m=>albumSel.add(m.id));albumSelDelArmed=false;renderAlbum()});
+$('selDl').addEventListener('click',()=>{if(albumSel.size)albumDownloadMany([...albumSel])});
+$('selDel').addEventListener('click',()=>{
+  if(!albumSel.size)return;
+  if(!albumSelDelArmed){albumSelDelArmed=true;renderAlbum();return}
+  const n=albumSel.size;
+  albumSel.forEach(id=>{const k=ALBUM.list.findIndex(q=>q.id===id);if(k>=0)ALBUM.list.splice(k,1);albumRemove(id)});
+  albumSel.clear();albumSelDelArmed=false;albumSelMode=false;renderAlbum();toast(n+'まい けしたよ');
+});
+$('btnAlbumFav').addEventListener('click',()=>{
+  const m=ALBUM.list.find(q=>q.id===albumCur);if(!m)return;
+  m.fav=!m.fav;albumPutMeta(m);$('btnAlbumFav').textContent=m.fav?'★ お気に入り':'☆ お気に入り';
+  if($('mBook').classList.contains('on'))renderAlbum();
+});
 $('grid').addEventListener('click',e=>{const c=e.target.closest('.pc[data-pid]');if(c){albumFilter=c.dataset.pid;setBookTab('album')}});
 $('actBtn').addEventListener('click',doAct);
 $('btnBook').addEventListener('click',()=>{refreshBook();openModal('mBook')});
@@ -3226,20 +3456,52 @@ $('btnHint').addEventListener('click',()=>showHint());
 (function(){const b=$('btnMap'),m=$('mini');let off=false;try{off=localStorage.getItem('usapon-map-off')==='1'}catch(e){}
   const apply=()=>{m.style.display=off?'none':'block';b.style.opacity=off?.55:1;b.setAttribute('aria-pressed',off?'false':'true')};apply();
   b.addEventListener('click',()=>{off=!off;apply();try{localStorage.setItem('usapon-map-off',off?'1':'0')}catch(e){}});})();
+/* ---------- help tabs / settings ---------- */
+(function(){
+  const bt=$('photoAbout'),bd=$('photoAboutBody'),fo=$('frameOpts');
+  document.querySelectorAll('#helpSheet .acc').forEach(b2=>b2.addEventListener('click',()=>{const d=$(b2.dataset.body),on=d.hidden;d.hidden=!on;b2.setAttribute('aria-expanded',on?'true':'false')}));
+  const mark=()=>fo.querySelectorAll('button').forEach(b=>b.classList.toggle('on',(b.dataset.f==='1')===photoFrame()));
+  fo.addEventListener('click',e=>{const b=e.target.closest('button[data-f]');if(!b)return;try{localStorage.setItem('usapon-photo-frame',b.dataset.f)}catch(er){}mark()});
+  mark();
+})();
+
+function landTip(){try{const t=('ontouchstart' in window)||navigator.maxTouchPoints>0;if(t&&innerHeight>innerWidth&&localStorage.getItem('usapon-land-tip')!=='1'){localStorage.setItem('usapon-land-tip','1');setTimeout(()=>toast('スマホは、よこむきにすると\nあそびやすいよ',4200),700)}}catch(e){}}
+(function(){
+  const tabs=$('helpTabs');
+  const setTab=t=>{tabs.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));document.querySelectorAll('#helpSheet .hp').forEach(p=>p.classList.toggle('on',p.id==='hp-'+t))};
+  tabs.addEventListener('click',e=>{const b=e.target.closest('button[data-t]');if(!b)return;setTab(b.dataset.t)});
+  setTab((('ontouchstart' in window)||navigator.maxTouchPoints>0)?'sp':'pc');
+  const KEY='usapon-orient',isAnd=/Android/i.test(navigator.userAgent||'');
+  let mode='auto';try{mode=localStorage.getItem(KEY)||'auto'}catch(e){}
+  const seg=$('segOrient');
+  const mark=()=>seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.o===mode));
+  const apply=(m,user)=>{
+    const so=screen.orientation;
+    if(!so||!so.lock){if(user)toast('この端末では\nむきを固定できません',3000);return}
+    if(m==='auto'){try{so.unlock()}catch(e){}return}
+    so.lock(m).catch(()=>{if(user)toast('ブラウザの画面では 固定できないよ\nホーム画面に追加したアプリで使ってね',3800)});
+  };
+  if(!isAnd)seg.classList.add('dis');
+  mark();
+  seg.addEventListener('click',e=>{const b=e.target.closest('button[data-o]');if(!b)return;
+    if(!isAnd){toast('むきの固定は Androidのみです',2600);return}
+    mode=b.dataset.o;try{localStorage.setItem(KEY,mode)}catch(e){}mark();apply(mode,true)});
+  if(isAnd&&mode!=='auto')apply(mode,false);
+})();
 $('btnHelp').addEventListener('click',()=>openModal('mHelp'));
 $('btnHelpClose').addEventListener('click',()=>closeModal('mHelp'));
 (function(){
   const inApp=/Line\/|Instagram|FBAN|FBAV|FB_IAB|MicroMessenger|TikTok|musical_ly|Twitter|Snapchat|KAKAOTALK|NAVER\(inapp/i.test(navigator.userAgent||'')||/[#&]inapp\b/.test(location.hash);
   if(!inApp)return;
   $('inAppWarn').hidden=false;
-  $('photoNote').textContent='このアプリ内の画面だと「保存」がうまくいかないことがあります。画像を長押しするか、ブラウザ（Safari・Chrome）で開き直してね。';
+  $('photoNote').dataset.inapp='1';$('photoNote').textContent='このアプリ内の画面だと「保存」がうまくいかないことがあります。画像を長押しするか、ブラウザ（Safari・Chrome）で開き直してね。';
   $('btnCopyUrl').addEventListener('click',()=>{
     const u=location.href.split('#')[0];
     const ok=()=>{$('btnCopyUrl').textContent='コピーしたよ！SafariかChromeに貼りつけてね'};
     try{navigator.clipboard.writeText(u).then(ok,()=>{window.prompt('このURLをコピーしてブラウザで開いてね',u)})}catch(e){window.prompt('このURLをコピーしてブラウザで開いてね',u)}
   });
 })();
-$('btnStart').addEventListener('click',()=>{closeModal('mIntro');quickPop();state.mode='play';if(state.pendingDone){state.pendingDone=false;showComplete()}});
+$('btnStart').addEventListener('click',()=>{closeModal('mIntro');quickPop();state.mode='play';landTip();if(state.pendingDone){state.pendingDone=false;showComplete()}});
 $('btnReset').addEventListener('click',()=>{closeModal('mBook');openModal('mReset')});
 $('btnResetNo').addEventListener('click',()=>{closeModal('mReset');refreshBook();openModal('mBook')});
 $('btnResetYes').addEventListener('click',()=>{
@@ -3247,7 +3509,7 @@ $('btnResetYes').addEventListener('click',()=>{
   panels.forEach(p=>{p.found=false;setFace(p);setPlate(p)});refreshHUD();closeModal('mReset');toast('はじめからスタート！');
 });
 $('btnPhotoClose').addEventListener('click',()=>{closeModal('mPhoto');if(state.pendingDone){state.pendingDone=false;setTimeout(showComplete,500)}});
-$('btnRetake').addEventListener('click',()=>{closeModal('mPhoto');if(lastShot.free)return;setTimeout(()=>takePhoto(lastShot.p,lastShot.k+1),30)});
+$('btnRetake').addEventListener('click',()=>{closeModal('mPhoto');if(lastShot.free){if(state.pendingDone){state.pendingDone=false;setTimeout(showComplete,500)}return}setTimeout(()=>takePhoto(lastShot.p,lastShot.k+1),30)});
 $('broomBtn').addEventListener('click',()=>{if(state.mode==='play'){$('broomBtn').classList.remove('pulse');setFly(!player.fly)}});
 $('btnDoneClose').addEventListener('click',()=>{closeModal('mDone');if(save.broom&&!player.fly){const b=$('broomBtn');b.classList.remove('pulse');void b.offsetWidth;b.classList.add('pulse')}});
 $('btnSpotClose').addEventListener('click',()=>closeModal('mSpot'));
