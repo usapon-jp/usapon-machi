@@ -829,7 +829,7 @@ body.selfie #camFlip{background:rgba(255,226,168,.42);border-color:#ffe2a8;color
 // ===== BGM / SFX (WebAudio, no files) =====
 const AUDIO=(function(){
   let ctx=null,master=null,musicG=null,sfxG=null,echo=null,timer=null,started=false,nextT=0,step=0,bar=0;
-  let on=true,vol=.5,OUT=null;
+  let on=true,vol=.5,OUT=null,scene='town',nextC=0,barC=0,cafeG=null,echoC=null,cafeM=null;
   try{const s=localStorage.getItem('usapon-bgm');if(s==='off')on=false;const v=parseFloat(localStorage.getItem('usapon-bgm-vol'));if(v>=0&&v<=1)vol=v}catch(e){}
   const BPM=100,EIGHTH=60/BPM/2;
   const hz=m=>440*Math.pow(2,(m-69)/12);
@@ -854,10 +854,14 @@ const AUDIO=(function(){
     const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return false;
     try{ctx=new AC()}catch(e){return false}
     master=ctx.createGain();master.gain.value=.55;master.connect(ctx.destination);
-    musicG=ctx.createGain();OUT=musicG;musicG.gain.value=on?vol*1.0:0;musicG.connect(master);
+    musicG=ctx.createGain();OUT=musicG;musicG.gain.value=on&&scene==='town'?vol*1.0:0;musicG.connect(master);
     sfxG=ctx.createGain();sfxG.gain.value=on?Math.max(.25,vol):0;sfxG.connect(master);
     const d=ctx.createDelay(1);d.delayTime.value=EIGHTH*1.5;const fb=ctx.createGain();fb.gain.value=.3;const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=2600;
     d.connect(lp);lp.connect(fb);fb.connect(d);const wet=ctx.createGain();wet.gain.value=.35;lp.connect(wet);wet.connect(musicG);echo=d;
+    // カフェ用の別バス(店内専用BGM)
+    cafeG=ctx.createGain();cafeG.gain.value=on&&scene==='cafe'?vol*1.7:0;cafeG.connect(master);
+    {const dc=ctx.createDelay(1);dc.delayTime.value=.54;const fc=ctx.createGain();fc.gain.value=.28;const lc=ctx.createBiquadFilter();lc.type='lowpass';lc.frequency.value=2400;
+     dc.connect(lc);lc.connect(fc);fc.connect(dc);const wc=ctx.createGain();wc.gain.value=.3;lc.connect(wc);wc.connect(cafeG);echoC=dc;cafeM=buildCafe(ctx,cafeG,echoC)}
     return true;
   }
   function tone(t,f,dur,type,peak,dest,send){
@@ -967,9 +971,58 @@ const AUDIO=(function(){
     if(pass===2&&b===7||pass===3&&b===15)ghost(t+E*3,81,E*5);
     if(pass===2&&b===8)bell(t,93,E*6,.08,musicG,.7);
   }
+  /* ---- カフェの店内専用BGM: ゆったりしたジャズ/ボサ風(エレピ・ウッドベース・ブラシ・ビブラフォン)。街のBGMとは別の音量バスで、店内にいる間だけ鳴る ---- */
+  function buildCafe(ctx,out,send){
+    const CB=60/84,hz2=m=>440*Math.pow(2,(m-69)/12);
+    const CH={Cmaj7:{r:48,t:4,v:[64,67,71,74]},Am7:{r:45,t:3,v:[60,64,67,72]},Dm7:{r:50,t:3,v:[60,65,69,72]},G7:{r:43,t:4,v:[59,62,65,69]},
+              Em7:{r:52,t:3,v:[59,62,67,71]},A7:{r:45,t:4,v:[61,64,67,71]},Fmaj7:{r:41,t:4,v:[57,60,64,69]}};
+    const PR=['Cmaj7','Am7','Dm7','G7','Em7','A7','Dm7','G7','Fmaj7','Em7','Dm7','G7','Cmaj7','A7','Dm7','G7'];
+    const MEL=[[[0,76,3],[3,79,1],[4,83,3]],[[0,81,2],[2,79,1],[3,76,1],[4,72,4]],[[1,74,1],[2,77,2],[4,81,3],[7,79,1]],[[0,79,3],[4,77,2],[6,74,2]],
+      [[0,76,2],[2,79,2],[4,83,3]],[[0,81,1],[1,80,1],[2,81,2],[4,76,4]],[[0,77,3],[3,74,1],[4,72,2],[6,74,2]],[[0,71,4],[4,74,2]],
+      [[0,81,3],[3,79,1],[4,77,3],[7,76,1]],[[0,76,2],[2,74,1],[3,76,1],[4,79,4]],[[0,74,2],[2,77,2],[4,81,2],[6,84,2]],[[0,83,3],[4,79,2],[6,77,2]],
+      [[0,76,2],[2,79,2],[4,84,4]],[[0,81,2],[2,85,2],[4,81,2],[6,79,2]],[[0,77,3],[3,81,1],[4,86,3],[7,84,1]],[[0,83,2],[2,79,2],[4,77,2],[6,74,2]]];
+    const ep=(t,e)=>t+Math.floor(e/2)*CB+(e%2?CB*.62:0); // swing: 裏拍を少し後ろへ
+    let nb=null;const noiseC=(t,dur,peak,freq,q)=>{
+      if(!nb){nb=ctx.createBuffer(1,ctx.sampleRate*.3,ctx.sampleRate);const d=nb.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
+      const sc=ctx.createBufferSource();sc.buffer=nb;const f=ctx.createBiquadFilter();f.type='bandpass';f.frequency.value=freq;f.Q.value=q||.9;
+      const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(peak,t+.006);g.gain.exponentialRampToValueAtTime(.0008,t+dur);
+      sc.connect(f);f.connect(g);g.connect(out);sc.start(t);sc.stop(t+dur+.02)};
+    const env=(g,t,peak,dur,att)=>{g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(peak,t+(att||.006));g.gain.exponentialRampToValueAtTime(.0008,t+dur)};
+    const osc=(ty,f,t,dur,peak,att,sn)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.type=ty;o.frequency.value=f;env(g,t,peak,dur,att);o.connect(g);g.connect(out);
+      if(sn){const s2=ctx.createGain();s2.gain.value=sn;g.connect(s2);s2.connect(send)}o.start(t);o.stop(t+dur+.05)};
+    const rhodes=(t,m,dur,peak)=>{const f=hz2(m);osc('sine',f,t,dur,peak,.008,.22);osc('sine',f*2,t,dur*.5,peak*.22,.006,.15);osc('sine',f*5.02,t,.12,peak*.07,.003,0)};
+    const vibes=(t,m,dur,peak)=>{const f=hz2(m);osc('sine',f,t,dur*1.5,peak,.005,.4);osc('sine',f*4,t,dur*.4,peak*.12,.004,.3)};
+    const bass=(t,m,dur,peak)=>{const f=hz2(m);osc('triangle',f,t,dur,peak,.012,0);osc('sine',f*2,t,dur*.4,peak*.25,.008,0)};
+    function bar(t,B){
+      const pass=Math.floor(B/16)%4,b=B%16,c=CH[PR[b]],nx=CH[PR[(b+1)%16]],lv=pass===0?.7:1;
+      // walking bass
+      const app=nx.r>=c.r?nx.r-1:nx.r+1;
+      [c.r,c.r+c.t,c.r+7,app].forEach((m,i)=>bass(t+i*CB,m,CB*.92,.3*lv));
+      // comping (charleston): beat 1 and the "and" of 2
+      const hits=pass===0?[[0,1.8,.05]]:[[0,1.7,.06],[3,.9,.045]];if(pass===2&&b%2===1)hits.push([6,.8,.04]);
+      hits.forEach(([e,d,pk])=>c.v.forEach((m,i)=>rhodes(ep(t,e)+i*.012,m,CB*d,pk*lv)));
+      // melody (vibes), soft low rhodes double in pass 2
+      if(pass>=1||b>=8)MEL[b].forEach(([e,m,d])=>{const tt=ep(t,e),dd=CB*d*.5;vibes(tt,m,Math.max(dd,CB*.7),pass===3?.1:.14);if(pass===2)rhodes(tt,m-12,Math.max(dd,CB*.7),.035)});
+      // brushes
+      for(let e=0;e<8;e++){noiseC(ep(t,e),.05,e%2?.011:.02,8000,.8);if(e%2===0&&e>0)noiseC(ep(t,e),.14,pass>=1?.014:.008,3500,.7)}
+      osc('sine',70,t,.16,.09*lv,.004,0);osc('sine',70,ep(t,4),.16,.07*lv,.004,0);
+      // たまに食器の音
+      if(b%5===2&&pass>=1){const tt=ep(t,5);osc('sine',3300,tt,.16,.012,.002,.3);osc('sine',4400,tt+.03,.12,.008,.002,.3)}
+    }
+    return {bar,len:CB*4};
+  }
   function tick(){
     if(!ctx||ctx.state!=='running')return;
+    if(scene==='cafe'){while(nextC<ctx.currentTime+.35){cafeM.bar(nextC,barC);nextC+=cafeM.len;barC++}return}
     while(nextT<ctx.currentTime+.35){scheduleBar(nextT,bar);nextT+=EIGHTH*6;bar=(bar+1)%128}
+  }
+  function gains(tc){if(!ctx)return;const t=ctx.currentTime;
+    musicG.gain.cancelScheduledValues(t);musicG.gain.setTargetAtTime(on&&scene==='town'?vol:0,t,tc);
+    cafeG.gain.cancelScheduledValues(t);cafeG.gain.setTargetAtTime(on&&scene==='cafe'?vol*1.7:0,t,tc)}
+  function setScene(s){ // 'town' | 'cafe': 店内に入る/出るときにBGMを切り替える
+    if(s===scene)return;scene=s;if(!ctx)return;
+    if(s==='cafe'){nextC=ctx.currentTime+.25;barC=0}else nextT=ctx.currentTime+.25;
+    gains(.3);
   }
   function startMusic(){
     if(!init())return;
@@ -978,7 +1031,7 @@ const AUDIO=(function(){
   }
   function apply(){
     if(!ctx)return;const t=ctx.currentTime;
-    musicG.gain.cancelScheduledValues(t);musicG.gain.setTargetAtTime(on?vol*1.0:0,t,.08);
+    gains(.08);
     sfxG.gain.cancelScheduledValues(t);sfxG.gain.setTargetAtTime(on?Math.max(.25,vol):0,t,.05);
     try{localStorage.setItem('usapon-bgm',on?'on':'off');localStorage.setItem('usapon-bgm-vol',String(vol))}catch(e){}
   }
@@ -998,7 +1051,7 @@ const AUDIO=(function(){
   ['pointerdown','keydown','touchstart'].forEach(ev=>window.addEventListener(ev,function once(){window.removeEventListener(ev,once,true);firstGesture()},true));
   if(btn)btn.addEventListener('click',()=>{on=!on;ui();if(!init()){return}if(on){if(!started)startMusic();else if(ctx.state==='suspended')ctx.resume().catch(()=>{})}apply()});
   if(rng){rng.addEventListener('input',()=>{vol=rng.value/100;apply();if(!started&&on)startMusic()});rng.addEventListener('change',()=>rng.blur())}
-  return {sfx};
+  return {sfx,setScene};
 })();
 (function(){
 'use strict';
@@ -4034,6 +4087,7 @@ function cafeSet(on){
     hemi.color.set(0xfff2e0);hemi.groundColor.set(0x9a7048);
     warm.intensity=.4;warm.distance=7;
     INTERIOR.on=true;INTERIOR.y=0;state.inCafe=true;document.body.classList.add('incafe');
+    try{AUDIO.setScene('cafe')}catch(e){}
   }else{
     const S=CAFE.saved;CAFE.in=false;
     CAFE.root.visible=false;CAFE.lights.forEach(l=>scene.remove(l));
@@ -4041,6 +4095,7 @@ function cafeSet(on){
     renderer.setClearColor(S.clear);
     moon.position.copy(S.mp);moon.intensity=S.mi;moon.color.set(S.mc);hemi.color.set(S.hc);hemi.groundColor.set(S.hg);warm.intensity=S.wi;warm.distance=S.wd;cam.dist=S.dist;
     INTERIOR.on=false;state.inCafe=false;document.body.classList.remove('incafe');
+    try{AUDIO.setScene('town')}catch(e){}
   }
 }
 function cafeResetCam(yaw,pitch){setFly(false);player.vx=player.vz=0;player.vy=0;player.sit=null;player.ground=true;cam.yaw=yaw;cam.pitch=pitch;state.topdown=false;cam.ty=undefined;cam.pe=undefined;cam.cur=undefined}
