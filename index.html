@@ -2062,10 +2062,10 @@ function shopExtras(C,h){
      bx('half',C,lx,2.41,fz+1.6,sp*.5,sp*.5,.07,col,0)}                   // kamaboko (half-round) hem, hangs below the band
    for(const sg of[-1,1]){bx('wood',C,sg*(aw/2+.02),3.0,fz+.85,.07,.1,1.75,'#6a4a2a',0,.5);   // side rails
      bx('wood',C,sg*(aw/2-.05),2.7,fz+.45,.07,.07,1.1,'#5a3426',0,-.75)}}                    // little brackets
-  // OPEN chalkboard
-  const q=C.W(-w*.42,fz+1.6),tkc=edBegin('chalk',q[0],q[1]);const cb=new THREE.Mesh(new THREE.PlaneGeometry(.8,1.0),new THREE.MeshBasicMaterial({map:chalkTex}));cb.position.set(q[0],C.y0+.65,q[1]);cb.rotation.y=C.rot+.15;scene.add(cb);
+  // OPEN chalkboard (お花屋さんと雑貨屋さんは、新しい看板に置きかえたので出さない)
+  if(h.shop!=='flower'&&h.shop!=='zakka'){const q=C.W(-w*.42,fz+1.6),tkc=edBegin('chalk',q[0],q[1]);const cb=new THREE.Mesh(new THREE.PlaneGeometry(.8,1.0),new THREE.MeshBasicMaterial({map:chalkTex}));cb.position.set(q[0],C.y0+.65,q[1]);cb.rotation.y=C.rot+.15;scene.add(cb);
   const cbf=new THREE.Mesh(new THREE.BoxGeometry(.9,1.1,.08),new THREE.MeshLambertMaterial({color:0x5a3426}));cbf.position.set(q[0]-Math.sin(C.rot+.15)*.05,C.y0+.6,q[1]-Math.cos(C.rot+.15)*.05);cbf.rotation.y=C.rot+.15;scene.add(cbf);
-  addCircle(q[0],q[1],.45,C.y0+1.2);edEnd(tkc);
+  addCircle(q[0],q[1],.45,C.y0+1.2);edEnd(tkc)}
   if(h.shop==='flower'){
     // ひさしの下に、ドライフラワーの束とランタンを吊るす
     {const cols=['#c79bff','#ff9ab8','#ffd36a','#fff1e0','#ff9a6a'],aw=w*.84;
@@ -4272,14 +4272,27 @@ function flowerBoardCanvas(){ // お花屋さんの黒板(チョーク絵): カ�
   g.lineWidth=3.4;g.beginPath();g.arc(128,48,20,.6,5.7);g.stroke();
   g.fillStyle='#f3ecd8';g.font='900 25px "Zen Maru Gothic","Hiragino Maru Gothic ProN","Noto Sans JP",sans-serif';g.textAlign='center';g.fillText('まほうの おはなや',128,296);
   const t=new THREE.CanvasTexture(c);t.minFilter=THREE.LinearFilter;t.generateMipmaps=false;return t}
-function flowerModels(){ // お花屋さんの店先の看板(カフェの看板モデルの黒板だけ、お花の絵に)
-  try{const s=flowerDoor();if(!s)return;const h=s.house,cs=Math.cos(h.rot),sn=Math.sin(h.rot),gy=groundY(h.x,h.z);
-    const sg=cafeGLB(CAFE_SIGN_GLB),lx=2.75,lz=h.d/2+1.6;
-    const pl=new THREE.Mesh(new THREE.PlaneGeometry(.8,1.02),new THREE.MeshBasicMaterial({map:flowerBoardCanvas(),side:THREE.DoubleSide}));pl.position.set(0,-.02,.28);pl.rotation.x=-.17;sg.add(pl);
-    sg.scale.setScalar(.6);sg.position.set(h.x+lx*cs+lz*sn,gy+.57,h.z-lx*sn+lz*cs);sg.rotation.y=h.rot+.25;scene.add(sg);
-    addCircle(h.x+lx*cs+lz*sn,h.z-lx*sn+lz*cs,.42,1.3);
-  }catch(e){console.warn('flower sign failed',e)}
+function zakkaBoardCanvas(){ // 雑貨屋さんの黒板: 真ん中にTシャツ、上と下に「SUZURIの」「ざっかやさん」
+  const c=cv(256,320),g=c.getContext('2d');
+  g.fillStyle='#14110f';g.fillRect(0,0,256,320);
+  for(let i=0;i<60;i++){g.fillStyle='rgba(255,255,255,'+(.02+Math.random()*.03)+')';g.fillRect(Math.random()*256,Math.random()*320,40+Math.random()*60,2)}
+  g.lineCap='round';g.lineJoin='round';g.fillStyle='#f3ecd8';g.textAlign='center';
+  g.font='900 30px "Zen Maru Gothic","Hiragino Maru Gothic ProN","Noto Sans JP",sans-serif';g.fillText('SUZURIの',128,62);g.font='900 34px "Zen Maru Gothic","Hiragino Maru Gothic ProN","Noto Sans JP",sans-serif';g.fillText('雑貨屋さん',128,296);
+  // Tシャツ(チョーク)
+  g.strokeStyle='#ffd36a';g.lineWidth=5;g.beginPath();g.moveTo(78,116);g.lineTo(108,104);g.quadraticCurveTo(128,124,148,104);g.lineTo(178,116);g.lineTo(208,152);g.lineTo(182,174);g.lineTo(168,158);g.lineTo(168,238);g.lineTo(88,238);g.lineTo(88,158);g.lineTo(74,174);g.lineTo(48,152);g.closePath();g.stroke();
+  g.strokeStyle='#ffb3c8';g.lineWidth=4;g.beginPath();g.moveTo(128,170);g.bezierCurveTo(128,160,112,158,112,172);g.bezierCurveTo(112,184,128,192,128,200);g.bezierCurveTo(128,192,144,184,144,172);g.bezierCurveTo(144,158,128,160,128,170);g.stroke();
+  g.strokeStyle='#ffe9a8';g.lineWidth=2.6;[[36,92],[222,96],[40,238],[220,232]].forEach(q=>{g.beginPath();g.moveTo(q[0]-8,q[1]);g.lineTo(q[0]+8,q[1]);g.moveTo(q[0],q[1]-8);g.lineTo(q[0],q[1]+8);g.stroke()});
+  const t=new THREE.CanvasTexture(c);t.minFilter=THREE.LinearFilter;t.generateMipmaps=false;return t}
+function shopSign(shopKey,mapFn,lx){ // 店先の看板(カフェの看板モデルの黒板だけ、お店ごとの絵に)
+  try{const s=shopsOut.find(q=>q.shop===shopKey);if(!s)return;const h=s.house,cs=Math.cos(h.rot),sn=Math.sin(h.rot),gy=groundY(h.x,h.z);
+    const sg=cafeGLB(CAFE_SIGN_GLB),lz=h.d/2+1.6;
+    const pl=new THREE.Mesh(new THREE.PlaneGeometry(.8,1.02),new THREE.MeshBasicMaterial({map:mapFn(),side:THREE.DoubleSide}));pl.position.set(0,-.02,.28);pl.rotation.x=-.17;sg.add(pl);
+    const px=h.x+lx*cs+lz*sn,pz=h.z-lx*sn+lz*cs;
+    sg.scale.setScalar(.6);sg.position.set(px,gy+.57,pz);sg.rotation.y=h.rot+(lx>0?.25:-.25);scene.add(sg);
+    addCircle(px,pz,.42,1.3);
+  }catch(e){console.warn('shop sign failed',shopKey,e)}
 }
+function flowerModels(){shopSign('flower',flowerBoardCanvas,2.75);shopSign('zakka',zakkaBoardCanvas,-2.75)}
 cafeInit();
 /* ===== ZAKKA PARALLAX ===== (SUZURI雑貨屋さん: 1枚の完成イラストをレイヤーに分けた2.5D店内。3Dモデルは使わない)
    部屋の箱(床・天井・左右と奥の壁)に背景の絵を「元のカメラから見た位置」どおりに貼り、家具の切り抜きを距離に合わせて立てる。
