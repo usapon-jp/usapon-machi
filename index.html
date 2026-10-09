@@ -4199,6 +4199,7 @@ function zakBuild(){
   root.add(zakQuad([[-Wl,0,dnL],[-Wl,0,db],[-Wl,Hr,db],[-Wl,Hr,dnL]],room));      // 左の壁(扉と窓)
   root.add(zakQuad([[Wr,0,dnR],[Wr,0,db],[Wr,Hr,db],[Wr,Hr,dnR]],room));          // 右の壁(窓)
   root.add(zakQuad([[-Wl,0,db],[Wr,0,db],[Wr,Hr,db],[-Wl,Hr,db]],room));          // 奥の壁(アーチ棚)
+  {const fw=new THREE.Mesh(new THREE.PlaneGeometry(Wl+Wr,Hr),new THREE.MeshBasicMaterial({color:0xe9c9a0,fog:false,side:THREE.DoubleSide}));fw.position.set(Z.X+(Wr-Wl)/2,Hr/2,Z.Z-dnF);root.add(fw)} // 手前の壁(自撮りで後ろが見えても部屋の中)
   // 切り抜き: 床に立つ物は足元の位置から距離を出す。壁に付く物は壁の面の距離にする
   const dB=y=>f*Z.yf/(y-Z.cy),dT=dB(884),dC=dB(643),dR=dB(853); // 棚は足元の丸いラグまで含む高さで距離を決める(床に食い込んで切れないように)
   const L=ZAK_DATA.L,xcOf=k=>L[k].x+L[k].w/2;
@@ -4228,7 +4229,9 @@ function zakBuild(){
   const rw=L.rack.w*dR/f,rx=(xcOf('rack')-Z.cx)*dR/f;box(rx-rw/2+.1,rx+rw/2,dR,dR+.9);
   Z.exit=[-Wl+.5,dB(740)-.3];Z.spawn=[-1.3,2.55];
 }
-function zakProj(cm){ // 2.5D専用の投影: 絵の主点(cx,cy)をレンズシフトで合わせ、画面の縦横比に合わせて絵の一部を映す
+function zakProj(cm){
+  if(state.camMode){cm.view=null;cm.aspect=window.innerWidth/window.innerHeight;THREE.PerspectiveCamera.prototype.updateProjectionMatrix.call(cm);return} // カメラモード中は普通の遠近法
+  // 2.5D専用の投影: 絵の主点(cx,cy)をレンズシフトで合わせ、画面の縦横比に合わせて絵の一部を映す
   const Z=ZAK,sz=renderer.getSize(new THREE.Vector2()),A=sz.x/sz.y,zoom=A>=Z.W/Z.H?1.25:1.15;
   let vw,vh;if(A>=Z.W/Z.H){vw=Z.W/zoom;vh=vw/A}else{vh=Z.H/zoom;vw=vh*A}
   const x0=clamp(Z.panX-vw/2,0,Z.W-vw),y0=clamp(Z.panY-vh/2,0,Z.H-vh);
@@ -4284,8 +4287,12 @@ function zakkaAct(act){
 }
 function zakkaTick(dt,t){
   if(!ZAK.in)return;const Z=ZAK;
-  cam.yaw=0;if(player.fly)setFly(false);
+  if(player.fly)setFly(false);
   const rx=player.pos.x-Z.X,d=Z.Z-player.pos.z;
+  if(state.camMode){ // カメラモード: 既存のカメラ処理に任せる(目線・自撮り・ドラッグ・ズーム)。部屋の外が見えすぎないよう向きを制限
+    if(!state.selfie)cam.yaw=clamp(cam.yaw,-1.25,1.25);Z.hadCam=true;blob.scale.x*=Z.pscale;blob.scale.z*=Z.pscale;hemi.intensity=.7;return}
+  if(Z.hadCam){Z.hadCam=false;cam.yaw=0;cam.cur=undefined;cam.pe=undefined;camera.fov=58;camera.view=null}
+  cam.yaw=0;
   const tx=Z.freeze?0:clamp(rx*.18,-.38,.38),td=Z.freeze?0:clamp((d-3.4)*.35,-.4,.9),k=Z.freeze?1:Math.min(1,dt*4); // freezeは確認用(元のカメラ位置に固定)
   Z.cam.x+=(tx-Z.cam.x)*k;Z.cam.d+=(td-Z.cam.d)*k;
   Z.panX=768+clamp(rx*Z.f/(Z.db*.6),-420,420);
