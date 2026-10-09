@@ -253,7 +253,7 @@ body.selfie #camFlip{background:linear-gradient(180deg,#ffb869,#f08a2c);color:#f
 #camTour.on{display:block}
 #camTour svg{position:absolute;left:0;top:0;pointer-events:none}
 .ctl{position:absolute;background:#fff1d8;color:#5b3b6e;font:900 14px/1.45 "Zen Maru Gothic","Hiragino Maru Gothic ProN",sans-serif;padding:8px 12px;border-radius:14px;white-space:pre;text-align:center;box-shadow:0 3px 14px rgba(0,0,0,.35);pointer-events:none}
-.ctl.mid{left:50%;transform:translateX(-50%);background:rgba(255,255,255,.14);color:#fff;box-shadow:none;font-size:16px;text-shadow:0 1px 6px rgba(0,0,0,.6)}
+.ctl.mid{left:50%;transform:translateX(-50%);background:rgba(26,16,51,.88);border:1px solid rgba(255,255,255,.35);color:#fff;box-shadow:none;font-size:16px;text-shadow:none;width:max-content;max-width:calc(100vw - 32px);text-align:center;white-space:pre-line}
 
 #camTag{position:absolute;top:max(22px,calc(env(safe-area-inset-top,0px) + 8px));left:50%;transform:translateX(-50%);padding:5px 14px;border-radius:999px;background:rgba(255,251,243,.78);color:#8f6e86;font-weight:900;font-size:13px;pointer-events:none;white-space:nowrap}
 body.touch #joy{left:calc(22px + env(safe-area-inset-left,0px));bottom:max(50px,calc(env(safe-area-inset-bottom,0px) + 44px));border:1.5px solid rgba(255,255,255,.9);background:radial-gradient(circle,rgba(255,255,255,.12) 0,rgba(70,45,80,.2) 100%);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);box-shadow:0 0 0 1px rgba(70,45,80,.14),inset 0 0 22px rgba(255,255,255,.2),0 4px 16px rgba(70,45,80,.14)}
@@ -3398,6 +3398,13 @@ function showCamTour(){
   t.innerHTML='<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'"><defs><mask id="ctm"><rect width="'+W+'" height="'+H+'" fill="#fff"/>'+holes+'</mask></defs><rect width="'+W+'" height="'+H+'" fill="rgba(12,6,28,.76)" mask="url(#ctm)"/>'+rings+'</svg>'+labs+
     '<div class="ctl mid" style="top:'+(H*.36)+'px">ドラッグで むきをかえる\n2本指で ズーム（ひろげる＝ちかく）</div><div class="ctl mid" style="top:'+(H*.5)+'px">タップでとじる</div>';
   t.classList.add('on');
+  { // 説明のふきだしが重なったら、重ならなくなるまで上(下)へずらす
+    const els=[...t.querySelectorAll('.ctl:not(.mid)')],hit=(a,b)=>!(a.right<=b.left||b.right<=a.left||a.bottom<=b.top||b.bottom<=a.top);
+    els.forEach((el,i)=>{for(let k=0;k<12;k++){const r=el.getBoundingClientRect();const o=els.slice(0,i).find(q=>hit(r,q.getBoundingClientRect()));if(!o)break;const up=el.style.bottom!=='';const d=up?(r.bottom-o.getBoundingClientRect().top+8):(o.getBoundingClientRect().bottom-r.top+8);
+      if(up)el.style.bottom=(parseFloat(el.style.bottom)+d)+'px';else el.style.top=(parseFloat(el.style.top)+d)+'px'}});
+    els.forEach(el=>{const r=el.getBoundingClientRect(),dx=r.right>innerWidth-8?-(r.right-innerWidth+8):(r.left<8?8-r.left:0);if(!dx)return;if(el.style.right!=='')el.style.right=(parseFloat(el.style.right)-dx)+'px';else el.style.left=(parseFloat(el.style.left)+dx)+'px'});
+    const mids=[...t.querySelectorAll('.ctl.mid')];mids.forEach(m=>{for(let k=0;k<8;k++){const r=m.getBoundingClientRect();if(!els.some(q=>hit(r,q.getBoundingClientRect())))break;m.style.top=(parseFloat(m.style.top)+14)+'px'}});
+  }
 }
 function hideCamTour(){$('camTour').classList.remove('on');try{localStorage.setItem('usapon-camtour','1')}catch(e){}}
 function setSelfie(on){
