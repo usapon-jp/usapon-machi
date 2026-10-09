@@ -470,7 +470,7 @@ body.selfie #camFlip{background:rgba(255,226,168,.42);border-color:#ffe2a8;color
       <button class="chip" id="btnBgm" type="button" aria-label="BGMのオンオフ" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></button>
       <button class="chip" id="btnBook" type="button" aria-label="ずかん"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 5.5c3.2-1 6.2-.6 9.5 1.6 3.300-2.200 6.300-2.600 9.500-1.600v12.800c-3.200-1-6.200-.6-9.500 1.600-3.300-2.200-6.300-2.600-9.500-1.600z"/><path d="M12 7.100v12.800"/></svg></button>
       <button class="chip" id="btnHint" type="button" aria-label="ヒント"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.6 2.2c-.8.5-1.2 1-1.2 1.9"/><path d="M12 17h.01"/></svg></button>
-      <button class="chip" id="btnHelp" type="button" aria-label="あそびかた"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+      <button class="chip" id="btnHelp" type="button" aria-label="あそびかた・チュートリアル" title="あそびかた・チュートリアル"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
       <button class="chip" id="btnMap" type="button" aria-label="マップの表示きりかえ" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.400-6.500 11-6.500 11z"/><circle cx="12" cy="10" r="2.400"/></svg></button>
     </div>
     <div id="bgmRow"><span>♪</span><input type="range" id="bgmVol" min="0" max="100" step="1" aria-label="BGMの音量"></div>
@@ -540,7 +540,7 @@ body.selfie #camFlip{background:rgba(255,226,168,.42);border-color:#ffe2a8;color
 
 <div class="modal" id="mHelp">
   <div class="sheet" id="helpSheet">
-    <h2>あそびかた</h2>
+    <h2>あそびかた・チュートリアル</h2>
     <p class="helpIntro">パネルや かくれおばけちゃんを さがそう。<br>パネルは 見つけたら 写真を とってね。<br>ぜんぶ 見つけると、いいこと あるかも…</p>
     <div class="setrow">
       <button type="button" class="acc" data-body="opBody" aria-expanded="false"><span>そうさ方法</span><i></i></button>
@@ -590,6 +590,7 @@ body.selfie #camFlip{background:rgba(255,226,168,.42);border-color:#ffe2a8;color
         <div class="sethint" style="color:var(--mist)">※パネルの写真には、いつも わくがつきます。</div>
       </div>
     </div>
+    <div class="actions"><button class="btn sub" id="btnTourReplay" type="button">カメラモードの チュートリアルを みる</button></div>
     <div class="actions"><button class="btn sub" id="btnHelpClose" type="button">とじる</button></div>
     <div class="actions"><button class="btn sub" id="btnEditMode" type="button" hidden style="font-size:12px;opacity:.8">配置を編集する（おとな用）</button><button class="btn sub" id="btnTestBroom" type="button" hidden style="font-size:12px;opacity:.8">テスト用：ほうきを使えるようにする</button></div>
   </div>
@@ -763,7 +764,7 @@ body.selfie #camFlip{background:rgba(255,226,168,.42);border-color:#ffe2a8;color
       "caption": "うさぽんの動画が見られるよ。\n（テスト用：リンクは仮です）",
       "url": "",
       "button": "みる",
-      "button2": "YouTubeをひらく（べつタブ）",
+      "button2": "YouTubeをひらく",
       "signText": "うさぽんTV",
       "x": -5.8,
       "z": 10.5,
@@ -776,7 +777,7 @@ body.selfie #camFlip{background:rgba(255,226,168,.42);border-color:#ffe2a8;color
       "caption": "うさぽんのグッズはこちら。\n（テスト用：リンクは仮です）",
       "url": "",
       "button": "みる",
-      "button2": "SUZURIをひらく（べつタブ）",
+      "button2": "SUZURIをひらく",
       "signText": "うさぽんグッズ"
     }
   ]
@@ -3457,7 +3458,7 @@ function doAct(){
   if(a.type==='sit'){const s=a.obj;player.sit=s;player.pos.set(s.x,s.y+.05,s.z);player.vx=player.vz=0;player.face=s.face;player.ground=true;toast('すわったよ\n動くと立ち上がるよ');return}
   if(a.type==='spot'){
     const sp=a.obj.sp;$('spotTitle').textContent=sp.title||'';$('spotCap').textContent=sp.caption||'';
-    const l=$('spotLink');if(sp.url){l.href=sp.url;l.textContent=sp.button2||'ひらく（べつタブ）';l.hidden=false;$('spotNone').hidden=true}else{l.hidden=true;$('spotNone').hidden=false}
+    const l=$('spotLink');if(sp.url){l.href=sp.url;l.textContent=sp.button2||'ひらく';l.hidden=false;$('spotNone').hidden=true}else{l.hidden=true;$('spotNone').hidden=false}
     openModal('mSpot');
   }
 }
@@ -3607,6 +3608,7 @@ function landTip(){try{const t=('ontouchstart' in window)||navigator.maxTouchPoi
 })();
 $('btnHelp').addEventListener('click',()=>openModal('mHelp'));
 $('btnHelpClose').addEventListener('click',()=>closeModal('mHelp'));
+$('btnTourReplay').addEventListener('click',()=>{closeModal('mHelp');if(state.mode!=='play')return;if(!state.camMode)setCamMode(true);setTimeout(()=>{if(state.camMode)showCamTour()},450)}); // あそびかたの歯車から、カメラモードの説明を何度でも見直せる
 (function(){
   const inApp=/Line\/|Instagram|FBAN|FBAV|FB_IAB|MicroMessenger|TikTok|musical_ly|Twitter|Snapchat|KAKAOTALK|NAVER\(inapp/i.test(navigator.userAgent||'')||/[#&]inapp\b/.test(location.hash);
   if(!inApp)return;
@@ -4191,7 +4193,7 @@ function zakMenuOpen(){ // RPGのコマンドメニューのように: 「しょ
   if(!m){
     const st=document.createElement('style');st.textContent='#mZak .sheet{max-width:min(440px,92vw)}#zkList{display:flex;flex-direction:column;gap:6px;max-height:min(52vh,330px);overflow:auto;margin:8px 0;padding-right:2px;-webkit-overflow-scrolling:touch}#zkList a{display:flex;align-items:center;gap:10px;text-decoration:none;text-align:left;border-radius:12px;padding:6px 12px 6px 8px;font-size:14px}#zkList a:before{content:"▶";color:#ffc95e;font-size:12px;width:12px;opacity:0}#zkList a:hover:before,#zkList a:focus:before{opacity:1}#zkList img{width:44px;height:44px;border-radius:8px;background:#fff7ec;flex:none}#zkList b{display:block;font-size:14px}#zkList small{display:block;opacity:.8;font-size:12px}#zkList .pr{margin-left:auto;font-weight:900;color:#ffc95e;white-space:nowrap}';document.head.appendChild(st);
     m=document.createElement('div');m.className='modal';m.id='mZak';
-    m.innerHTML='<div class="sheet"><h2>ハロウィンの しょうひん</h2><p>えらぶと SUZURI の ページが べつタブで ひらくよ。ゲームは そのまま のこるよ</p><div id="zkList"></div><div class="actions"><a class="btn" id="zkAll" href="'+ZAK_SECTION+'" target="_blank" rel="noopener" style="text-decoration:none">ぜんぶ みる（べつタブ）</a><button class="btn sub" id="zkClose" type="button">とじる</button></div></div>';
+    m.innerHTML='<div class="sheet"><h2>ハロウィンの しょうひん</h2><p>えらぶと SUZURI の ページが べつタブで ひらくよ。ゲームは そのまま のこるよ</p><div id="zkList"></div><div class="actions"><a class="btn" id="zkAll" href="'+ZAK_SECTION+'" target="_blank" rel="noopener" style="text-decoration:none">まとめてみる</a><button class="btn sub" id="zkClose" type="button">とじる</button></div></div>';
     ($('mSpot').parentNode).appendChild(m);
     const L=m.querySelector('#zkList');
     ZAK_MENU.forEach(it=>{const a=document.createElement('a');a.className='btn sub';a.href=it.u;a.target='_blank';a.rel='noopener';
