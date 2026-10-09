@@ -38,10 +38,8 @@ c_items = np.maximum.reduce([D_(N, E, rect(480, 330, 640, 520), 34), D_(N, E, re
 layers['counter'] = (N, clean(np.maximum(cbody, c_items)), 'counter')
 # --- niche shelf items / back drawer unit (set back, near the back wall) ---
 # 奥の引き出し棚は奥の壁にほぼ貼りついているので、切り抜かず背景に焼き込む。アーチ棚は、グッズ入りの新しい棚(goods_shelf.webp)を重ねて焼き込む
-BAKE = [(640, 200, 785, 392)]
+BAKE = [(640, 200, 785, 392), (95, 300, 475, 870)]   # 2つ目: 左の壁際の棚(壁に接していて切り抜くと浮いて見えるため、背景に焼き込む)
 # --- left display rack with bag, boxes, plants, pumpkins and its round rug ---
-rack_items = cv2.morphologyEx(D_(N, E, rect(205, 300, 460, 850), 40), cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8))
-layers['rack'] = (N, clean(np.maximum(rack_items, ell(280, 788, 172, 52)), 350), 'rack')
 # --- wreath on the door / ivy on the right wall ---
 # リース: 扉の面に貼りついているので切り抜かず、元の絵から円形に(縁をなだらかに)背景へ焼き込む。下の WREATH_BAKE を参照
 layers['ivy'] = (N, clean(D_(N, E, rect(1365, 160, 1450, 405), 34), 200), 'ivy')
@@ -86,7 +84,7 @@ meta['table'] = dict(x=tpos[0], y=tpos[1], w=tim.width, h=tim.height, kind='tabl
 json.dump(meta, open(f'{OUT}/layers.json', 'w'), indent=1)
 # preview composite at the original camera
 comp = BASE.copy().astype(np.float32)
-order = ['rug', 'counter', 'ivy', 'wreath', 'rack']
+order = ['rug', 'counter', 'ivy']
 for n in order:
     src, m, _ = layers[n]
     ys, xs = np.where(m > 0); 
