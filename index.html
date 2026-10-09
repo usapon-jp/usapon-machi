@@ -557,8 +557,8 @@ body.selfie #camFlip{background:rgba(255,226,168,.42);border-color:#ffe2a8;color
       <div class="r"><span><kbd>E</kbd></span><em>いす・テレビで行動</em></div>
     </div>
     <div class="rows hp" id="hp-sp">
-      <div class="r"><span>左のスティック</span><em>あるく</em></div>
-      <div class="r"><span>右下のボタン</span><em>ダッシュ・ジャンプ</em></div>
+      <div class="r"><span>左のスティック</span><em>丸の中＝ゆっくり<br>丸の外まで＝スタスタ</em></div>
+      <div class="r"><span>右下のボタン</span><em>ダッシュ（1回おすと、スティックから手をはなすまで）・ジャンプ</em></div>
       <div class="r"><span>画面をなぞる</span><em>視点をまわす</em></div>
       <div class="r"><span>カメラボタン</span><em>パネルの近くで写真</em></div>
     </div>
@@ -3490,7 +3490,7 @@ window.addEventListener('keydown',e=>{
   if(e.code==='BracketLeft')cam.yaw+=.3;if(e.code==='BracketRight')cam.yaw-=.3;
 });
 window.addEventListener('keyup',e=>{input.keys[e.code]=false});
-window.addEventListener('blur',()=>{input.keys={};input.dash=false});
+window.addEventListener('blur',()=>{input.keys={};input.dash=false;input.dashLatch=false});
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 canvas.addEventListener('wheel',e=>{if(state.mode!=='play')return;e.preventDefault();if(state.selfie)cam.sd=clamp((cam.sd||3.3)+e.deltaY*.004,1.2,6.5);else if(state.camMode)cam.zoom=clamp((cam.zoom||1)+e.deltaY*.001,.3,1.25);else cam.dist=clamp(cam.dist+e.deltaY*.008,3.6,13)},{passive:false});
 const ptrs=new Map();let pinch0=0;
@@ -3511,16 +3511,20 @@ canvas.addEventListener('pointermove',e=>{
 const endPtr=e=>{ptrs.delete(e.pointerId);pinch0=0};
 canvas.addEventListener('pointerup',endPtr);canvas.addEventListener('pointercancel',endPtr);
 (function(){
-  const joy=$('joy'),knob=$('knob');let id=null,cx=0,cy=0;const RAD=48;
-  const set=(x,y)=>{let dx=x-cx,dy=y-cy;const m=Math.hypot(dx,dy);if(m>RAD){dx=dx/m*RAD;dy=dy/m*RAD}knob.style.transform='translate('+dx+'px,'+dy+'px)';joy.classList.toggle('act',m>8);input.jx=dx/RAD;input.jy=-dy/RAD};
-  joy.addEventListener('pointerdown',e=>{if(id!==null)return;id=e.pointerId;joy.setPointerCapture(e.pointerId);const r=joy.getBoundingClientRect();cx=r.left+r.width/2;cy=r.top+r.height/2;set(e.clientX,e.clientY);e.preventDefault()});
+  const joy=$('joy'),knob=$('knob');let id=null,cx=0,cy=0,RC=48;
+  // 2だんかい: 丸の中=ゆっくり歩く(最大で半分の速さ) / 丸より外まで引っぱる=ふつうに歩く(スタスタ)。丸の外は少し先までつまみが動く
+  const set=(x,y)=>{let dx=x-cx,dy=y-cy;const m=Math.hypot(dx,dy),OUT=RC+22;if(m>OUT){dx=dx/m*OUT;dy=dy/m*OUT}const mm=Math.min(m,OUT);knob.style.transform='translate('+dx+'px,'+dy+'px)';joy.classList.toggle('act',m>8);
+    const f=mm<=RC?.5*mm/RC:.5+.5*Math.min(1,(mm-RC)/22);input.jx=mm>0?dx/mm*f:0;input.jy=mm>0?-dy/mm*f:0;joy.classList.toggle('fast',mm>RC+4)};
+  joy.addEventListener('pointerdown',e=>{if(id!==null)return;id=e.pointerId;joy.setPointerCapture(e.pointerId);const r=joy.getBoundingClientRect();cx=r.left+r.width/2;cy=r.top+r.height/2;RC=r.width/2;set(e.clientX,e.clientY);e.preventDefault()});
   joy.addEventListener('pointermove',e=>{if(e.pointerId===id)set(e.clientX,e.clientY)});
-  const end=e=>{if(e.pointerId!==id)return;id=null;knob.style.transform='';joy.classList.remove('act');input.jx=0;input.jy=0};
+  const end=e=>{if(e.pointerId!==id)return;id=null;knob.style.transform='';joy.classList.remove('act','fast');input.jx=0;input.jy=0;if(input.dashLatch){input.dash=false;input.dashLatch=false;dash.classList.remove('hold')}}; // ダッシュは、方向キーから手をはなすまで続く
   joy.addEventListener('pointerup',end);joy.addEventListener('pointercancel',end);
   const dash=$('tbDash'),jump=$('tbJump');
   [dash,jump,$('photoBtn'),$('broomBtn')].forEach(b=>{if(b)b.addEventListener('contextmenu',e=>e.preventDefault())}); // long-press must not open the OS menu (it cancelled the held dash)
-  dash.addEventListener('pointerdown',e=>{if(player.fly){input.down=true;e.preventDefault();return}input.dash=true;dash.classList.add('hold');dash.setPointerCapture(e.pointerId);e.preventDefault()});
-  const dEnd=()=>{input.dash=false;dash.classList.remove('hold')};dash.addEventListener('pointerup',dEnd);dash.addEventListener('pointercancel',dEnd);
+  dash.addEventListener('pointerdown',e=>{if(player.fly){input.down=true;e.preventDefault();return}e.preventDefault();
+    // 1回おすとダッシュ開始(もう1回おすと止まる)。方向キーから手をはなすと止まる。方向キーをさわっていないときは、少ししたら止まる
+    if(input.dashLatch){input.dash=false;input.dashLatch=false;dash.classList.remove('hold');return}
+    input.dash=true;input.dashLatch=true;input.dashIdle=0;dash.classList.add('hold')});
   jump.addEventListener('pointerdown',e=>{input.jump=true;e.preventDefault()});
 })();
 $('photoBtn').addEventListener('click',()=>{if(state.mode!=='play')return;if(state.nearPanel)takePhoto(state.nearPanel,0);else setCamMode(true)});
@@ -3719,6 +3723,7 @@ function update(dt){
   if(state.selfie){ix=0;iy=0}
   let mag=Math.hypot(ix,iy);if(mag>1){ix/=mag;iy/=mag;mag=1}
   if(player.sit){if(playing&&(mag>.35||input.jump))standUp();else{mag=0;ix=iy=0;input.jump=false}}
+  if(input.dashLatch){input.dashIdle=(mag>.05?0:(input.dashIdle||0)+dt);if(input.dashIdle>1.8||!playing||player.fly){input.dash=false;input.dashLatch=false;const db=$('tbDash');if(db)db.classList.remove('hold')}}
   const dash=playing&&(input.keys.ShiftLeft||input.keys.ShiftRight||input.dash);
   const sp=(player.fly?(dash?8.6:5.8):(dash?7.6:4.3))*mag;
   const fx=-Math.sin(cam.yaw),fz=-Math.cos(cam.yaw),rx=Math.cos(cam.yaw),rz=-Math.sin(cam.yaw);
@@ -4604,7 +4609,7 @@ function rotateCafePon(){
     let tot=0;for(let j=0;j<=n;j++)for(let i=0;i<=n;i++)if(free(i,j))tot++;
     const pt=(x,z)=>seen[idx(Math.round((x+40)/st),Math.round((z+40)/st))]===1;
     return {reached:c,freeCells:tot,pct:Math.round(c/tot*100),gateN:pt(0,-38),fountain:pt(2,12),plazaS:pt(0,30),plazaN:pt(0,-28),stairs:STAIRS.map(s=>pt(s.x,(s.a+s.b)/2))}};
-  window.__usapon={zakkaEnter,zakkaExit,zakState:()=>ZAK,cafeEnter,cafeExit,cafeState:()=>CAFE,reach,tpTo,state,player,cam,panels:()=>panels,save:()=>save,warnings,slots,seats,spots:()=>spots,setFly,presentReset,presentPos:()=>PRESENT&&presentPos(),props:()=>ED.list,layout:()=>edExport(false)};
+  window.__usapon={input,zakkaEnter,zakkaExit,zakState:()=>ZAK,cafeEnter,cafeExit,cafeState:()=>CAFE,reach,tpTo,state,player,cam,panels:()=>panels,save:()=>save,warnings,slots,seats,spots:()=>spots,setFly,presentReset,presentPos:()=>PRESENT&&presentPos(),props:()=>ED.list,layout:()=>edExport(false)};
 })();
 })();
 </script>
