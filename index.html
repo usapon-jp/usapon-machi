@@ -212,6 +212,13 @@ body.touch #actBtn kbd{display:none}
 #edHide:disabled{opacity:.35}
 #edOutTxt{width:100%;height:150px;box-sizing:border-box;margin-top:10px;font-size:12px;border-radius:10px;padding:8px;background:#120a2b;color:var(--paper);border:1px solid var(--line);-webkit-user-select:text;user-select:text}
 body.editing #quick{display:none}
+#edPanel [hidden]{display:none!important}
+#edInfo{white-space:pre-line}
+#edPanel.cm .edProp{display:none}
+#edPanel:not(.cm) .edCord{display:none}
+#edMode{background:rgba(255,201,94,.18);border-color:var(--lantern);font-size:11.5px}
+#edConB,#edConP{background:linear-gradient(180deg,#ffd27a,#e0912a);color:#2a1200;border-color:#ffe2a8}
+#edAddLamp{border-style:dashed}
 /* ===== もちた風スマホ操作UI（やわらかいクリーム色の丸ボタン・右下にまとめて配置） ===== */
 .mk-ic{width:34px;height:34px;flex:none;display:block;overflow:visible}
 .mk-k{stroke:#8f6e86;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;fill:none}
@@ -512,12 +519,18 @@ body.selfie #camFlip{background:rgba(255,226,168,.42);border-color:#ffe2a8;color
     <div id="edBody">
       <small id="edInfo"></small>
       <div class="edRow"><button id="edPrev" type="button">◀ ちかく</button><button id="edNext" type="button">ちかく ▶</button></div>
-      <div class="edPad edNeed">
+      <div class="edRow"><button id="edMode" type="button"></button></div>
+      <div class="edRow edCord edNeed"><button id="edSagM" type="button">たるみ ー</button><button id="edSagP" type="button">たるみ ＋</button></div>
+      <div class="edRow edCord edNeed"><button id="edCordOff" type="button">ひもを はずす</button><button id="edCordUndo" type="button">このひもを もどす</button></div>
+      <div class="edPad edNeed edProp">
         <button id="edRL" type="button">⟲<small>回す</small></button><button id="edF" type="button">↑<small>おく</small></button><button id="edRR" type="button">⟳<small>回す</small></button>
         <button id="edL" type="button">←</button><button id="edFine" type="button">おおきく</button><button id="edR" type="button">→</button>
         <button id="edDn" type="button">▼<small>さげる</small></button><button id="edB" type="button">↓<small>てまえ</small></button><button id="edUp" type="button">▲<small>あげる</small></button>
       </div>
-      <div class="edRow edNeed"><button id="edHide" type="button">かくす</button><button id="edUndo" type="button">この小物をもどす</button></div>
+      <div class="edRow edNeed edProp"><button id="edHide" type="button">かくす</button><button id="edUndo" type="button">この小物をもどす</button></div>
+      <div class="edRow edProp"><button id="edAddLamp" type="button">＋ 街灯を ふやす</button></div>
+      <div class="edRow edProp" id="edLampRow" hidden><button id="edCordStart" type="button"></button></div>
+      <div class="edRow edProp" id="edConnRow" hidden><button id="edConB" type="button">電球で つなぐ</button><button id="edConP" type="button">ポンポンで</button></div>
       <div class="edRow"><button id="edCopy" type="button">配置データをコピー</button></div>
       <div class="edRow"><button id="edAll" type="button">ぜんぶもどす</button></div>
       <small id="edCount"></small>
@@ -2287,37 +2300,62 @@ function addLamp(x,z){
   const y0=groundY(x,z),tk=edBegin('lamp',x,z);
   /* post & lantern: Meshy lamppost model, placed by the second script from `lamps` */
   addGlow(x,y0+3.32,z,6.6,'#ffa845');B.pool.add(x,y0+.12,z,9,1,9,0,'#8a5018');
-  addCircle(x,z,.28);const lp=[x,y0+3.5,z];lp.ed=ED.cur;ED.cur.lamp=lp;lamps.push(lp);edEnd(tk);
+  addCircle(x,z,.28);const lp=[x,y0+3.5,z];lp.key='L'+x.toFixed(1)+'_'+z.toFixed(1);lp.ed=ED.cur;ED.cur.lamp=lp;lamps.push(lp);edEnd(tk);
 }
 const GARL=[];let wireLines=null;
+const CORD_CAP=24,CORD_SPARES=24,LAMP_SPARES=16,SPARE_XZ=400;
 function garlandPts(a,b,sag,n){const pts=[];for(let i=0;i<=n;i++){const t=i/n;pts.push([lerp(a[0],b[0],t),lerp(a[1],b[1],t)-sag*4*t*(1-t),lerp(a[2],b[2],t)])}return pts}
-/* la / lb: lamp (or null for a fixed end); the string follows a lamp when it is moved in the edit panel */
-function garland(a,b,sag,type,la,lb){
-  const L=Math.hypot(b[0]-a[0],b[2]-a[2]),n=Math.max(4,Math.round(L/.8)),pts=garlandPts(a,b,sag,n);
-  const G={a,b,sag,type,n,la,lb,w0:wire.length,items:[],oa:la?[a[0]-la[0],a[1]-la[1],a[2]-la[2]]:null,ob:lb?[b[0]-lb[0],b[1]-lb[1],b[2]-lb[2]]:null};
-  for(let i=0;i<n;i++)wire.push(pts[i],pts[i+1]);
-  const PC=['#ff8a2a','#8a5bd6','#fff1d8','#ff7aa8','#ffc95e'];
-  for(let i=1;i<n;i++){const p=pts[i];
-    if(type==='bulb'){const ib=B.bulb;ib.add(p[0],p[1]-.08,p[2],.1,.1,.1,0,GRP(['#ffe2a0','#ffc870','#ffd890']));const it={i,ib,k:ib.m.length-1,dy:-.08,sc:.1};if(i%2===0){it.g=addGlow(p[0],p[1]-.08,p[2],1.5,'#ffc060')}G.items.push(it)}
-    else{const ib=B.flower;ib.add(p[0],p[1]-.14,p[2],.17,.17,.17,0,PC[i%PC.length]);G.items.push({i,ib,k:ib.m.length-1,dy:-.14,sc:.17})}}
-  GARL.push(G);
-}
-const _gm=new THREE.Matrix4(),_gp=new THREE.Vector3(),_gq=new THREE.Quaternion(),_gs=new THREE.Vector3();
-function garlandUpdate(lampE,pos){ // pos: {x,z,y} = new foot position of that lamp
-  const lp=lampE&&lampE.lamp;if(!lp)return;
-  lp.cur=[pos.x,pos.y+3.5,pos.z];
+function cordEnd(d){if(d.lamp){const l=d.lamp.cur||d.lamp;return [l[0]+d.o[0],l[1]+d.o[1],l[2]+d.o[2]]}return d.p}
+const cordEndKey=d=>d.lamp?d.lamp.key:d.key;
+const _gm=new THREE.Matrix4(),_gp=new THREE.Vector3(),_gq=new THREE.Quaternion(),_gs=new THREE.Vector3(),CORD_OFF=[0,-300,0];
+/* A string = wire segments + bulbs (or pompoms) + glows. Existing strings keep their size; spare slots are pre-built (capacity CORD_CAP) and hidden,
+   so that strings can be added / removed / re-routed at run time from the edit panel (no new buffers needed). */
+function cordApply(G){
+  const hiddenEnd=d=>d.lamp&&d.lamp.hidden;
+  const live=G.on&&!hiddenEnd(G.A)&&!hiddenEnd(G.B);
+  let n=G.n,pts=null;
+  if(live){const a=cordEnd(G.A),b=cordEnd(G.B);
+    if(G.spare){n=Math.max(4,Math.min(CORD_CAP,Math.round(Math.hypot(b[0]-a[0],b[2]-a[2])/.8)));G.n=n}
+    pts=garlandPts(a,b,G.sag,n)}
+  G.pts=pts;
+  const P=wireLines?wireLines.geometry.attributes.position:null;
+  for(let i=0;i<G.nmax;i++){
+    const p0=live&&i<n?pts[i]:CORD_OFF,p1=live&&i<n?pts[i+1]:CORD_OFF,w0=wire[G.w0+i*2],w1=wire[G.w0+i*2+1];
+    w0[0]=p0[0];w0[1]=p0[1];w0[2]=p0[2];w1[0]=p1[0];w1[1]=p1[1];w1[2]=p1[2];
+    if(P){P.setXYZ(G.w0+i*2,p0[0],p0[1],p0[2]);P.setXYZ(G.w0+i*2+1,p1[0],p1[1],p1[2])}
+  }
   const touched=new Set(),gl=[];
-  GARL.forEach(G=>{
-    if(G.la!==lp&&G.lb!==lp)return;
-    const e=(l,o,fix)=>l?[(l.cur||l)[0]+o[0],(l.cur||l)[1]+o[1],(l.cur||l)[2]+o[2]]:fix;
-    const a=e(G.la,G.oa,G.a),b=e(G.lb,G.ob,G.b),pts=garlandPts(a,b,G.sag,G.n);
-    if(wireLines){const P=wireLines.geometry.attributes.position;for(let i=0;i<G.n;i++){P.setXYZ((G.w0+i*2),pts[i][0],pts[i][1],pts[i][2]);P.setXYZ((G.w0+i*2+1),pts[i+1][0],pts[i+1][1],pts[i+1][2])}P.needsUpdate=true}
-    G.items.forEach(it=>{const p=pts[it.i],x=p[0],y=p[1]+it.dy,z=p[2];
-      if(it.ib.im){_gp.set(x,y,z);_gq.identity();_gs.set(it.sc,it.sc,it.sc);_gm.compose(_gp,_gq,_gs);it.ib.m[it.k].copy(_gm);it.ib.im.setMatrixAt(it.k,_gm);touched.add(it.ib.im)}
-      if(it.g){it.g.x=x;it.g.y=y;it.g.z=z;gl.push(it.g)}});
+  G.items.forEach(it=>{
+    const vis=live&&it.type===G.type&&it.i<n;let x=0,y=-300,z=0,sc=0;
+    if(vis){const p=pts[it.i];x=p[0];y=p[1]+it.dy;z=p[2];sc=it.sc}
+    _gp.set(x,y,z);_gq.set(0,0,0,1);_gs.set(sc,sc,sc);_gm.compose(_gp,_gq,_gs);
+    it.ib.m[it.k].copy(_gm);if(it.ib.im){it.ib.im.setMatrixAt(it.k,_gm);touched.add(it.ib.im)}
+    if(it.g){it.g.x=x;it.g.y=y;it.g.z=z;it.g.size=vis?1.5:0;gl.push(it.g)}
   });
-  touched.forEach(im=>{im.instanceMatrix.needsUpdate=true});
-  if(gl.length)glowRefresh(gl);
+  if(wireLines){touched.forEach(im=>{im.instanceMatrix.needsUpdate=true});if(P)P.needsUpdate=true;if(gl.length)glowRefresh(gl)}
+}
+function mkCord(a,b,sag,type,la,lb,spare){
+  const G={sag,sag0:sag,type,on:!spare,spare:!!spare,items:[],w0:wire.length,n:0,nmax:0,pts:null};
+  if(spare){G.A={p:[0,0,0],key:'-'};G.B={p:[0,0,0],key:'-'};G.nmax=CORD_CAP;G.n=0}
+  else{
+    G.A=la?{lamp:la,o:[a[0]-la[0],a[1]-la[1],a[2]-la[2]]}:{p:a,key:'F'};
+    G.B=lb?{lamp:lb,o:[b[0]-lb[0],b[1]-lb[1],b[2]-lb[2]]}:{p:b,key:'F'};
+    G.nmax=Math.max(4,Math.round(Math.hypot(b[0]-a[0],b[2]-a[2])/.8));G.n=G.nmax}
+  for(let i=0;i<G.nmax*2;i++)wire.push([0,0,0]);
+  const PC=['#ff8a2a','#8a5bd6','#fff1d8','#ff7aa8','#ffc95e'];
+  (spare?['bulb','pom']:[type]).forEach(ty=>{
+    for(let i=1;i<G.nmax;i++){
+      if(ty==='bulb'){const ib=B.bulb;ib.add(0,-300,0,.1,.1,.1,0,spare?'#ffd890':GRP(['#ffe2a0','#ffc870','#ffd890']));
+        const it={i,ib,k:ib.m.length-1,dy:-.08,sc:.1,type:'bulb'};if(i%2===0)it.g=addGlow(0,-300,0,1.5,'#ffc060');G.items.push(it)}
+      else{const ib=B.flower;ib.add(0,-300,0,.17,.17,.17,0,PC[i%PC.length]);G.items.push({i,ib,k:ib.m.length-1,dy:-.14,sc:.17,type:'pom'})}
+    }});
+  GARL.push(G);cordApply(G);return G;
+}
+function garland(a,b,sag,type,la,lb){mkCord(a,b,sag,type,la,lb,false)}
+/* a lamp was moved / hidden in the edit panel: re-draw its strings */
+function cordsTouch(lp,pos,hide){
+  lp.cur=[pos.x,pos.y+3.5,pos.z];lp.hidden=!!hide;
+  GARL.forEach(G=>{if(G.A.lamp===lp||G.B.lamp===lp)cordApply(G)});
 }
 (function placeLamps(){
   ROADS.forEach(r=>{
@@ -2339,6 +2377,9 @@ function garlandUpdate(lampE,pos){ // pos: {x,z,y} = new foot position of that l
   // plaza: strings from fountain top to ring lamps
   const ring=lamps.filter(l=>Math.hypot(l[0]-2,l[2]-6)<8.6&&Math.hypot(l[0]-2,l[2]-6)>6.5);
   ring.forEach(l=>garland([l[0],l[1]+.3,l[2]],[2,groundY(2,6)+5.6,6],1.2,'bulb',l,null));
+  // spare lamps and spare strings (hidden until the edit panel switches them on)
+  for(let i=0;i<LAMP_SPARES;i++){addLamp(SPARE_XZ,SPARE_XZ);const lp=lamps[lamps.length-1];lp.key='S'+i;lp.ed.id='spare:'+i;lp.ed.spare=i}
+  for(let i=0;i<CORD_SPARES;i++)mkCord(null,null,.9,'bulb',null,null,true);
 })();
 
 /* ---------- plants, planters, barrels, fences ---------- */
@@ -2441,7 +2482,9 @@ function foliage(x,y0,z,h,s,c,c2,nBig,lumps,spread){
   for(let i=0;i<Math.round(lumps*.3);i++){const th=rand()*6.28,R0=(1.1+rand()*.6)*s*spread*F,sz=(.2+rand()*.2)*s*F;
     B.lump.add(x+ox+Math.cos(th)*R0*asx,y0+h+.5*s*F+rand()*.4*s,z+oz+Math.sin(th)*R0*asz,sz,sz*.9,sz,rand()*6,shadeC(tone(),.72+rand()*.15,(rand()-.5)*.06))}
 }
+const TREE_MOVE=[[-16.9,33.8,16,38]]; // [from x, from z, to x, to z]: this tree stood in the line of sight of the zakka entrance, so it is moved toward the town fence
 function addTree(x,z,s,bare){
+  const mv=TREE_MOVE.find(m=>Math.hypot(m[0]-x,m[1]-z)<.5);if(mv){x=mv[2];z=mv[3]}
   // Meshy deciduous tree (model A/B) is placed in the second script; here only the layout, lantern, ground dressing and colliders
   const y0=groundY(x,z),h=5.4*s;
   TREES.push([x,y0,z,h,Math.floor(rand()*3),rand()*6.283]);
@@ -2612,7 +2655,7 @@ function buildGlow(){
 }
 window.__W={INTERIOR,THREE,scene,camera,renderer,canvas,hemi,moon,warm,glowMat,buildGlow,ghosts,houses,lamps,
   util:{$,isTouch,rand,R,pick,clamp,lerp,angLerp,rr,cv,canvasTex,mulberry32,textTex},WORLD,MAT,glowTex,addGlow,sky,
-  groundY,baseY,collidesAt,cols,circs,camSph,camBox,resolveXZ,addCircle,addBoxCol,STAIRS,seats,slots,shopsOut,MAPROADS,PLAZAS,warnings,roadClear,fountainPos:[2,6],ivys:IVYS,crates:CRATES,trees:TREES,firs:FIRS,shrubs:SHRUBS,ED,edBegin,edEnd,glowRefresh,garlandUpdate,pumps:PUMPS};
+  groundY,baseY,collidesAt,cols,circs,camSph,camBox,resolveXZ,addCircle,addBoxCol,STAIRS,seats,slots,shopsOut,MAPROADS,PLAZAS,warnings,roadClear,fountainPos:[2,6],ivys:IVYS,crates:CRATES,trees:TREES,firs:FIRS,shrubs:SHRUBS,ED,edBegin,edEnd,glowRefresh,cordsTouch,cordApply,GARL,cordEndKey,pumps:PUMPS};
 })();
 (function(){
 'use strict';
@@ -4374,7 +4417,7 @@ function edApply(e){
   (e.seats||[]).forEach((q,k)=>{const o=s0.seats[k],w=tp(o.x,o.z);q.x=w[0];q.z=w[1];q.y=o.y+dY;q.face=o.face+th;if(q.table){const tt=tp(e.x0,e.z0);q.table=[tt[0],tt[1]]}});
   if(e.panel){const p=e.panel;p.x=nx;p.z=nz;p.rot=s0.p.rot+th;p.n.set(Math.sin(p.rot),0,Math.cos(p.rot));p.y0=s0.p.y0+dY}
   if(e.spot){e.spot.x=nx;e.spot.z=nz;e.spot.rot=s0.sp.rot+th}
-  if(e.lamp)W.garlandUpdate(e,{x:nx,z:nz,y:groundY(nx,nz)+st.dy});
+  if(e.lamp)W.cordsTouch(e.lamp,{x:nx,z:nz,y:groundY(nx,nz)+st.dy},hide);
 }
 function edFind(o){
   if(o.id)return ED.list.find(e=>e.id===o.id)||null;
@@ -4391,13 +4434,50 @@ function edLoad(arr,tag,isBase){
   if(miss)warnings.push(tag+': '+miss+'件の小物が見つかりませんでした');
 }
 const r2=v=>Math.round(v*100)/100;
-function edIsSet(e){const st=e.st;return !!st&&(Math.abs(st.dx)>.001||Math.abs(st.dz)>.001||Math.abs(st.dy)>.001||Math.abs(st.r)>.01||st.hide)}
+function edIsSet(e){const st=e.st;if(st&&e.spare!==undefined)return !st.hide;return !!st&&(Math.abs(st.dx)>.001||Math.abs(st.dz)>.001||Math.abs(st.dy)>.001||Math.abs(st.r)>.01||st.hide)}
 function edRow(e){const st=edSt(e),o=e.id?{id:e.id}:{k:e.kind,x:r2(e.x0),z:r2(e.z0)};
   o.dx=r2(st.dx);o.dz=r2(st.dz);if(st.dy)o.dy=r2(st.dy);if(st.r)o.r=Math.round(st.r*10)/10;if(st.hide)o.hide=true;return o}
-function edExport(all){return ED.list.filter(e=>all?!!e.st:edIsSet(e)).map(edRow)}
+function edExport(all){return ED.list.filter(e=>all?(!!e.st&&!(e.spare!==undefined&&e.st.hide&&!edChanged(e))):edIsSet(e)).map(edRow)}
+/* ---------- strings (ひも): saved as differences from the default town ---------- */
+const GARL=W.GARL;
+const dummyEnd=()=>({p:[0,0,0],key:'-'});
+function cordKey(G){return G.type[0]+':'+[W.cordEndKey(G.A),W.cordEndKey(G.B)].sort().join('~')}
+function cordLen(G){if(!G.pts)return 0;let L=0;for(let i=1;i<G.pts.length;i++)L+=Math.hypot(G.pts[i][0]-G.pts[i-1][0],G.pts[i][1]-G.pts[i-1][1],G.pts[i][2]-G.pts[i-1][2]);return L}
+function cordBase(G){G.bs={on:G.on,sag:G.sag,A:G.A,B:G.B,type:G.type}}
+function cordChanged(G){const b=G.bs;if(!b)return false;return G.on!==b.on||(G.on&&(Math.abs(G.sag-b.sag)>.001||G.A!==b.A||G.B!==b.B||G.type!==b.type))}
+function cordRestore(G){const b=G.bs;G.on=b.on;G.sag=b.sag;G.A=b.A;G.B=b.B;G.type=b.type;W.cordApply(G)}
+function cordDefault(G){if(G.spare){G.on=false;G.A=dummyEnd();G.B=dummyEnd()}else{G.on=true;G.sag=G.sag0}W.cordApply(G)}
+function cordIsSet(G){return G.spare?G.on:(!G.on||Math.abs(G.sag-G.sag0)>.001)}
+function cordRow(G){const k=cordKey(G);if(G.spare)return {k,add:1,s:r2(G.sag)};const o={k};if(!G.on)o.off=1;else o.s=r2(G.sag);return o}
+function cordsExport(){return GARL.filter(cordIsSet).map(cordRow)}
+function cordRemove(G){G.on=false;if(G.spare){G.A=dummyEnd();G.B=dummyEnd()}W.cordApply(G)}
+function cordAdd(la,lb,ty,sag){
+  if(!la||!lb||la===lb)return 'same';
+  const off=ty==='pom'?.15:.4,key=(ty==='pom'?'p':'b')+':'+[la.key,lb.key].sort().join('~');
+  const ex=GARL.find(g=>g.on?cordKey(g)===key:(!g.spare&&cordKey(g)===key));
+  if(ex){if(ex.on)return 'dup';ex.on=true;ex.sag=ex.sag0;W.cordApply(ex);return ex}
+  const G=GARL.find(g=>g.spare&&!g.on);if(!G)return 'full';
+  G.A={lamp:la,o:[0,off,0]};G.B={lamp:lb,o:[0,off,0]};G.type=ty==='pom'?'pom':'bulb';G.sag=sag;G.on=true;W.cordApply(G);return G;
+}
+function cordsLoad(arr,tag,isBase){
+  let miss=0;
+  (arr||[]).forEach(o=>{
+    const k=String(o.k||'');
+    if(o.add){
+      const ty=k[0]==='p'?'pom':'bulb',ks=k.slice(2).split('~'),la=W.lamps.find(l=>l.key===ks[0]),lb=W.lamps.find(l=>l.key===ks[1]);
+      const r=cordAdd(la,lb,ty,+o.s||.9);if(!r||typeof r==='string'){if(r!=='dup')miss++;}
+    }else{
+      const G=GARL.find(g=>!g.spare&&cordKey(g)===k);if(!G){miss++;return}
+      G.on=!o.off;if(o.s!==undefined)G.sag=+o.s;W.cordApply(G)}
+  });
+  if(isBase)GARL.forEach(cordBase);
+  if(miss)warnings.push(tag+': ひも'+miss+'本が見つかりませんでした');
+}
 function layoutInit(){
-  let base=[];try{base=JSON.parse($('layout-data').textContent).props||[]}catch(e){warnings.push('配置データを読めませんでした')}
-  edLoad(base,'配置データ',true);
+  ED.list.forEach(e=>{if(e.spare!==undefined){e.st={dx:0,dz:0,dy:0,r:0,hide:true};e.base=Object.assign({},e.st);edApply(e)}}); // spare lamps start hidden
+  GARL.forEach(cordBase);
+  let base=[],cb=[];try{const j=JSON.parse($('layout-data').textContent);base=j.props||[];cb=j.cords||[]}catch(e){warnings.push('配置データを読めませんでした')}
+  edLoad(base,'配置データ',true);cordsLoad(cb,'配置データ',true);
   if(state.editOn)edUI();
   const bm=$('btnEditMode');
   if(!/github\.io$/.test(location.hostname)){const tb=$('btnTestBroom');tb.hidden=false;tb.addEventListener('click',()=>{save.broom=true;save.wand=false;persist();presentReset();flyUI();closeModal('mHelp');toast('テスト用：ほうきが使えるようになりました\n時計塔のプレゼントを とりにいこう',3600)});
@@ -4405,25 +4485,42 @@ function layoutInit(){
 }
 function edUI(){
   let draft=null;try{draft=JSON.parse(localStorage.getItem(ED_DRAFT)||'null')}catch(e){}
-  if(draft&&Array.isArray(draft.props)){edLoad(draft.props,'下書き');setTimeout(()=>toast('前回の編集の続きから始めます',3000),1200)}
+  if(draft&&Array.isArray(draft.props)){edLoad(draft.props,'下書き');if(Array.isArray(draft.cords)){GARL.forEach(cordDefault);cordsLoad(draft.cords,'下書き')}setTimeout(()=>toast('前回の編集の続きから始めます',3000),1200)}
   document.body.classList.add('editing');
   const box=$('edPanel');box.hidden=false;
-  let sel=null,fine=false,resetArm=0;
+  let sel=null,fine=false,resetArm=0,selC=null,cm=false,pend=null;
   // marker: ground ring + arrow, drawn on top so it is visible through walls
   const mk=new THREE.Group();mk.visible=false;scene.add(mk);
   const mm=new THREE.MeshBasicMaterial({color:0x7cf0ff,transparent:true,opacity:.9,depthTest:false});
   const ring=new THREE.Mesh(new THREE.TorusGeometry(.95,.06,6,40),mm);ring.rotation.x=PI/2;ring.renderOrder=20;mk.add(ring);
   const arrow=new THREE.Mesh(new THREE.ConeGeometry(.28,.6,4),mm);arrow.rotation.x=PI;arrow.renderOrder=20;mk.add(arrow);
-  const saveDraft=()=>{try{localStorage.setItem(ED_DRAFT,JSON.stringify({v:1,props:edExport(true)}))}catch(e){}};
-  const near=()=>ED.list.map(e=>{const q=edPos(e);return {e,d:Math.hypot(q.x-player.pos.x,q.z-player.pos.z)}}).filter(o=>o.d<14).sort((a,b)=>a.d-b.d).map(o=>o.e);
+  const mk2=new THREE.Group();mk2.visible=false;scene.add(mk2); // start lamp of a string being connected
+  const mm2=new THREE.MeshBasicMaterial({color:0xffb347,transparent:true,opacity:.95,depthTest:false});
+  const ring2=new THREE.Mesh(new THREE.TorusGeometry(.95,.09,6,40),mm2);ring2.rotation.x=PI/2;ring2.renderOrder=21;mk2.add(ring2);
+  const arrow2=new THREE.Mesh(new THREE.ConeGeometry(.28,.6,4),mm2);arrow2.rotation.x=PI;arrow2.position.y=2.9;arrow2.renderOrder=21;mk2.add(arrow2);
+  const dots=[];for(let i=0;i<26;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(.13,8,6),mm);m.visible=false;m.renderOrder=20;scene.add(m);dots.push(m)}
+  const saveDraft=()=>{try{localStorage.setItem(ED_DRAFT,JSON.stringify({v:1,props:edExport(true),cords:cordsExport()}))}catch(e){}};
+  const hiddenSpare=e=>e.spare!==undefined&&edSt(e).hide;
+  const near=()=>ED.list.filter(e=>!hiddenSpare(e)).map(e=>{const q=edPos(e);return {e,d:Math.hypot(q.x-player.pos.x,q.z-player.pos.z)}}).filter(o=>o.d<14).sort((a,b)=>a.d-b.d).map(o=>o.e);
   function info(){
     const nm=$('edName'),tx=$('edInfo');
-    if(!sel){nm.textContent='小物をえらんでね';tx.textContent='画面の小物をタップ、または ◀ ▶';box.classList.remove('has');return}
+    const nCh=ED.list.filter(edChanged).length+GARL.filter(cordChanged).length;
+    $('edCount').textContent=nCh?'今回 '+nCh+'件 変更中':'';
+    box.classList.toggle('cm',cm);
+    $('edMode').textContent=cm?'いま：ひもを えらぶ　→ こものへ':'いま：こものを えらぶ　→ ひもへ';
+    if(cm){
+      if(!selC||!selC.on||!selC.pts){selC=null;nm.textContent='ひもを えらんでね';tx.textContent='◀ ▶ か 画面の ひもを タップ';box.classList.remove('has');return}
+      box.classList.add('has');nm.textContent='ひも（'+(selC.type==='pom'?'ポンポン':'電球')+(selC.spare?'・ふやした':'')+'）';
+      tx.textContent='ながさ '+cordLen(selC).toFixed(1)+'m　たるみ '+selC.sag.toFixed(2);return}
+    const lampSel=!!sel&&sel.kind==='lamp';
+    $('edLampRow').hidden=!lampSel;$('edConnRow').hidden=!(lampSel&&pend&&sel!==pend);
+    $('edCordStart').textContent=pend?'ひもを つなぐのを やめる':'この街灯から ひもを つなぐ';
+    const hint=pend?'\n（ひも：つなぐ相手の街灯を えらんでね）':'';
+    if(!sel){nm.textContent='小物をえらんでね';tx.textContent='画面の小物をタップ、または ◀ ▶'+hint;box.classList.remove('has');return}
     const st=edSt(sel);box.classList.add('has');
-    nm.textContent=(ED_LABEL[sel.kind]||sel.kind)+(st.hide?'（かくし中）':'');
-    tx.textContent='ずらし '+st.dx.toFixed(1)+', '+st.dz.toFixed(1)+'　高さ '+(st.dy>=0?'+':'')+st.dy.toFixed(2)+'　角度 '+Math.round(st.r)+'°';
-    $('edHide').textContent=st.hide?'もとに見せる':'かくす';$('edHide').disabled=!!ED_NOHIDE[sel.kind];
-    const n=ED.list.filter(edChanged).length;$('edCount').textContent=n?'今回 '+n+'件 変更中':'';
+    nm.textContent=(ED_LABEL[sel.kind]||sel.kind)+(sel.spare!==undefined?'（ふやした）':'')+(st.hide?'（かくし中）':'');
+    tx.textContent='ずらし '+st.dx.toFixed(1)+', '+st.dz.toFixed(1)+'　高さ '+(st.dy>=0?'+':'')+st.dy.toFixed(2)+'　角度 '+Math.round(st.r)+'°'+hint;
+    $('edHide').textContent=sel.spare!==undefined?'この街灯を けす':(st.hide?'もとに見せる':'かくす');$('edHide').disabled=!!ED_NOHIDE[sel.kind];
   }
   function pick(e){sel=e;info()}
   function change(fn){if(!sel)return toast('先に小物をえらんでね');sel.st=Object.assign({},edSt(sel));fn(sel.st);edApply(sel);saveDraft();info()}
@@ -4444,17 +4541,34 @@ function edUI(){
   });
   $('edFine').addEventListener('click',()=>{fine=!fine;$('edFine').classList.toggle('on',fine);$('edFine').textContent=fine?'こまかく':'おおきく'});
   $('edPrev').addEventListener('click',()=>cyc(-1));$('edNext').addEventListener('click',()=>cyc(1));
-  function cyc(d){const l=near();if(!l.length)return toast('近くに動かせる小物がありません');let i=l.indexOf(sel);i=i<0?(d>0?0:l.length-1):(i+d+l.length)%l.length;pick(l[i])}
+  const nearC=()=>GARL.filter(G=>G.on&&G.pts).map(G=>{const P=G.pts,d=Math.min(...[P[0],P[P.length-1],P[P.length>>1]].map(q=>Math.hypot(q[0]-player.pos.x,q[2]-player.pos.z)));return {G,d}}).filter(o=>o.d<16).sort((a,b)=>a.d-b.d).map(o=>o.G);
+  function cyc(d){
+    if(cm){const l=nearC();if(!l.length)return toast('近くに ひもが ありません');let i=l.indexOf(selC);i=i<0?(d>0?0:l.length-1):(i+d+l.length)%l.length;selC=l[i];info();return}
+    const l=near();if(!l.length)return toast('近くに動かせる小物がありません');let i=l.indexOf(sel);i=i<0?(d>0?0:l.length-1):(i+d+l.length)%l.length;pick(l[i])}
   $('edHide').addEventListener('click',()=>change(s=>{s.hide=!s.hide}));
   $('edUndo').addEventListener('click',()=>change(s=>{Object.assign(s,edBase(sel))}));
+  $('edMode').addEventListener('click',()=>{cm=!cm;if(cm&&!selC){const l=nearC();selC=l[0]||null}info()});
+  const sagBy=d=>{if(!selC)return toast('先に ひもを えらんでね');selC.sag=Math.max(0,Math.min(4,selC.sag+d));W.cordApply(selC);saveDraft();info()};
+  $('edSagM').addEventListener('click',()=>sagBy(-.25));$('edSagP').addEventListener('click',()=>sagBy(.25));
+  $('edCordOff').addEventListener('click',()=>{if(!selC)return toast('先に ひもを えらんでね');cordRemove(selC);selC=null;saveDraft();info();toast('ひもを はずしました\n（同じ2本を つなぎ直すと もどります）',2800)});
+  $('edCordUndo').addEventListener('click',()=>{if(!selC)return toast('先に ひもを えらんでね');cordRestore(selC);if(!selC.on)selC=null;saveDraft();info()});
+  $('edCordStart').addEventListener('click',()=>{if(!sel||sel.kind!=='lamp')return;pend=pend?null:sel;info();if(pend)toast('つぎに つなぐ相手の街灯を えらんでね\n（◀ ▶ か タップ）',3200)});
+  const conn=ty=>{if(!pend||!sel||sel.kind!=='lamp')return;const r=cordAdd(pend.lamp,sel.lamp,ty,.9);
+    if(r==='dup')return toast('その2本は もう つながっているよ');if(r==='full')return toast('これ以上 ひもは ふやせません');if(r==='same'||!r)return;
+    pend=null;saveDraft();info();toast('ひもを つなぎました\n（「ひも」モードで たるみを かえられます）',3000)};
+  $('edConB').addEventListener('click',()=>conn('bulb'));$('edConP').addEventListener('click',()=>conn('pom'));
+  $('edAddLamp').addEventListener('click',()=>{
+    const e=ED.list.find(q=>q.spare!==undefined&&edSt(q).hide);if(!e)return toast('これ以上 街灯は ふやせません（16本まで）');
+    const fx=-Math.sin(cam.yaw),fz=-Math.cos(cam.yaw),x=player.pos.x+fx*3,z=player.pos.z+fz*3;
+    sel=e;cm=false;change(s=>{s.dx=x-e.x0;s.dz=z-e.z0;s.dy=0;s.r=0;s.hide=false});toast('街灯を ふやしました\n矢印ボタンで うごかせます',2800)});
   $('edMin').addEventListener('click',()=>{box.classList.toggle('min');$('edMin').textContent=box.classList.contains('min')?'＋':'－'});
   $('edAll').addEventListener('click',()=>{
     if(Date.now()-resetArm>2500){resetArm=Date.now();$('edAll').textContent='もう一度押すと全部もどす';setTimeout(()=>{$('edAll').textContent='ぜんぶもどす'},2500);return}
     resetArm=0;$('edAll').textContent='ぜんぶもどす';
-    ED.list.forEach(e=>{if(e.st&&edChanged(e)){e.st=edBase(e);edApply(e)}});saveDraft();info();toast('今回の変更を ぜんぶもどしました\n（公開中の配置にもどります）',3200);
+    ED.list.forEach(e=>{if(e.st&&edChanged(e)){e.st=edBase(e);edApply(e)}});GARL.forEach(G=>{if(cordChanged(G))cordRestore(G)});pend=null;selC=null;saveDraft();info();toast('今回の変更を ぜんぶもどしました\n（公開中の配置にもどります）',3200);
   });
   $('edCopy').addEventListener('click',()=>{
-    const txt=JSON.stringify({v:1,props:edExport(false)});
+    const cs=cordsExport(),txt=JSON.stringify(Object.assign({v:1,props:edExport(false)},cs.length?{cords:cs}:{}));
     const fallback=()=>{$('edOutTxt').value=txt;openModal('mEdOut');setTimeout(()=>{try{$('edOutTxt').focus();$('edOutTxt').select()}catch(e){}},50)};
     try{navigator.clipboard.writeText(txt).then(()=>toast('配置データをコピーしました\nチャットに貼りつけてね',3200),fallback)}catch(e){fallback()}
   });
@@ -4466,13 +4580,18 @@ function edUI(){
     if(!down||state.mode!=='play')return;const d0=down;down=null;
     if(Math.hypot(ev.clientX-d0.x,ev.clientY-d0.y)>9||performance.now()-d0.t>450)return;
     const rc=canvas.getBoundingClientRect();let best=null,bd=60;
-    ED.list.forEach(e=>{const q=edPos(e);_p.set(q.x,q.y+.8,q.z).project(camera);if(_p.z>1||_p.z<-1)return;
+    if(cm){let bc=null,bdc=44;GARL.forEach(G=>{if(!G.on||!G.pts)return;G.pts.forEach(q=>{_p.set(q[0],q[1],q[2]).project(camera);if(_p.z>1||_p.z<-1)return;
+      const sx=rc.left+(_p.x+1)/2*rc.width,sy=rc.top+(1-_p.y)/2*rc.height,d=Math.hypot(sx-ev.clientX,sy-ev.clientY);if(d<bdc){bdc=d;bc=G}})});
+      if(bc){selC=bc;info()}return}
+    ED.list.forEach(e=>{if(hiddenSpare(e))return;const q=edPos(e);_p.set(q.x,q.y+.8,q.z).project(camera);if(_p.z>1||_p.z<-1)return;
       const sx=rc.left+(_p.x+1)/2*rc.width,sy=rc.top+(1-_p.y)/2*rc.height,d=Math.hypot(sx-ev.clientX,sy-ev.clientY);
       if(d<bd){bd=d;best=e}});
     if(best)pick(best);
   });
   W.edTick=t=>{
-    if(!sel){mk.visible=false;return}
+    dots.forEach((m,i)=>{const q=cm&&selC&&selC.on&&selC.pts?selC.pts[i]:null;m.visible=!!q;if(q)m.position.set(q[0],q[1],q[2])});
+    if(pend){const q=edPos(pend);mk2.visible=true;mk2.position.set(q.x,q.y+.06,q.z);arrow2.position.y=2.9+Math.sin(t*5)*.15}else mk2.visible=false;
+    if(cm||!sel){mk.visible=false;return}
     const q=edPos(sel);mk.visible=true;mk.position.set(q.x,q.y+.06,q.z);
     arrow.position.y=2.9+Math.sin(t*4)*.15;
   };
@@ -4613,7 +4732,8 @@ function rotateCafePon(){
     let tot=0;for(let j=0;j<=n;j++)for(let i=0;i<=n;i++)if(free(i,j))tot++;
     const pt=(x,z)=>seen[idx(Math.round((x+40)/st),Math.round((z+40)/st))]===1;
     return {reached:c,freeCells:tot,pct:Math.round(c/tot*100),gateN:pt(0,-38),fountain:pt(2,12),plazaS:pt(0,30),plazaN:pt(0,-28),stairs:STAIRS.map(s=>pt(s.x,(s.a+s.b)/2))}};
-  window.__usapon={input,zakkaEnter,zakkaExit,zakState:()=>ZAK,cafeEnter,cafeExit,cafeState:()=>CAFE,reach,tpTo,state,player,cam,panels:()=>panels,save:()=>save,warnings,slots,seats,spots:()=>spots,setFly,presentReset,presentPos:()=>PRESENT&&presentPos(),props:()=>ED.list,layout:()=>edExport(false)};
+  window.__usapon={input,zakkaEnter,zakkaExit,zakState:()=>ZAK,cafeEnter,cafeExit,cafeState:()=>CAFE,reach,tpTo,state,player,cam,panels:()=>panels,save:()=>save,warnings,slots,seats,spots:()=>spots,setFly,presentReset,presentPos:()=>PRESENT&&presentPos(),props:()=>ED.list,layout:()=>edExport(false),cordTest:{GARL,cordAdd,cordsExport,cordsLoad,cordRemove,cordKey,cordDefault,cordChanged}};
+
 })();
 })();
 </script>
