@@ -1023,27 +1023,42 @@ const AUDIO=(function(){
     }
     return {bar,len:CB*4};
   }
-  /* ---- お花屋さん専用BGM: ひかえめな三拍子のワルツ(オルゴール風のメロディ・ハープ風の分散和音・やわらかいパッド・きらきら)。魔女のお店のしずかな夜 ---- */
+  /* ---- お花屋さん専用BGM: ケルト音楽ふうの魔法のメロディ(Dドリアン・ゆったり6/8。ハープの分散和音・ホイッスル風のメロディ・ひくいドローン・ひかえめなバウロン・きらきら) ---- */
   function buildFlower(ctx,out,send){
-    const CB=60/104,hz2=m=>440*Math.pow(2,(m-69)/12);
-    const CH={Am:{b:45,a:[57,60,64,69]},F:{b:41,a:[57,60,65,69]},Dm:{b:50,a:[57,62,65,69]},E:{b:40,a:[56,59,64,68]},G:{b:43,a:[55,59,62,67]},C:{b:48,a:[55,60,64,67]}};
-    const PR=['Am','Am','F','E','Am','Dm','E','Am','C','G','F','C','Dm','E','Am','E'];
-    const MEL=[[[0,81,2],[2,79,1]],[[0,76,3]],[[0,77,2],[2,81,1]],[[0,80,2],[2,83,1]],[[0,81,1],[1,84,1],[2,81,1]],[[0,74,2],[2,77,1]],[[0,76,1],[1,80,1],[2,83,1]],[[0,81,3]],
-      [[0,79,2],[2,84,1]],[[0,83,1],[1,79,1],[2,74,1]],[[0,77,2],[2,81,1]],[[0,76,2],[2,79,1]],[[0,74,1],[1,77,1],[2,81,1]],[[0,80,2],[2,76,1]],[[0,81,2],[2,84,1]],[[0,83,3]]];
+    const E8=.215,hz2=m=>440*Math.pow(2,(m-69)/12); // 8分音符(6つで1小節 ≒ 1.3秒)
+    const CH={Dm:{b:38,a:[50,57,62,65]},C:{b:36,a:[48,55,60,64]},G:{b:43,a:[47,55,59,62]},F:{b:41,a:[48,53,57,60]},Am:{b:45,a:[52,57,60,64]}};
+    const PR=['Dm','C','Dm','C','G','C','Dm','Dm','F','C','Dm','Am','G','C','Dm','Dm'];
+    const MEL=[[[0,74,2],[2,77,1],[3,81,3]],[[0,79,2],[2,76,1],[3,79,3]],[[0,77,1],[1,74,1],[2,77,1],[3,81,2],[5,79,1]],[[0,76,3],[3,74,1],[4,76,2]],
+      [[0,79,2],[2,83,1],[3,86,3]],[[0,84,1],[1,83,1],[2,79,1],[3,76,3]],[[0,77,2],[2,74,1],[3,77,1],[4,81,2]],[[0,81,4],[4,79,1],[5,77,1]],
+      [[0,81,2],[2,84,1],[3,81,1],[4,77,2]],[[0,79,2],[2,84,1],[3,79,1],[4,76,2]],[[0,77,1],[1,81,1],[2,86,2],[4,84,1],[5,81,1]],[[0,81,3],[3,76,1],[4,79,2]],
+      [[0,79,1],[1,83,1],[2,86,2],[4,83,2]],[[0,84,2],[2,79,1],[3,76,1],[4,79,2]],[[0,77,2],[2,74,1],[3,69,1],[4,74,2]],[[0,74,6]]];
     const osc=(ty,f,t,dur,peak,att,sn)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.type=ty;o.frequency.value=f;
       g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(peak,t+(att||.004));g.gain.exponentialRampToValueAtTime(.0008,t+dur);
       o.connect(g);g.connect(out);if(sn){const s2=ctx.createGain();s2.gain.value=sn;g.connect(s2);s2.connect(send)}o.start(t);o.stop(t+dur+.05)};
-    const music=(t,m,dur,peak)=>{const f=hz2(m);osc('sine',f,t,dur,peak,.003,.4);osc('sine',f*3.01,t,dur*.25,peak*.18,.002,.3)};   // オルゴール
-    const harp=(t,m,peak)=>osc('triangle',hz2(m),t,.9,peak,.004,.3);
+    const harp=(t,m,peak)=>{const f=hz2(m);osc('triangle',f,t,1.3,peak,.003,.45);osc('sine',f*2,t,.5,peak*.35,.003,.3)};       // ハープ
+    const whistle=(t,m,dur,peak)=>{const f=hz2(m),o=ctx.createOscillator(),o2=ctx.createOscillator(),g=ctx.createGain(),lf=ctx.createOscillator(),lg=ctx.createGain(),g2=ctx.createGain();
+      o.type='sine';o.frequency.value=f;o2.type='sine';o2.frequency.value=f*2;g2.gain.value=.12;lf.frequency.value=5.2;lg.gain.setValueAtTime(0,t);lg.gain.linearRampToValueAtTime(f*.006,t+Math.min(.35,dur*.6)); // ゆれ
+      lf.connect(lg);lg.connect(o.frequency);o2.connect(g2);g2.connect(g);o.connect(g);
+      g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(peak,t+.07);g.gain.setValueAtTime(peak*.85,t+Math.max(.08,dur-.12));g.gain.linearRampToValueAtTime(0,t+dur);
+      g.connect(out);const s2=ctx.createGain();s2.gain.value=.5;g.connect(s2);s2.connect(send);[o,o2,lf].forEach(x=>{x.start(t);x.stop(t+dur+.05)})};
+    const bodhran=(t,peak)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(130,t);o.frequency.exponentialRampToValueAtTime(58,t+.12);
+      g.gain.setValueAtTime(peak,t);g.gain.exponentialRampToValueAtTime(.0008,t+.22);o.connect(g);g.connect(out);o.start(t);o.stop(t+.25)};
+    const bell=(t,m,dur,peak)=>{const f=hz2(m);osc('sine',f,t,dur,peak,.002,.7);osc('sine',f*2.76,t,dur*.3,peak*.15,.002,.5)};
     function bar(t,B){
       const pass=Math.floor(B/16)%3,b=B%16,c=CH[PR[b]];
-      osc('sine',hz2(c.b),t,CB*2.6,.14,.02,0);                                    // やわらかい低音(1拍目だけ)
-      [0,1,2].forEach(i=>harp(t+i*CB,c.a[[0,2,1][i]+(i===2?1:0)],i===0?.05:.035));  // ハープ風(3拍)
-      if(pass>=1||b>=4)MEL[b].forEach(([e,m,d])=>music(t+e*CB,m,Math.max(.5,d*CB*1.1),pass===2?.08:.11));
-      if(pass===1)c.a.slice(0,3).forEach(m=>osc('sine',hz2(m-12),t,CB*3,.016,.45,0));  // 2周目: パッド
-      if(b%4===3)osc('sine',hz2(c.a[3]+12),t+CB*2.2,.7,.03,.002,.5);                 // 4小節ごとに きらっ
+      // ひくいドローン(ニ+ イ の5度)をずっと
+      if(b%4===0){osc('sine',hz2(38),t,E8*24,.05,1.2,.1);osc('sine',hz2(45),t,E8*24,.03,1.4,.1)}
+      osc('sine',hz2(c.b),t,E8*3.5,.12,.015,0);
+      // ハープの分散和音(6つ)
+      [0,1,2,3,2,1].forEach((k,i)=>harp(t+i*E8,c.a[k],i===0?.06:(i%3===0?.045:.034)));
+      // ホイッスルのメロディ(最初の4小節はハープだけ)
+      if(pass>=1||b>=4)MEL[b].forEach(([e,m,d],i)=>{const dur=Math.max(.35,d*E8*.95);whistle(t+e*E8,pass===2?m+(i%2?0:0):m,dur,pass===2?.085:.11);if(pass===2&&d>=2)bell(t+e*E8,m+12,1,.035)});
+      // バウロン(ひかえめ): 2周目いこう 1拍目・4拍目
+      if(pass>=1){bodhran(t,.11);bodhran(t+E8*3,.06);if(b%4===3)bodhran(t+E8*5,.04)}
+      // きらきら
+      if(b%4===3)[0,1,2].forEach(i=>bell(t+E8*(3+i*.8),c.a[3]+24+i*4,1.1,.03));
     }
-    return {bar,len:CB*3};
+    return {bar,len:E8*6};
   }
 
   function tick(){
