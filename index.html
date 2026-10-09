@@ -4247,9 +4247,9 @@ function zakBuild(){
 function zakProj(cm){
   if(state.camMode){cm.view=null;cm.aspect=window.innerWidth/window.innerHeight;THREE.PerspectiveCamera.prototype.updateProjectionMatrix.call(cm);return} // カメラモード中は普通の遠近法
   // 2.5D専用の投影: 絵の主点(cx,cy)をレンズシフトで合わせ、画面の縦横比に合わせて絵の一部を映す
-  const Z=ZAK,sz=renderer.getSize(new THREE.Vector2()),A=sz.x/sz.y,zoom=1;
+  const Z=ZAK,sz=renderer.getSize(new THREE.Vector2()),A=sz.x/sz.y,zoom=1/clamp(cam.dist/(Z.dist0||cam.dist),1,1.4); // ピンチで少し引いて(ひろげる=ちかく/ちぢめる=ひろく)、画面全体を見わたせる
   let vw,vh;if(A>=Z.W/Z.H){vw=Z.W/zoom;vh=vw/A}else{vh=Z.H/zoom;vw=vh*A}
-  const feet=Z.cy+Z.f*Z.yf/Math.max(Z.pd||2.5,1.6),x0=clamp(Z.panX-vw/2,0,Z.W-vw),y0=clamp(Z.freeze?Z.panY-vh/2:(feet+90-vh)*(1-(Z.up||0)),0,Z.H-vh); // 足元が切れないよう、縦は足元に合わせて動かす
+  const feet=Z.cy+Z.f*Z.yf/Math.max(Z.pd||2.5,1.6),x0=vw>=Z.W?(Z.W-vw)/2:clamp(Z.panX-vw/2,0,Z.W-vw),y0=vh>=Z.H?(Z.H-vh)/2:clamp(Z.freeze?Z.panY-vh/2:(feet+90-vh)*(1-(Z.up||0)),0,Z.H-vh); // 足元が切れないよう、縦は足元に合わせて動かす
   const hw=Math.max(Z.cx-x0,x0+vw-Z.cx),hh=Math.max(Z.cy-y0,y0+vh-Z.cy);
   cm.fov=2*Math.atan(hh/Z.f)*180/PI;cm.aspect=hw/hh;
   cm.view={enabled:true,fullWidth:2*hw,fullHeight:2*hh,offsetX:x0-(Z.cx-hw),offsetY:y0-(Z.cy-hh),width:vw,height:vh};
@@ -4278,7 +4278,7 @@ function zakkaDoor(){return shopsOut.find(q=>q.shop==='zakka')}
 function zakkaEnter(){
   if(ZAK.busy||ZAK.in||CAFE.in||CAFE.busy||!zakkaDoor())return;ZAK.busy=true;CAFE.fade.classList.add('on');
   setTimeout(()=>{
-    zakSet(true);const Z=ZAK;
+    zakSet(true);const Z=ZAK;Z.dist0=cam.dist;
     player.pos.set(Z.X+Z.spawn[0],0,Z.Z-Z.spawn[1]);player.face=PI;cafeResetCam(0,.3);Z.cam.x=Z.cam.d=0;
     CAFE.fade.classList.remove('on');toast('ざっかやに はいったよ\nしょうひんに ちかづくと「みる」が でるよ',3600);
     setTimeout(()=>{ZAK.busy=false},380);
@@ -4308,11 +4308,13 @@ function zakkaTick(dt,t){
       const L=ZAK_DATA.L.table,dT=f0(),tw=L.w*dT/Z.f/2,tc=(L.x+L.w/2-Z.cx)*dT/Z.f;
       if(d>dT+.15&&Math.abs(rx-tc)<tw+.4)cam.sAng=(rx>tc?1:-1)*.75}Z.hadCam=true;blob.scale.x*=Z.pscale;blob.scale.z*=Z.pscale;hemi.intensity=.7;return}
   if(Z.hadCam){Z.hadCam=false;cam.yaw=0;cam.cur=undefined;cam.pe=undefined;camera.fov=58;camera.view=null}
-  cam.yaw=clamp(cam.yaw,-.22,.22); // ドラッグで、左右に少しだけ見まわせる(絵の外が見えない範囲)。向きそのものは動かさず、カメラを横にずらして奥行きを出す
+  const port=innerWidth/innerHeight<1.2,YM=port?.6:.22;cam.yaw=clamp(cam.yaw,-YM,YM); // ドラッグで、左右に少しだけ見まわせる(絵の外が見えない範囲)。向きそのものは動かさず、カメラを横にずらして奥行きを出す
   cam.pitch=clamp(cam.pitch,.04,.3);Z.up=(.3-cam.pitch)/.26;const lookY=0; // 上へ見上げる(外の街と同じ向き: 画面を上にドラッグすると上が見える)。下へは動かさない。絵の上の方(カウンター・棚)まで見える
-  const look=-cam.yaw*1.5,tx=Z.freeze?0:clamp(rx*.18,-.38,.38)+look,td=Z.freeze?0:clamp((d-3.4)*.35,-.4,.9),k=Z.freeze?1:Math.min(1,dt*4); // freezeは確認用(元のカメラ位置に固定)
+  const look=-cam.yaw*(port?.6:1.5),tx=Z.freeze?0:clamp(rx*.18,-.38,.38)+look,td=Z.freeze?0:clamp((d-3.4)*.35,-.4,.9),k=Z.freeze?1:Math.min(1,dt*4); // freezeは確認用(元のカメラ位置に固定)
   Z.pd=d;Z.cam.x+=(tx-Z.cam.x)*k;Z.cam.d+=(td-Z.cam.d)*k;
-  Z.panX=Z.freeze?768:768+clamp(rx*Z.f/(Z.db*.6),-420,420)-Z.f*look/Math.max(d,1.6); // ドラッグ中はピヨちゃんを画面の同じ位置に保つ(外の街の「ピヨちゃんを中心にまわる」感じ)
+  {const vwp=Z.W/clamp(cam.dist/(Z.dist0||cam.dist),1,1.4),vhp=innerHeight/innerWidth,vw2=port?Math.min(Z.W,Z.H/vhp)/clamp(cam.dist/(Z.dist0||cam.dist),1,1.4):vwp;
+    // たて画面: ドラッグで、絵の横はばを左右いっぱいまで見わたせる(壁の端でとまる)。よこ画面: ピヨちゃんを中心にまわる感じ
+    Z.panX=Z.freeze?768:(port?768+clamp(rx*Z.f/(Z.db*.6),-420,420)*.5+(cam.yaw/YM)*Math.max(0,(Z.W-vw2)/2):768+clamp(rx*Z.f/(Z.db*.6),-420,420)-Z.f*look/Math.max(d,1.6))} // ドラッグ中はピヨちゃんを画面の同じ位置に保つ(外の街の「ピヨちゃんを中心にまわる」感じ)
   camera.position.set(Z.X+Z.cam.x,Z.yf+lookY,Z.Z-Z.cam.d);camera.quaternion.set(0,0,0,1);camera.updateProjectionMatrix();
   piyo.group.visible=true;blob.visible=true;blob.scale.x*=Z.pscale;blob.scale.z*=Z.pscale;hemi.intensity=.7;
 }
