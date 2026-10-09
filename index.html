@@ -1923,7 +1923,7 @@ function buildHouse(h){
     // front facade: door + windows
     let winX=[-w*.33,w*.33];
     if(h.kind==='shop'){
-      archDoor(C,0,d/2+.04,0,true,pick(DOORC),h.shop==='cupcake',h.shop==='cupcake'?'#ecdcc6':undefined); // カフェ正面(屋外テーブル側)は扉なしのアーチ
+      archDoor(C,0,d/2+.04,0,true,h.shop==='flower'?(pick(DOORC),'#3c6b66'):pick(DOORC),h.shop==='cupcake',h.shop==='cupcake'?'#ecdcc6':(h.shop==='flower'?'#8a5a34':undefined)); // カフェ正面(屋外テーブル側)は扉なしのアーチ
       windowAt(C,winX[0],by+1.5,d/2,0,1.1,1.3,true,false,false);windowAt(C,winX[1],by+1.5,d/2,0,1.1,1.3,true,false,false);
     }else{
       archDoor(C,dx,doorZ+.04,0,false,pick(DOORC));
@@ -2026,7 +2026,7 @@ function signBoard(C,lx,ly,lz,yaw,text,bg,fg,w,h){
 }
 function shopExtras(C,h){
   const w=h.w,d=h.d,fz=d/2;
-  const awnC={flower:'#c79bff',cupcake:'#8fb08f',zakka:'#7fd0c0'}[h.shop]; // カフェは扉の緑になじむセージグリーン
+  const awnC={flower:'#8a55c8',cupcake:'#8fb08f',zakka:'#7fd0c0'}[h.shop]; // お花屋さん: 店内の紫の布に合わせる // カフェは扉の緑になじむセージグリーン
   // striped awning across the storefront: each stripe is its own slab so the scalloped valance lines up exactly
   {const aw=w*.92,ns=Math.max(6,Math.round(aw/.52)),sp=aw/ns,cream='#fff4ea';
    AWN.push({x:C.x,z:C.z,c:C.c,s:C.s,cx:0,hw:aw/2+.15,z0:fz+.3,z1:fz+1.8});
@@ -2118,7 +2118,7 @@ function genHouses(E){
         const me=fit(x,z,rot,w,d,extraW);if(me){bd=dd;best={me,x,z,rot}}}});
     return best}
   const SHOPS=[
-    {shop:'flower',id:'flower',tx:-6,tz:36,w:6.8,d:5.6,wall:'#f1d2c8',roofC:'#a46ac0'},
+    {shop:'flower',id:'flower',tx:-6,tz:36,w:6.8,d:5.6,wall:'#4f9a84',roofC:'#5a3f78'},
     {shop:'zakka',id:'zakka',tx:-14,tz:25,w:6.8,d:5.6,wall:'#e2efe4',roofC:'#58a79c'},
     {shop:'cupcake',id:'cupcake',tx:15,tz:6,w:7.8,d:6.0,wall:'#f6e8d0',roofC:'#d86a50'}
   ];
