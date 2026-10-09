@@ -4169,10 +4169,14 @@ const ZAK={built:false,in:false,busy:false,X:260,Z:0,root:null,hid:[],saved:null
 function zakScr(X,Y,d){return[ZAK.cx+ZAK.f*X/d,ZAK.cy-ZAK.f*(Y-ZAK.yf)/d]} // 部屋の座標(横X, 床からの高さY, 奥行きd) → 元の絵のピクセル
 function zakTex(b64){const im=new Image(),t=new THREE.Texture(im);im.onload=()=>{t.needsUpdate=true};im.src='data:image/webp;base64,'+b64;
   t.minFilter=t.magFilter=THREE.LinearFilter;t.generateMipmaps=false;return t}
-function zakQuad(P,tex,crop,opts){ // 4つの角から面を作り、UVは「元のカメラで見た位置」から決める(平面なら遠近まで正確)
-  const pos=[],uv=[];P.forEach(p=>{pos.push(ZAK.X+p[0],p[1],ZAK.Z-p[2]);const s=zakScr(p[0],p[1],p[2]);
-    uv.push(crop?(s[0]-crop[0])/crop[2]:s[0]/ZAK.W,1-(crop?(s[1]-crop[1])/crop[3]:s[1]/ZAK.H))});
-  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex([0,1,2,0,2,3]);
+function zakQuad(P,tex,crop,opts,n){ // 4つの角から面を作り、UVは「元のカメラで見た位置」から決める。面を細かく割って(n×n)、遠近のずれを抑える
+  n=n||24;const pos=[],uv=[],idx=[];
+  const lerp3=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
+  for(let j=0;j<=n;j++){const l=lerp3(P[0],P[3],j/n),r=lerp3(P[1],P[2],j/n);
+    for(let i=0;i<=n;i++){const p=lerp3(l,r,i/n);pos.push(ZAK.X+p[0],p[1],ZAK.Z-p[2]);const s=zakScr(p[0],p[1],p[2]);
+      uv.push(crop?(s[0]-crop[0])/crop[2]:s[0]/ZAK.W,1-(crop?(s[1]-crop[1])/crop[3]:s[1]/ZAK.H))}}
+  for(let j=0;j<n;j++)for(let i=0;i<n;i++){const a=j*(n+1)+i,b=a+1,c=a+n+1,d=c+1;idx.push(a,b,d,a,d,c)}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(idx);
   const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial(Object.assign({map:tex,side:THREE.DoubleSide,fog:false},opts||{})));m.frustumCulled=false;return m}
 function zakBoard(key,d){ // 切り抜きを、元の絵と同じ位置・大きさに見える距離dに立てる
   const L=ZAK_DATA.L[key],f=ZAK.f,xc=L.x+L.w/2,yc=L.y+L.h/2;
@@ -4211,6 +4215,8 @@ function zakBuild(){
     const m=new THREE.Mesh(new THREE.PlaneGeometry((w-ix*2)*d/f,(h-iy*2)*d/f),new THREE.MeshBasicMaterial({map:zakTex(D.b),side:THREE.DoubleSide,fog:false}));
     m.position.set(Z.X+((x0+x1)/2-Z.cx)*d/f,Z.yf+(Z.cy-(y0+y1)/2)*d/f,Z.Z-d);root.add(m);
     Z.items.push({title:D.t,caption:D.p+'(ぜいこみ)　SUZURIで みられるよ',url:D.u,stand:it.st})});
+  // カウンターのレジ: ハロウィングッズが並ぶSUZURIのセクションページへ(ボタンは別タブで開くので、ゲームはそのまま残る)
+  Z.items.push({title:'SUZURI ハロウィンショップ',caption:'うさぽんの ハロウィングッズが ならんでいるよ。\nべつタブで ひらくから、ゲームは そのままだよ',url:'https://suzuri.jp/usaponshop/sections/71518',stand:[-.9,4.45],cash:true});
   // 当たり判定(既存の仕組み): 壁・カウンター・テーブル・左の棚・手前の境目
   const wx=x=>Z.X+x,wz=d=>Z.Z-d,box=(x0,x1,d0,d1)=>addBoxCol(wx((x0+x1)/2),wz((d0+d1)/2),(x1-x0)/2,(d1-d0)/2,0);
   box(-Wl-.6,-Wl,1,db+1);box(Wr,Wr+.6,1,db+1);box(-Wl-1,Wr+1,dC,db+1);box(-Wl-1,Wr+1,1.2,2.3-.38);
@@ -4221,7 +4227,7 @@ function zakBuild(){
 function zakProj(cm){
   if(state.camMode){cm.view=null;cm.aspect=window.innerWidth/window.innerHeight;THREE.PerspectiveCamera.prototype.updateProjectionMatrix.call(cm);return} // カメラモード中は普通の遠近法
   // 2.5D専用の投影: 絵の主点(cx,cy)をレンズシフトで合わせ、画面の縦横比に合わせて絵の一部を映す
-  const Z=ZAK,sz=renderer.getSize(new THREE.Vector2()),A=sz.x/sz.y,zoom=A>=Z.W/Z.H?1.25:1.15;
+  const Z=ZAK,sz=renderer.getSize(new THREE.Vector2()),A=sz.x/sz.y,zoom=Z.zoom1?1:(A>=Z.W/Z.H?1.25:1.15);
   let vw,vh;if(A>=Z.W/Z.H){vw=Z.W/zoom;vh=vw/A}else{vh=Z.H/zoom;vw=vh*A}
   const x0=clamp(Z.panX-vw/2,0,Z.W-vw),y0=clamp(Z.panY-vh/2,0,Z.H-vh);
   const hw=Math.max(Z.cx-x0,x0+vw-Z.cx),hh=Math.max(Z.cy-y0,y0+vh-Z.cy);
@@ -4271,7 +4277,7 @@ function zakkaAct(act){
   const Z=ZAK,rx=player.pos.x-Z.X,d=Z.Z-player.pos.z;
   if(Math.hypot(rx-Z.exit[0],d-Z.exit[1])<1.6)return{type:'zakkaExit',label:'そとへ でる'};
   let best=null,bd=1.7;Z.items.forEach(it=>{const dd=Math.hypot(rx-it.stand[0],d-it.stand[1]);if(dd<bd){bd=dd;best=it}});
-  if(best)return{type:'spot',obj:{sp:{title:best.title,caption:best.caption,url:best.url,button2:'SUZURIをひらく（べつタブ）'}},label:'しょうひんを みる'};
+  if(best)return{type:'spot',obj:{sp:{title:best.title,caption:best.caption,url:best.url,button2:best.cash?'ハロウィンショップをひらく（べつタブ）':'SUZURIをひらく（べつタブ）'}},label:best.cash?'ハロウィンショップを みる':'しょうひんを みる'};
   return null;
 }
 function zakkaTick(dt,t){
@@ -4284,7 +4290,7 @@ function zakkaTick(dt,t){
   cam.yaw=0;
   const tx=Z.freeze?0:clamp(rx*.18,-.38,.38),td=Z.freeze?0:clamp((d-3.4)*.35,-.4,.9),k=Z.freeze?1:Math.min(1,dt*4); // freezeは確認用(元のカメラ位置に固定)
   Z.cam.x+=(tx-Z.cam.x)*k;Z.cam.d+=(td-Z.cam.d)*k;
-  Z.panX=768+clamp(rx*Z.f/(Z.db*.6),-420,420);
+  Z.panX=Z.freeze?768:768+clamp(rx*Z.f/(Z.db*.6),-420,420);
   camera.position.set(Z.X+Z.cam.x,Z.yf,Z.Z-Z.cam.d);camera.quaternion.set(0,0,0,1);camera.updateProjectionMatrix();
   piyo.group.visible=true;blob.visible=true;blob.scale.x*=Z.pscale;blob.scale.z*=Z.pscale;hemi.intensity=.7;
 }
