@@ -3725,6 +3725,7 @@ function update(dt){
   if(player.sit){if(playing&&(mag>.35||input.jump))standUp();else{mag=0;ix=iy=0;input.jump=false}}
   if(input.dashLatch){input.dashIdle=(mag>.05?0:(input.dashIdle||0)+dt);if(input.dashIdle>1.8||!playing||player.fly){input.dash=false;input.dashLatch=false;const db=$('tbDash');if(db)db.classList.remove('hold')}}
   const dash=playing&&(input.keys.ShiftLeft||input.keys.ShiftRight||input.dash);
+  if(dash&&mag>.05&&mag<1){ix/=mag;iy/=mag;mag=1} // ダッシュ中は、丸の中(ゆっくり)でも ぜんぶ ダッシュの速さになる
   const sp=(player.fly?(dash?8.6:5.8):(dash?7.6:4.3))*mag;
   const fx=-Math.sin(cam.yaw),fz=-Math.cos(cam.yaw),rx=Math.cos(cam.yaw),rz=-Math.sin(cam.yaw);
   const tx=(rx*ix+fx*iy)*sp,tz=(rz*ix+fz*iy)*sp,k2=Math.min(1,dt*(mag>0?11:14));

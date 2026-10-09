@@ -253,7 +253,7 @@ body.selfie #camFlip{background:linear-gradient(180deg,#ffb869,#f08a2c);color:#f
 #camTour.on{display:block}
 #camTour svg{position:absolute;left:0;top:0;pointer-events:none}
 .ctl{position:absolute;background:#fff1d8;color:#5b3b6e;font:900 14px/1.45 "Zen Maru Gothic","Hiragino Maru Gothic ProN",sans-serif;padding:8px 12px;border-radius:14px;white-space:pre;text-align:center;box-shadow:0 3px 14px rgba(0,0,0,.35);pointer-events:none}
-.ctl.mid{left:50%;transform:translateX(-50%);background:rgba(255,255,255,.14);color:#fff;box-shadow:none;font-size:16px;text-shadow:0 1px 6px rgba(0,0,0,.6)}
+.ctl.mid{left:50%;transform:translateX(-50%);background:rgba(26,16,51,.88);border:1px solid rgba(255,255,255,.35);color:#fff;box-shadow:none;font-size:16px;text-shadow:none;width:max-content;max-width:calc(100vw - 32px);text-align:center;white-space:pre-line}
 
 #camTag{position:absolute;top:max(22px,calc(env(safe-area-inset-top,0px) + 8px));left:50%;transform:translateX(-50%);padding:5px 14px;border-radius:999px;background:rgba(255,251,243,.78);color:#8f6e86;font-weight:900;font-size:13px;pointer-events:none;white-space:nowrap}
 body.touch #joy{left:calc(22px + env(safe-area-inset-left,0px));bottom:max(50px,calc(env(safe-area-inset-bottom,0px) + 44px));border:1.5px solid rgba(255,255,255,.9);background:radial-gradient(circle,rgba(255,255,255,.12) 0,rgba(70,45,80,.2) 100%);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);box-shadow:0 0 0 1px rgba(70,45,80,.14),inset 0 0 22px rgba(255,255,255,.2),0 4px 16px rgba(70,45,80,.14)}
@@ -557,8 +557,8 @@ body.selfie #camFlip{background:rgba(255,226,168,.42);border-color:#ffe2a8;color
       <div class="r"><span><kbd>E</kbd></span><em>いす・テレビで行動</em></div>
     </div>
     <div class="rows hp" id="hp-sp">
-      <div class="r"><span>左のスティック</span><em>あるく</em></div>
-      <div class="r"><span>右下のボタン</span><em>ダッシュ・ジャンプ</em></div>
+      <div class="r"><span>左のスティック</span><em>丸の中＝ゆっくり<br>丸の外まで＝スタスタ</em></div>
+      <div class="r"><span>右下のボタン</span><em>ダッシュ（1回おすと、スティックから手をはなすまで）・ジャンプ</em></div>
       <div class="r"><span>画面をなぞる</span><em>視点をまわす</em></div>
       <div class="r"><span>カメラボタン</span><em>パネルの近くで写真</em></div>
     </div>
@@ -3342,6 +3342,13 @@ function showCamTour(){
   t.innerHTML='<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'"><defs><mask id="ctm"><rect width="'+W+'" height="'+H+'" fill="#fff"/>'+holes+'</mask></defs><rect width="'+W+'" height="'+H+'" fill="rgba(12,6,28,.76)" mask="url(#ctm)"/>'+rings+'</svg>'+labs+
     '<div class="ctl mid" style="top:'+(H*.36)+'px">ドラッグで むきをかえる\n2本指で ズーム（ひろげる＝ちかく）</div><div class="ctl mid" style="top:'+(H*.5)+'px">タップでとじる</div>';
   t.classList.add('on');
+  { // 説明のふきだしが重なったら、重ならなくなるまで上(下)へずらす
+    const els=[...t.querySelectorAll('.ctl:not(.mid)')],hit=(a,b)=>!(a.right<=b.left||b.right<=a.left||a.bottom<=b.top||b.bottom<=a.top);
+    els.forEach((el,i)=>{for(let k=0;k<12;k++){const r=el.getBoundingClientRect();const o=els.slice(0,i).find(q=>hit(r,q.getBoundingClientRect()));if(!o)break;const up=el.style.bottom!=='';const d=up?(r.bottom-o.getBoundingClientRect().top+8):(o.getBoundingClientRect().bottom-r.top+8);
+      if(up)el.style.bottom=(parseFloat(el.style.bottom)+d)+'px';else el.style.top=(parseFloat(el.style.top)+d)+'px'}});
+    els.forEach(el=>{const r=el.getBoundingClientRect(),dx=r.right>innerWidth-8?-(r.right-innerWidth+8):(r.left<8?8-r.left:0);if(!dx)return;if(el.style.right!=='')el.style.right=(parseFloat(el.style.right)-dx)+'px';else el.style.left=(parseFloat(el.style.left)+dx)+'px'});
+    const mids=[...t.querySelectorAll('.ctl.mid')];mids.forEach(m=>{for(let k=0;k<8;k++){const r=m.getBoundingClientRect();if(!els.some(q=>hit(r,q.getBoundingClientRect())))break;m.style.top=(parseFloat(m.style.top)+14)+'px'}});
+  }
 }
 function hideCamTour(){$('camTour').classList.remove('on');try{localStorage.setItem('usapon-camtour','1')}catch(e){}}
 function setSelfie(on){
@@ -3422,7 +3429,7 @@ window.addEventListener('keydown',e=>{
   if(e.code==='BracketLeft')cam.yaw+=.3;if(e.code==='BracketRight')cam.yaw-=.3;
 });
 window.addEventListener('keyup',e=>{input.keys[e.code]=false});
-window.addEventListener('blur',()=>{input.keys={};input.dash=false});
+window.addEventListener('blur',()=>{input.keys={};input.dash=false;input.dashLatch=false});
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 canvas.addEventListener('wheel',e=>{if(state.mode!=='play')return;e.preventDefault();if(state.selfie)cam.sd=clamp((cam.sd||3.3)+e.deltaY*.004,1.2,6.5);else if(state.camMode)cam.zoom=clamp((cam.zoom||1)+e.deltaY*.001,.3,1.25);else cam.dist=clamp(cam.dist+e.deltaY*.008,3.6,13)},{passive:false});
 const ptrs=new Map();let pinch0=0;
@@ -3443,16 +3450,20 @@ canvas.addEventListener('pointermove',e=>{
 const endPtr=e=>{ptrs.delete(e.pointerId);pinch0=0};
 canvas.addEventListener('pointerup',endPtr);canvas.addEventListener('pointercancel',endPtr);
 (function(){
-  const joy=$('joy'),knob=$('knob');let id=null,cx=0,cy=0;const RAD=48;
-  const set=(x,y)=>{let dx=x-cx,dy=y-cy;const m=Math.hypot(dx,dy);if(m>RAD){dx=dx/m*RAD;dy=dy/m*RAD}knob.style.transform='translate('+dx+'px,'+dy+'px)';joy.classList.toggle('act',m>8);input.jx=dx/RAD;input.jy=-dy/RAD};
-  joy.addEventListener('pointerdown',e=>{if(id!==null)return;id=e.pointerId;joy.setPointerCapture(e.pointerId);const r=joy.getBoundingClientRect();cx=r.left+r.width/2;cy=r.top+r.height/2;set(e.clientX,e.clientY);e.preventDefault()});
+  const joy=$('joy'),knob=$('knob');let id=null,cx=0,cy=0,RC=48;
+  // 2だんかい: 丸の中=ゆっくり歩く(最大で半分の速さ) / 丸より外まで引っぱる=ふつうに歩く(スタスタ)。丸の外は少し先までつまみが動く
+  const set=(x,y)=>{let dx=x-cx,dy=y-cy;const m=Math.hypot(dx,dy),OUT=RC+22;if(m>OUT){dx=dx/m*OUT;dy=dy/m*OUT}const mm=Math.min(m,OUT);knob.style.transform='translate('+dx+'px,'+dy+'px)';joy.classList.toggle('act',m>8);
+    const f=mm<=RC?.5*mm/RC:.5+.5*Math.min(1,(mm-RC)/22);input.jx=mm>0?dx/mm*f:0;input.jy=mm>0?-dy/mm*f:0;joy.classList.toggle('fast',mm>RC+4)};
+  joy.addEventListener('pointerdown',e=>{if(id!==null)return;id=e.pointerId;joy.setPointerCapture(e.pointerId);const r=joy.getBoundingClientRect();cx=r.left+r.width/2;cy=r.top+r.height/2;RC=r.width/2;set(e.clientX,e.clientY);e.preventDefault()});
   joy.addEventListener('pointermove',e=>{if(e.pointerId===id)set(e.clientX,e.clientY)});
-  const end=e=>{if(e.pointerId!==id)return;id=null;knob.style.transform='';joy.classList.remove('act');input.jx=0;input.jy=0};
+  const end=e=>{if(e.pointerId!==id)return;id=null;knob.style.transform='';joy.classList.remove('act','fast');input.jx=0;input.jy=0;if(input.dashLatch){input.dash=false;input.dashLatch=false;dash.classList.remove('hold')}}; // ダッシュは、方向キーから手をはなすまで続く
   joy.addEventListener('pointerup',end);joy.addEventListener('pointercancel',end);
   const dash=$('tbDash'),jump=$('tbJump');
   [dash,jump,$('photoBtn'),$('broomBtn')].forEach(b=>{if(b)b.addEventListener('contextmenu',e=>e.preventDefault())}); // long-press must not open the OS menu (it cancelled the held dash)
-  dash.addEventListener('pointerdown',e=>{if(player.fly){input.down=true;e.preventDefault();return}input.dash=true;dash.classList.add('hold');dash.setPointerCapture(e.pointerId);e.preventDefault()});
-  const dEnd=()=>{input.dash=false;dash.classList.remove('hold')};dash.addEventListener('pointerup',dEnd);dash.addEventListener('pointercancel',dEnd);
+  dash.addEventListener('pointerdown',e=>{if(player.fly){input.down=true;e.preventDefault();return}e.preventDefault();
+    // 1回おすとダッシュ開始(もう1回おすと止まる)。方向キーから手をはなすと止まる。方向キーをさわっていないときは、少ししたら止まる
+    if(input.dashLatch){input.dash=false;input.dashLatch=false;dash.classList.remove('hold');return}
+    input.dash=true;input.dashLatch=true;input.dashIdle=0;dash.classList.add('hold')});
   jump.addEventListener('pointerdown',e=>{input.jump=true;e.preventDefault()});
 })();
 $('photoBtn').addEventListener('click',()=>{if(state.mode!=='play')return;if(state.nearPanel)takePhoto(state.nearPanel,0);else setCamMode(true)});
@@ -3650,7 +3661,9 @@ function update(dt){
   if(state.selfie){ix=0;iy=0}
   let mag=Math.hypot(ix,iy);if(mag>1){ix/=mag;iy/=mag;mag=1}
   if(player.sit){if(playing&&(mag>.35||input.jump))standUp();else{mag=0;ix=iy=0;input.jump=false}}
+  if(input.dashLatch){input.dashIdle=(mag>.05?0:(input.dashIdle||0)+dt);if(input.dashIdle>1.8||!playing||player.fly){input.dash=false;input.dashLatch=false;const db=$('tbDash');if(db)db.classList.remove('hold')}}
   const dash=playing&&(input.keys.ShiftLeft||input.keys.ShiftRight||input.dash);
+  if(dash&&mag>.05&&mag<1){ix/=mag;iy/=mag;mag=1} // ダッシュ中は、丸の中(ゆっくり)でも ぜんぶ ダッシュの速さになる
   const sp=(player.fly?(dash?8.6:5.8):(dash?7.6:4.3))*mag;
   const fx=-Math.sin(cam.yaw),fz=-Math.cos(cam.yaw),rx=Math.cos(cam.yaw),rz=-Math.sin(cam.yaw);
   const tx=(rx*ix+fx*iy)*sp,tz=(rz*ix+fz*iy)*sp,k2=Math.min(1,dt*(mag>0?11:14));
