@@ -4249,7 +4249,7 @@ function zakProj(cm){
   // 2.5D専用の投影: 絵の主点(cx,cy)をレンズシフトで合わせ、画面の縦横比に合わせて絵の一部を映す
   const Z=ZAK,sz=renderer.getSize(new THREE.Vector2()),A=sz.x/sz.y,zoom=1;
   let vw,vh;if(A>=Z.W/Z.H){vw=Z.W/zoom;vh=vw/A}else{vh=Z.H/zoom;vw=vh*A}
-  const feet=Z.cy+Z.f*Z.yf/Math.max(Z.pd||2.5,1.6),x0=clamp(Z.panX-vw/2,0,Z.W-vw),y0=clamp(Z.freeze?Z.panY-vh/2:feet+90-vh,0,Z.H-vh); // 足元が切れないよう、縦は足元に合わせて動かす
+  const feet=Z.cy+Z.f*Z.yf/Math.max(Z.pd||2.5,1.6),x0=clamp(Z.panX-vw/2,0,Z.W-vw),y0=clamp(Z.freeze?Z.panY-vh/2:(feet+90-vh)*(1-(Z.up||0)),0,Z.H-vh); // 足元が切れないよう、縦は足元に合わせて動かす
   const hw=Math.max(Z.cx-x0,x0+vw-Z.cx),hh=Math.max(Z.cy-y0,y0+vh-Z.cy);
   cm.fov=2*Math.atan(hh/Z.f)*180/PI;cm.aspect=hw/hh;
   cm.view={enabled:true,fullWidth:2*hw,fullHeight:2*hh,offsetX:x0-(Z.cx-hw),offsetY:y0-(Z.cy-hh),width:vw,height:vh};
@@ -4309,7 +4309,7 @@ function zakkaTick(dt,t){
       if(d>dT+.15&&Math.abs(rx-tc)<tw+.4)cam.sAng=(rx>tc?1:-1)*.75}Z.hadCam=true;blob.scale.x*=Z.pscale;blob.scale.z*=Z.pscale;hemi.intensity=.7;return}
   if(Z.hadCam){Z.hadCam=false;cam.yaw=0;cam.cur=undefined;cam.pe=undefined;camera.fov=58;camera.view=null}
   cam.yaw=clamp(cam.yaw,-.22,.22); // ドラッグで、左右に少しだけ見まわせる(絵の外が見えない範囲)。向きそのものは動かさず、カメラを横にずらして奥行きを出す
-  cam.pitch=clamp(cam.pitch,.3-.13,.3+.13);const lookY=(cam.pitch-.3)*2.6; // 上下も少しだけ(ドラッグ下=カメラが上がる)
+  cam.pitch=clamp(cam.pitch,.3,.62);Z.up=(cam.pitch-.3)/.32;const lookY=0; // 上へ見上げる(ドラッグ下=上が見える)。下へは動かさない。絵の上の方(カウンター・棚)まで見える
   const look=-cam.yaw*2.2,tx=Z.freeze?0:clamp(rx*.18,-.38,.38)+look,td=Z.freeze?0:clamp((d-3.4)*.35,-.4,.9),k=Z.freeze?1:Math.min(1,dt*4); // freezeは確認用(元のカメラ位置に固定)
   Z.pd=d;Z.cam.x+=(tx-Z.cam.x)*k;Z.cam.d+=(td-Z.cam.d)*k;
   Z.panX=Z.freeze?768:768+clamp(rx*Z.f/(Z.db*.6),-420,420);
