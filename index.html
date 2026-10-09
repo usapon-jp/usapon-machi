@@ -4307,7 +4307,7 @@ const ZAK={built:false,in:false,busy:false,X:260,Z:0,root:null,hid:[],saved:null
   W:1536,H:1024,f:800,cx:820,cy:350,db:6.2,pscale:.62,cam:{x:0,d:0},panX:768,panY:540};
 function zakScr(X,Y,d){return[ZAK.cx+ZAK.f*X/d,ZAK.cy-ZAK.f*(Y-ZAK.yf)/d]} // 部屋の座標(横X, 床からの高さY, 奥行きd) → 元の絵のピクセル
 function zakTex(b64){const im=new Image(),t=new THREE.Texture(im);im.onload=()=>{t.needsUpdate=true};im.src='data:image/webp;base64,'+b64;
-  t.minFilter=t.magFilter=THREE.LinearFilter;t.generateMipmaps=false;return t}
+  t.minFilter=t.magFilter=THREE.LinearFilter;t.wrapS=t.wrapT=THREE.MirroredRepeatWrapping;t.generateMipmaps=false;return t}
 function zakQuad(P,tex,crop,opts,n){ // 4つの角から面を作り、UVは「元のカメラで見た位置」から決める。面を細かく割って(n×n)、遠近のずれを抑える
   n=n||24;const pos=[],uv=[],idx=[];
   const lerp3=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
@@ -4369,7 +4369,7 @@ function zakBuild(){
 function zakProj(cm){
   if(state.camMode){cm.view=null;cm.aspect=window.innerWidth/window.innerHeight;THREE.PerspectiveCamera.prototype.updateProjectionMatrix.call(cm);return} // カメラモード中は普通の遠近法
   // 2.5D専用の投影: 絵の主点(cx,cy)をレンズシフトで合わせ、画面の縦横比に合わせて絵の一部を映す
-  const Z=ZAK,sz=renderer.getSize(new THREE.Vector2()),A=sz.x/sz.y,zoom=(A>=Z.W/Z.H?1.2:1)/clamp(cam.dist/(Z.dist0||cam.dist),1,1.4); // ピンチで少し引いて(ひろげる=ちかく/ちぢめる=ひろく)、画面全体を見わたせる
+  const Z=ZAK,sz=renderer.getSize(new THREE.Vector2()),A=sz.x/sz.y,zoom=(A>=Z.W/Z.H?1.3:1)/clamp(cam.dist/(Z.dist0||cam.dist),1,A>=Z.W/Z.H?1.3:1.4); // ピンチで少し引いて(ひろげる=ちかく/ちぢめる=ひろく)、画面全体を見わたせる
   let vw,vh;if(A>=Z.W/Z.H){vw=Z.W/zoom;vh=vw/A}else{vh=Z.H/zoom;vw=vh*A}
   const feet=Z.cy+Z.f*Z.yf/Math.max(Z.pd||2.5,1.6),x0=vw>=Z.W?(Z.W-vw)/2:clamp(Z.panX-vw/2,0,Z.W-vw),y0=vh>=Z.H?(Z.H-vh)/2:clamp(Z.freeze?Z.panY-vh/2:(feet+90-vh)*(1-(Z.up||0)),0,Z.H-vh); // 足元が切れないよう、縦は足元に合わせて動かす
   const hw=Math.max(Z.cx-x0,x0+vw-Z.cx),hh=Math.max(Z.cy-y0,y0+vh-Z.cy);
@@ -4421,6 +4421,7 @@ function zakkaAct(act){
   if(Math.hypot(rx-Z.exit[0],d-Z.exit[1])<1.5)return{type:'zakkaExit',label:'そとへ でる'};
   return null;
 }
+function d0(Z){return Z.Z-player.pos.z}
 function shopHold(Z,vw2,dt,rx){ // ピヨちゃんを画面の中心あたりに保つ(ドラッグしても絵が動くだけにならず、ピヨちゃんを中心にまわる)
   const v=new THREE.Vector3(player.pos.x,player.pos.y+.8,player.pos.z);camera.updateMatrixWorld();v.project(camera);
   const e=v.x-clamp(rx*.08,-.4,.4);Z.panC=clamp((Z.panC||0)+e*vw2/2*Math.min(1,dt*10),-700,700);
@@ -4428,15 +4429,16 @@ function shopHold(Z,vw2,dt,rx){ // ピヨちゃんを画面の中心あたりに
 function zakkaTick(dt,t){
   if(!ZAK.in)return;const Z=ZAK,f0=()=>Z.f*Z.yf/(884-Z.cy);
   if(player.fly)setFly(false);
+  {const dd=Math.max(d0(Z),1.6),mx=(Z.W-200-Z.cx)*dd/Z.f,mn=(200-Z.cx)*dd/Z.f;player.pos.x=clamp(player.pos.x,Z.X+mn,Z.X+mx)} // 絵のはしまで行くと、ピヨちゃんが画面の外に出て絵がのびて見えるので、見える範囲にとどめる
   const rx=player.pos.x-Z.X,d=Z.Z-player.pos.z;
   if(state.camMode){ // カメラモード: 既存のカメラ処理に任せる(目線・自撮り・ドラッグ・ズーム)。部屋の外が見えすぎないよう向きを制限
     if(!state.selfie)cam.yaw=clamp(cam.yaw,-.85,.85);else{ // 自撮り: 島テーブルの後ろにいるとき、テーブルがピヨちゃんを隠さないよう横から撮る
       const L=ZAK_DATA.L.table,dT=f0(),tw=L.w*dT/Z.f/2,tc=(L.x+L.w/2-Z.cx)*dT/Z.f;
       if(d>dT+.15&&Math.abs(rx-tc)<tw+.4)cam.sAng=(rx>tc?1:-1)*.75}Z.hadCam=true;blob.scale.x*=Z.pscale;blob.scale.z*=Z.pscale;hemi.intensity=.7;return}
   if(Z.hadCam){Z.hadCam=false;cam.yaw=0;cam.cur=undefined;cam.pe=undefined;camera.fov=58;camera.view=null}
-  const port=innerWidth/innerHeight<1.2,YM=port?.6:.22;cam.yaw=clamp(cam.yaw,-YM,YM); // ドラッグで、左右に少しだけ見まわせる(絵の外が見えない範囲)。向きそのものは動かさず、カメラを横にずらして奥行きを出す
+  const port=innerWidth/innerHeight<1.2,YM=port?.6:.26;cam.yaw=clamp(cam.yaw,-YM,YM); // ドラッグで、左右に少しだけ見まわせる(絵の外が見えない範囲)。向きそのものは動かさず、カメラを横にずらして奥行きを出す
   cam.pitch=clamp(cam.pitch,.04,.3);Z.up=(.3-cam.pitch)/.26;const lookY=0; // 上へ見上げる(外の街と同じ向き: 画面を上にドラッグすると上が見える)。下へは動かさない。絵の上の方(カウンター・棚)まで見える
-  const look=-cam.yaw*(port?.6:1.5),tx=Z.freeze?0:clamp(rx*.18,-.38,.38)+look,td=Z.freeze?0:clamp((d-3.4)*.35,-.4,.9),k=Z.freeze?1:Math.min(1,dt*4); // freezeは確認用(元のカメラ位置に固定)
+  const look=-cam.yaw*(port?.9:1.8),tx=Z.freeze?0:clamp(rx*.18,-.38,.38)+look,td=Z.freeze?0:clamp((d-3.4)*.35,-.4,.9),k=Z.freeze?1:Math.min(1,dt*4); // freezeは確認用(元のカメラ位置に固定)
   Z.pd=d;Z.cam.x+=(tx-Z.cam.x)*k;Z.cam.d+=(td-Z.cam.d)*k;
   {const vwp=Z.W/clamp(cam.dist/(Z.dist0||cam.dist),1,1.4),vhp=innerHeight/innerWidth,vw2=port?Math.min(Z.W,Z.H/vhp)/clamp(cam.dist/(Z.dist0||cam.dist),1,1.4):vwp;
     // たて画面: ドラッグで、絵の横はばを左右いっぱいまで見わたせる(壁の端でとまる)。よこ画面: ピヨちゃんを中心にまわる感じ
@@ -4452,7 +4454,7 @@ const FLW={built:false,in:false,busy:false,X:320,Z:0,root:null,hid:[],saved:null
   W:1536,H:1024,f:800,cx:768,cy:430,db:6.2,pscale:.62,cam:{x:0,d:0},panX:768,panY:540};
 function flwScr(X,Y,d){return[FLW.cx+FLW.f*X/d,FLW.cy-FLW.f*(Y-FLW.yf)/d]}
 function flwTex(b64){const im=new Image(),t=new THREE.Texture(im);im.onload=()=>{t.needsUpdate=true};im.src='data:image/webp;base64,'+b64;
-  t.minFilter=t.magFilter=THREE.LinearFilter;t.generateMipmaps=false;return t}
+  t.minFilter=t.magFilter=THREE.LinearFilter;t.wrapS=t.wrapT=THREE.MirroredRepeatWrapping;t.generateMipmaps=false;return t}
 function flwQuad(P,tex,n){
   n=n||24;const pos=[],uv=[],idx=[];
   const lerp3=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
@@ -4493,7 +4495,7 @@ function flwBuild(){
 }
 function flwProj(cm){
   if(state.camMode){cm.view=null;cm.aspect=window.innerWidth/window.innerHeight;THREE.PerspectiveCamera.prototype.updateProjectionMatrix.call(cm);return}
-  const Z=FLW,sz=renderer.getSize(new THREE.Vector2()),A=sz.x/sz.y,zoom=(A>=Z.W/Z.H?1.2:1)/clamp(cam.dist/(Z.dist0||cam.dist),1,1.4);
+  const Z=FLW,sz=renderer.getSize(new THREE.Vector2()),A=sz.x/sz.y,zoom=(A>=Z.W/Z.H?1.3:1)/clamp(cam.dist/(Z.dist0||cam.dist),1,A>=Z.W/Z.H?1.3:1.4);
   let vw,vh;if(A>=Z.W/Z.H){vw=Z.W/zoom;vh=vw/A}else{vh=Z.H/zoom;vw=vh*A}
   const feet=Z.cy+Z.f*Z.yf/Math.max(Z.pd||2.5,1.6),x0=vw>=Z.W?(Z.W-vw)/2:clamp(Z.panX-vw/2,0,Z.W-vw),y0=vh>=Z.H?(Z.H-vh)/2:clamp(Z.freeze?Z.panY-vh/2:(feet+90-vh)*(1-(Z.up||0)),0,Z.H-vh);
   const hw=Math.max(Z.cx-x0,x0+vw-Z.cx),hh=Math.max(Z.cy-y0,y0+vh-Z.cy);
@@ -4555,13 +4557,14 @@ function flowerTalk(){
 function flowerTick(dt,t){
   if(!FLW.in)return;const Z=FLW;
   if(player.fly)setFly(false);
+  {const dd=Math.max(d0(Z),1.6),mx=(Z.W-200-Z.cx)*dd/Z.f,mn=(200-Z.cx)*dd/Z.f;player.pos.x=clamp(player.pos.x,Z.X+mn,Z.X+mx)} // 絵のはしまで行くと、ピヨちゃんが画面の外に出て絵がのびて見えるので、見える範囲にとどめる
   const rx=player.pos.x-Z.X,d=Z.Z-player.pos.z;
   if(state.camMode){
     if(!state.selfie)cam.yaw=clamp(cam.yaw,-.85,.85);Z.hadCam=true;blob.scale.x*=Z.pscale;blob.scale.z*=Z.pscale;hemi.intensity=.7;return}
   if(Z.hadCam){Z.hadCam=false;cam.yaw=0;cam.cur=undefined;cam.pe=undefined;camera.fov=58;camera.view=null}
-  const port=innerWidth/innerHeight<1.2,YM=port?.6:.22;cam.yaw=clamp(cam.yaw,-YM,YM);
+  const port=innerWidth/innerHeight<1.2,YM=port?.6:.26;cam.yaw=clamp(cam.yaw,-YM,YM);
   cam.pitch=clamp(cam.pitch,.04,.3);Z.up=(.3-cam.pitch)/.26;
-  const look=-cam.yaw*(port?.6:1.5),tx=Z.freeze?0:clamp(rx*.18,-.38,.38)+look,td=Z.freeze?0:clamp((d-3.4)*.35,-.4,.9),k=Z.freeze?1:Math.min(1,dt*4);
+  const look=-cam.yaw*(port?.9:1.8),tx=Z.freeze?0:clamp(rx*.18,-.38,.38)+look,td=Z.freeze?0:clamp((d-3.4)*.35,-.4,.9),k=Z.freeze?1:Math.min(1,dt*4);
   Z.pd=d;Z.cam.x+=(tx-Z.cam.x)*k;Z.cam.d+=(td-Z.cam.d)*k;
   {const zm=clamp(cam.dist/(Z.dist0||cam.dist),1,1.4),vw2=port?Math.min(Z.W,Z.H/(innerHeight/innerWidth))/zm:Z.W/zm;
     Z.vw2=vw2;Z.panX=Z.freeze?768:768+clamp(rx*Z.f/(Z.db*.6),-420,420)*(port?.5:1)-Z.f*look/Math.max(d,1.6)*(port?.5:1)+(Z.panC||0)}
