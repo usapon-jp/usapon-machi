@@ -31,17 +31,14 @@ def clean(m, minpx=250, close=5):
 
 layers = {}
 def D_(a, b, region, th=30): return dif(a, b, th) * region
-# --- island table (original vs no_table) ---
-body = poly([(648, 583), (1188, 583), (1184, 886), (654, 886)])
-above = D_(O, N, rect(690, 400, 1175, 586), 34)
-layers['table'] = (O, clean(np.maximum(body, above)), 'table')
+# --- island table: ChatGPTで作った「グッズ入りの島テーブル」(goods_table.webp, 背景透明)を元の位置に重ねる(後で追加) ---
 # --- counter (no_table vs empty) ---
 cbody = rect(472, 466, 1290, 645)
 c_items = np.maximum.reduce([D_(N, E, rect(480, 330, 640, 520), 34), D_(N, E, rect(640, 392, 800, 470), 34), D_(N, E, rect(1196, 330, 1300, 470), 34)])
 layers['counter'] = (N, clean(np.maximum(cbody, c_items)), 'counter')
 # --- niche shelf items / back drawer unit (set back, near the back wall) ---
-# アーチ棚の中身と奥の引き出し棚は奥の壁にほぼ貼りついているので、切り抜かず背景に焼き込む
-BAKE = [(805, 150, 1192, 470), (640, 200, 785, 392)]
+# 奥の引き出し棚は奥の壁にほぼ貼りついているので、切り抜かず背景に焼き込む。アーチ棚は、グッズ入りの新しい棚(goods_shelf.webp)を重ねて焼き込む
+BAKE = [(640, 200, 785, 392)]
 # --- left display rack with bag, boxes, plants, pumpkins and its round rug ---
 rack_items = cv2.morphologyEx(D_(N, E, rect(205, 300, 460, 850), 40), cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8))
 layers['rack'] = (N, clean(np.maximum(rack_items, ell(280, 788, 172, 52)), 350), 'rack')
@@ -52,6 +49,14 @@ layers['ivy'] = (N, clean(D_(N, E, rect(1365, 160, 1450, 405), 34), 200), 'ivy')
 # --- centre rug (a floor decal) ---
 layers['rug'] = (N, poly([(588, 736), (1222, 736), (1379, 962), (436, 962)]), 'rug')
 
+from PIL import Image
+def fit(path, bbox, width, dst_x, dst_bottom=None, dst_y=None):
+    im = Image.open(D + path).convert('RGBA').crop(bbox); s_ = width / im.width
+    im = im.resize((round(im.width * s_), round(im.height * s_)), Image.LANCZOS)
+    a = np.asarray(im).copy(); a[..., 3] = np.where(a[..., 3] > 40, np.minimum(255, a[..., 3].astype(int) * 2), 0).astype(np.uint8)  # にじみ消し
+    im = Image.fromarray(a, 'RGBA'); return im, (dst_x, (dst_bottom - im.height) if dst_bottom else dst_y)
+SHELF = fit('goods_shelf.webp', (622, 166, 1409, 831), 393, 805, dst_y=150)
+TABLE = fit('goods_table.webp', (208, 56, 1365, 960), 550, 643, dst_bottom=872)
 meta = {}
 for name, (src, m, kind) in layers.items():
     ys, xs = np.where(m > 0)
@@ -72,15 +77,18 @@ for name, (src, m, kind) in layers.items():
 from PIL import Image
 BASE = E.copy()
 for (a, b, c, d) in BAKE: BASE[b:d, a:c] = N[b:d, a:c]
+_b = Image.fromarray(cv2.cvtColor(BASE, cv2.COLOR_BGR2RGB)).convert('RGBA'); _b.alpha_composite(SHELF[0], SHELF[1]); BASE = cv2.cvtColor(np.asarray(_b.convert('RGB')), cv2.COLOR_RGB2BGR)
 Image.fromarray(cv2.cvtColor(cv2.resize(BASE, (int(W * SC), int(H * SC)), interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2RGB)).save(f'{OUT}/room.webp', quality=82, method=6)
 print('room', os.path.getsize(f'{OUT}/room.webp'))
+tim, tpos = TABLE; tim.save(f'{OUT}/table.webp', quality=88, alpha_quality=92, method=6)
+meta['table'] = dict(x=tpos[0], y=tpos[1], w=tim.width, h=tim.height, kind='table', file='table.webp'); print('table', meta['table'])
 json.dump(meta, open(f'{OUT}/layers.json', 'w'), indent=1)
 # preview composite at the original camera
 comp = BASE.copy().astype(np.float32)
-order = ['rug', 'counter', 'ivy', 'wreath', 'rack', 'table']
+order = ['rug', 'counter', 'ivy', 'wreath', 'rack']
 for n in order:
     src, m, _ = layers[n]
     ys, xs = np.where(m > 0); 
     er = cv2.erode(m.astype(np.uint8), np.ones((3, 3), np.uint8)); a = cv2.GaussianBlur(er.astype(np.float32), (0, 0), .9)[..., None]
     comp = comp * (1 - a) + src.astype(np.float32) * a
-cv2.imwrite(OUT + '/_preview.png', comp.astype(np.uint8))
+_p = Image.fromarray(cv2.cvtColor(comp.astype(np.uint8), cv2.COLOR_BGR2RGB)).convert('RGBA'); _p.alpha_composite(TABLE[0], TABLE[1]); _p.convert('RGB').save(OUT + '/_preview.png')
