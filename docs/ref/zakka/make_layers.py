@@ -43,8 +43,7 @@ BAKE = [(640, 200, 785, 392)]
 rack_items = cv2.morphologyEx(D_(N, E, rect(205, 300, 460, 850), 40), cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8))
 layers['rack'] = (N, clean(np.maximum(rack_items, ell(280, 788, 172, 52)), 350), 'rack')
 # --- wreath on the door / ivy on the right wall ---
-wr = np.zeros((H, W), np.uint8); cv2.circle(wr, (113, 345), 74, 1, -1)
-layers['wreath'] = (O, clean(D_(O, E, wr, 40), 200), 'wreath')
+# リース: 扉の面に貼りついているので切り抜かず、元の絵から円形に(縁をなだらかに)背景へ焼き込む。下の WREATH_BAKE を参照
 layers['ivy'] = (N, clean(D_(N, E, rect(1365, 160, 1450, 405), 34), 200), 'ivy')
 # --- centre rug (a floor decal) ---
 layers['rug'] = (N, poly([(588, 736), (1222, 736), (1379, 962), (436, 962)]), 'rug')
@@ -77,6 +76,8 @@ for name, (src, m, kind) in layers.items():
 from PIL import Image
 BASE = E.copy()
 for (a, b, c, d) in BAKE: BASE[b:d, a:c] = N[b:d, a:c]
+_m = np.zeros((H, W), np.float32); cv2.circle(_m, (113, 345), 84, 1.0, -1); _m = cv2.GaussianBlur(_m, (0, 0), 5)[..., None]   # WREATH_BAKE
+BASE = (BASE.astype(np.float32) * (1 - _m) + O.astype(np.float32) * _m).astype(np.uint8)
 _b = Image.fromarray(cv2.cvtColor(BASE, cv2.COLOR_BGR2RGB)).convert('RGBA'); _b.alpha_composite(SHELF[0], SHELF[1]); BASE = cv2.cvtColor(np.asarray(_b.convert('RGB')), cv2.COLOR_RGB2BGR)
 Image.fromarray(cv2.cvtColor(cv2.resize(BASE, (int(W * SC), int(H * SC)), interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2RGB)).save(f'{OUT}/room.webp', quality=82, method=6)
 print('room', os.path.getsize(f'{OUT}/room.webp'))
