@@ -4310,9 +4310,9 @@ function zakkaTick(dt,t){
   if(Z.hadCam){Z.hadCam=false;cam.yaw=0;cam.cur=undefined;cam.pe=undefined;camera.fov=58;camera.view=null}
   cam.yaw=clamp(cam.yaw,-.22,.22); // ドラッグで、左右に少しだけ見まわせる(絵の外が見えない範囲)。向きそのものは動かさず、カメラを横にずらして奥行きを出す
   cam.pitch=clamp(cam.pitch,.04,.3);Z.up=(.3-cam.pitch)/.26;const lookY=0; // 上へ見上げる(外の街と同じ向き: 画面を上にドラッグすると上が見える)。下へは動かさない。絵の上の方(カウンター・棚)まで見える
-  const look=-cam.yaw*2.2,tx=Z.freeze?0:clamp(rx*.18,-.38,.38)+look,td=Z.freeze?0:clamp((d-3.4)*.35,-.4,.9),k=Z.freeze?1:Math.min(1,dt*4); // freezeは確認用(元のカメラ位置に固定)
+  const look=-cam.yaw*1.5,tx=Z.freeze?0:clamp(rx*.18,-.38,.38)+look,td=Z.freeze?0:clamp((d-3.4)*.35,-.4,.9),k=Z.freeze?1:Math.min(1,dt*4); // freezeは確認用(元のカメラ位置に固定)
   Z.pd=d;Z.cam.x+=(tx-Z.cam.x)*k;Z.cam.d+=(td-Z.cam.d)*k;
-  Z.panX=Z.freeze?768:768+clamp(rx*Z.f/(Z.db*.6),-420,420);
+  Z.panX=Z.freeze?768:768+clamp(rx*Z.f/(Z.db*.6),-420,420)-Z.f*look/Math.max(d,1.6); // ドラッグ中はピヨちゃんを画面の同じ位置に保つ(外の街の「ピヨちゃんを中心にまわる」感じ)
   camera.position.set(Z.X+Z.cam.x,Z.yf+lookY,Z.Z-Z.cam.d);camera.quaternion.set(0,0,0,1);camera.updateProjectionMatrix();
   piyo.group.visible=true;blob.visible=true;blob.scale.x*=Z.pscale;blob.scale.z*=Z.pscale;hemi.intensity=.7;
 }
