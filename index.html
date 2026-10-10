@@ -4440,10 +4440,22 @@ function zakkaAct(act){
   return null;
 }
 function shopCamFp(Z){ // お店のカメラモード: ピヨちゃんの目線だと壁にくっついて寄りすぎるので、少しうしろに下がって、広めの画角から始める
-  if(!Z.camInit){Z.camInit=true;cam.zoom=1.05}
+  if(!Z.camInit){Z.camInit=true;const A=innerWidth/innerHeight,bf=A<.8?66:58,vf=2*Math.atan(Math.tan(40*PI/180)/A)*180/PI;cam.zoom=clamp(Math.min(1.05,vf/bf),.5,1.05)} // よこ画面は、絵のはばをこえない画角から
   const q=cam.fp||0,cq=Math.cos(q),dx=-Math.sin(cam.yaw)*cq,dz=-Math.cos(cam.yaw)*cq,ey=player.pos.y+1.45,back=2.8;
-  const cx=player.pos.x-dx*back,cz=Math.min(player.pos.z-dz*back,Z.Z-.35);
-  camera.position.set(cx,ey,cz);camera.lookAt(player.pos.x+dx,ey-Math.sin(q),player.pos.z+dz);
+  const place=()=>{const q=cam.fp||0,cq=Math.cos(q),dx=-Math.sin(cam.yaw)*cq,dz=-Math.cos(cam.yaw)*cq;
+    camera.position.set(player.pos.x-dx*back,ey,Math.min(player.pos.z-dz*back,Z.Z-.35));camera.lookAt(player.pos.x+dx,ey-Math.sin(q),player.pos.z+dz);camera.updateMatrixWorld(true)};
+  place();
+  // 絵の端より向こうは見せない: 画面のふちのほうこうが絵の外に出るなら、そこで止める(前の向きにもどす)
+  const out=()=>{const o=camera.position,V=THREE.Vector3,inv=camera.projectionMatrix.clone().invert?camera.projectionMatrix.clone().invert():new THREE.Matrix4().getInverse(camera.projectionMatrix);
+    let tot=0;for(const nx of [-1,0,1])for(const ny of [-1,0,1]){if(!nx&&!ny)continue;
+      const v=new V(nx,ny,.5).applyMatrix4(inv).applyMatrix4(camera.matrixWorld).sub(o).normalize(),r=[o.x-Z.X,o.y,Z.Z-o.z],e=[v.x,v.y,-v.z];
+      let bt=1e9,hit=null;
+      for(const [ax,val] of [[0,-Z.Wl],[0,Z.Wr],[1,0],[1,Z.Hr],[2,Z.db]]){if(Math.abs(e[ax])<1e-6)continue;const t=(val-r[ax])/e[ax];if(t<=0||t>=bt)continue;
+        const h=[r[0]+e[0]*t,r[1]+e[1]*t,r[2]+e[2]*t];if(h[0]<-Z.Wl-.01||h[0]>Z.Wr+.01||h[1]<-.01||h[1]>Z.Hr+.01||h[2]>Z.db+.01)continue;bt=t;hit=h}
+      if(!hit){tot+=3000;continue}if(hit[2]<1.5){tot+=1500;continue}
+      const px=Z.cx+Z.f*hit[0]/hit[2],py=Z.cy-Z.f*(hit[1]-Z.yf)/hit[2];tot+=Math.max(0,-px)+Math.max(0,px-Z.W)+Math.max(0,-py)+Math.max(0,py-Z.H)}
+    return tot};
+  {const V=out();if(Z.okYaw!==undefined&&V>Z.okV+2){cam.yaw=Z.okYaw;cam.fp=Z.okFp;place()}else{Z.okYaw=cam.yaw;Z.okFp=cam.fp||0;Z.okV=V}}
   piyo.group.visible=true;blob.visible=true}
 function d0(Z){return Z.Z-player.pos.z}
 function shopHold(Z,vw2,dt,rx){ // ピヨちゃんを画面の中心あたりに保つ(ドラッグしても絵が動くだけにならず、ピヨちゃんを中心にまわる)
@@ -4459,7 +4471,7 @@ function zakkaTick(dt,t){
     if(!state.selfie){cam.yaw=clamp(cam.yaw,-.85,.85);shopCamFp(Z)}else{ // 自撮り: 島テーブルの後ろにいるとき、テーブルがピヨちゃんを隠さないよう横から撮る
       const L=ZAK_DATA.L.table,dT=f0(),tw=L.w*dT/Z.f/2,tc=(L.x+L.w/2-Z.cx)*dT/Z.f;
       if(d>dT+.15&&Math.abs(rx-tc)<tw+.4)cam.sAng=(rx>tc?1:-1)*.75}Z.hadCam=true;blob.scale.x*=Z.pscale;blob.scale.z*=Z.pscale;hemi.intensity=.7;return}
-  if(Z.hadCam){Z.hadCam=false;Z.camInit=false;cam.yaw=0;cam.cur=undefined;cam.pe=undefined;camera.fov=58;camera.view=null}
+  if(Z.hadCam){Z.hadCam=false;Z.camInit=false;Z.okYaw=undefined;cam.yaw=0;cam.cur=undefined;cam.pe=undefined;camera.fov=58;camera.view=null}
   const port=innerWidth/innerHeight<1.2,YM=port?.6:.26;cam.yaw=clamp(cam.yaw,-YM,YM); // ドラッグで、左右に少しだけ見まわせる(絵の外が見えない範囲)。向きそのものは動かさず、カメラを横にずらして奥行きを出す
   cam.pitch=clamp(cam.pitch,.04,.3);Z.up=(.3-cam.pitch)/.26;const lookY=0; // 上へ見上げる(外の街と同じ向き: 画面を上にドラッグすると上が見える)。下へは動かさない。絵の上の方(カウンター・棚)まで見える
   const look=-cam.yaw*(port?.9:1.8),tx=Z.freeze?0:clamp(rx*.18,-.38,.38)+look,td=Z.freeze?0:clamp((d-3.4)*.35,-.4,.9),k=Z.freeze?1:Math.min(1,dt*4); // freezeは確認用(元のカメラ位置に固定)
@@ -4585,7 +4597,7 @@ function flowerTick(dt,t){
   const rx=player.pos.x-Z.X,d=Z.Z-player.pos.z;
   if(state.camMode){
     if(!state.selfie){cam.yaw=clamp(cam.yaw,-.85,.85);shopCamFp(Z)}Z.hadCam=true;blob.scale.x*=Z.pscale;blob.scale.z*=Z.pscale;hemi.intensity=.7;return}
-  if(Z.hadCam){Z.hadCam=false;Z.camInit=false;cam.yaw=0;cam.cur=undefined;cam.pe=undefined;camera.fov=58;camera.view=null}
+  if(Z.hadCam){Z.hadCam=false;Z.camInit=false;Z.okYaw=undefined;cam.yaw=0;cam.cur=undefined;cam.pe=undefined;camera.fov=58;camera.view=null}
   const port=innerWidth/innerHeight<1.2,YM=port?.6:.26;cam.yaw=clamp(cam.yaw,-YM,YM);
   cam.pitch=clamp(cam.pitch,.04,.3);Z.up=(.3-cam.pitch)/.26;
   const look=-cam.yaw*(port?.9:1.8),tx=Z.freeze?0:clamp(rx*.18,-.38,.38)+look,td=Z.freeze?0:clamp((d-3.4)*.35,-.4,.9),k=Z.freeze?1:Math.min(1,dt*4);
