@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "note": "店員ピヨちゃん衣装パーツ。全パーツ素体(base/piyo_base_rig.glb)と同じ9ボーン・同じバインドポーズで書き出し済み(スキンメッシュ)。",
+  "base": "base/piyo_base_rig.glb",
+  "bones": ["Hips","Spine","Head","LeftArm","RightArm","LeftUpLeg","RightUpLeg","LeftFoot","RightFoot"],
+  "boneNamePrefix": "mixamorig:",
+  "tintColors": {
+    "flower": [0.59, 0.71, 0.52],
+    "cafe":   [0.59, 0.33, 0.22],
+    "store":  [0.63, 0.40, 0.86]
+  },
+  "parts": {
+    "beret_felt":   {"file": "glb/beret_felt.glb",   "skin": "Head 100%",           "tint": true,  "shops": ["flower","cafe"], "note": "共通ベレー帽(灰色フェルト→店の色で着色)"},
+    "scarf_felt":   {"file": "glb/scarf_felt.glb",   "skin": "Spine中心(Head少し)", "tint": true,  "shops": ["flower","cafe","store"], "note": "共通スカーフ"},
+    "hat_store":    {"file": "glb/hat_store.glb",    "skin": "Head 100%",           "tint": true,  "shops": ["store"], "note": "カチューシャ+シルクハットで1パーツ(着色対象)"},
+    "deco_flower":  {"file": "glb/deco_flower.glb",  "skin": "Head 100%",           "tint": false, "shops": ["flower"], "note": "ベレー帽の飾り(テクスチャそのまま)"},
+    "deco_cafe":    {"file": "glb/deco_cafe.glb",    "skin": "Head 100%",           "tint": false, "shops": ["cafe"],   "note": "ベレー帽の飾り(コーヒーカップ)"},
+    "star_hat":     {"file": "glb/star_hat.glb",     "skin": "Head 100%",           "tint": false, "shops": ["store"],  "note": "シルクハットのリボンの星"},
+    "star_scarf":   {"file": "glb/star_scarf.glb",   "skin": "Spine中心",           "tint": false, "shops": ["store"],  "note": "スカーフの結び目の星バッジ"},
+    "apron_flower": {"file": "glb/apron_flower.glb", "skin": "Spine+Hips+腕の付け根少し", "tint": false, "shops": ["flower"]},
+    "apron_cafe":   {"file": "glb/apron_cafe.glb",   "skin": "Spine+Hips+腕の付け根少し", "tint": false, "shops": ["cafe"]},
+    "apron_store":  {"file": "glb/apron_store.glb",  "skin": "Spine+Hips+腕の付け根少し", "tint": false, "shops": ["store"]}
+  },
+  "outfits": {
+    "flower": ["apron_flower","scarf_felt","beret_felt","deco_flower"],
+    "cafe":   ["apron_cafe","scarf_felt","beret_felt","deco_cafe"],
+    "store":  ["apron_store","scarf_felt","hat_store","star_hat","star_scarf"]
+  },
+  "tintRule": "tint:true のパーツは material.color に tintColors[店] を設定する(テクスチャは灰色のフェルト)。tint:false はそのまま(白)。"
+}
