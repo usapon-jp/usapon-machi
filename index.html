@@ -1047,12 +1047,12 @@ const AUDIO=(function(){
     function bar(t,B){
       const pass=Math.floor(B/16)%3,b=B%16,c=CH[PR[b]];
       // ひくいドローン(ニ+ イ の5度)をずっと
-      if(b%4===0){osc('sine',hz2(38),t,E8*24,.05,1.2,.1);osc('sine',hz2(45),t,E8*24,.03,1.4,.1)}
+      if(b%4===0){osc('sine',hz2(38),t,E8*24,.05,.4,.1);osc('sine',hz2(45),t,E8*24,.03,.5,.1)}
       osc('sine',hz2(c.b),t,E8*3.5,.12,.015,0);
       // ハープの分散和音(6つ)
       [0,1,2,3,2,1].forEach((k,i)=>harp(t+i*E8,c.a[k],i===0?.06:(i%3===0?.045:.034)));
       // ホイッスルのメロディ(最初の4小節はハープだけ)
-      if(pass>=1||b>=4)MEL[b].forEach(([e,m,d],i)=>{const dur=Math.max(.35,d*E8*.95);whistle(t+e*E8,pass===2?m+(i%2?0:0):m,dur,pass===2?.085:.11);if(pass===2&&d>=2)bell(t+e*E8,m+12,1,.035)});
+      MEL[b].forEach(([e,m,d],i)=>{const dur=Math.max(.35,d*E8*.95);whistle(t+e*E8,pass===2?m+(i%2?0:0):m,dur,pass===2?.085:.11);if(pass===2&&d>=2)bell(t+e*E8,m+12,1,.035)});
       // バウロン(ひかえめ): 2周目いこう 1拍目・4拍目
       if(pass>=1){bodhran(t,.11);bodhran(t+E8*3,.06);if(b%4===3)bodhran(t+E8*5,.04)}
       // きらきら
@@ -1071,8 +1071,8 @@ const AUDIO=(function(){
     cafeG.gain.cancelScheduledValues(t);cafeG.gain.setTargetAtTime(on&&(scene==='cafe'||scene==='flower')?vol*1.7:0,t,tc)}
   function setScene(s){ // 'town' | 'cafe' | 'flower': 店内に入る/出るときにBGMを切り替える
     if(s===scene)return;scene=s;if(!ctx)return;
-    if(s==='cafe'||s==='flower'){nextC=ctx.currentTime+.25;barC=0}else nextT=ctx.currentTime+.25;
-    gains(.3);
+    if(s==='cafe'||s==='flower'){nextC=ctx.currentTime+.05;barC=0}else nextT=ctx.currentTime+.25;
+    gains(.12);
   }
   function startMusic(){
     if(!init())return;
