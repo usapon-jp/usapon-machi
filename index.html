@@ -3600,7 +3600,8 @@ canvas.addEventListener('pointermove',e=>{
   if(ptrs.size>=2){const a=[...ptrs.values()],d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);if(pinch0){if(state.selfie)cam.sd=clamp((cam.sd||3.3)-(d-pinch0)*.012,1.2,6.5);else if(state.camMode)cam.zoom=clamp((cam.zoom||1)-(d-pinch0)*.004,.3,1.25);else cam.dist=clamp(cam.dist-(d-pinch0)*.03,3.6,13)}pinch0=d;return}
   if(state.selfie){if(ptrs.size<2){cam.sAng-=dx*.0068;cam.sp=clamp(cam.sp+dy*.003,-.12,.45)}return}
   if(state.camMode){const zf=Math.max(.4,cam.zoom||1);cam.yaw-=dx*.0068*zf;cam.fp=clamp((cam.fp||0)+dy*.0052*zf,-1.1,1.25);return}
-  cam.yaw-=dx*.0068;cam.pitch=clamp(cam.pitch+dy*.0052,.04,1.45);
+  const sk=(ZAK.in||FLW.in)?.4:1; // お店の中は絵の動く量が大きいので、すこしゆっくり
+  cam.yaw-=dx*.0068*sk;cam.pitch=clamp(cam.pitch+dy*.0052*sk,.04,1.45);
 });
 const endPtr=e=>{ptrs.delete(e.pointerId);pinch0=0};
 canvas.addEventListener('pointerup',endPtr);canvas.addEventListener('pointercancel',endPtr);
@@ -4323,6 +4324,8 @@ const ZAK={built:false,in:false,busy:false,X:260,Z:0,root:null,hid:[],saved:null
 function zakScr(X,Y,d){return[ZAK.cx+ZAK.f*X/d,ZAK.cy-ZAK.f*(Y-ZAK.yf)/d]} // 部屋の座標(横X, 床からの高さY, 奥行きd) → 元の絵のピクセル
 function zakTex(b64){const im=new Image(),t=new THREE.Texture(im);im.onload=()=>{t.needsUpdate=true};im.src='data:image/webp;base64,'+b64;
   t.minFilter=t.magFilter=THREE.LinearFilter;t.wrapS=t.wrapT=THREE.MirroredRepeatWrapping;t.generateMipmaps=false;return t}
+function roomEdgeDim(mat){ // 絵の外がわ(ミラーでのばした部分)は、だんだん暗くして「絵のはし」だと分かるように
+  mat.onBeforeCompile=sh=>{sh.fragmentShader=sh.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\n  {vec2 o=max(-vUv,vUv-1.);diffuseColor.rgb*=mix(.3,1.,clamp(1.-max(o.x,o.y)*9.,0.,1.));}')};return mat}
 function zakQuad(P,tex,crop,opts,n){ // 4つの角から面を作り、UVは「元のカメラで見た位置」から決める。面を細かく割って(n×n)、遠近のずれを抑える
   n=n||24;const pos=[],uv=[],idx=[];
   const lerp3=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
@@ -4331,7 +4334,7 @@ function zakQuad(P,tex,crop,opts,n){ // 4つの角から面を作り、UVは「�
       uv.push(crop?(s[0]-crop[0])/crop[2]:s[0]/ZAK.W,1-(crop?(s[1]-crop[1])/crop[3]:s[1]/ZAK.H))}}
   for(let j=0;j<n;j++)for(let i=0;i<n;i++){const a=j*(n+1)+i,b=a+1,c=a+n+1,d=c+1;idx.push(a,b,d,a,d,c)}
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(idx);
-  const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial(Object.assign({map:tex,side:THREE.DoubleSide,fog:false},opts||{})));m.frustumCulled=false;return m}
+  const m=new THREE.Mesh(g,roomEdgeDim(new THREE.MeshBasicMaterial(Object.assign({map:tex,side:THREE.DoubleSide,fog:false},opts||{}))));m.frustumCulled=false;return m}
 function zakBoard(key,d){ // 切り抜きを、元の絵と同じ位置・大きさに見える距離dに立てる
   const L=ZAK_DATA.L[key],f=ZAK.f,xc=L.x+L.w/2,yc=L.y+L.h/2;
   const m=new THREE.Mesh(new THREE.PlaneGeometry(L.w*d/f,L.h*d/f),new THREE.MeshBasicMaterial({map:zakTex(L.b),alphaTest:.4,side:THREE.DoubleSide,fog:false}));
@@ -4436,21 +4439,27 @@ function zakkaAct(act){
   if(Math.hypot(rx-Z.exit[0],d-Z.exit[1])<1.5)return{type:'zakkaExit',label:'そとへ でる'};
   return null;
 }
+function shopCamFp(Z){ // お店のカメラモード: ピヨちゃんの目線だと壁にくっついて寄りすぎるので、少しうしろに下がって、広めの画角から始める
+  if(!Z.camInit){Z.camInit=true;cam.zoom=1.05}
+  const q=cam.fp||0,cq=Math.cos(q),dx=-Math.sin(cam.yaw)*cq,dz=-Math.cos(cam.yaw)*cq,ey=player.pos.y+1.45,back=2.8;
+  const cx=player.pos.x-dx*back,cz=Math.min(player.pos.z-dz*back,Z.Z-.35);
+  camera.position.set(cx,ey,cz);camera.lookAt(player.pos.x+dx,ey-Math.sin(q),player.pos.z+dz);
+  piyo.group.visible=true;blob.visible=true}
 function d0(Z){return Z.Z-player.pos.z}
 function shopHold(Z,vw2,dt,rx){ // ピヨちゃんを画面の中心あたりに保つ(ドラッグしても絵が動くだけにならず、ピヨちゃんを中心にまわる)
   const v=new THREE.Vector3(player.pos.x,player.pos.y+.8,player.pos.z);camera.updateMatrixWorld();v.project(camera);
-  const e=v.x-clamp(rx*.08,-.4,.4);Z.panC=clamp((Z.panC||0)+e*vw2/2*Math.min(1,dt*10),-700,700);
+  const e=v.x;Z.panC=clamp((Z.panC||0)+e*vw2/2*Math.min(1,dt*10),-700,700);
 }
 function zakkaTick(dt,t){
   if(!ZAK.in)return;const Z=ZAK,f0=()=>Z.f*Z.yf/(884-Z.cy);
   if(player.fly)setFly(false);
-  {const dd=Math.max(d0(Z),1.6),mx=(Z.W-200-Z.cx)*dd/Z.f,mn=(200-Z.cx)*dd/Z.f;player.pos.x=clamp(player.pos.x,Z.X+mn,Z.X+mx)} // 絵のはしまで行くと、ピヨちゃんが画面の外に出て絵がのびて見えるので、見える範囲にとどめる
+  {const dd=Math.max(d0(Z),1.6),mx=(Z.W-120-Z.cx)*dd/Z.f,mn=(120-Z.cx)*dd/Z.f;player.pos.x=clamp(player.pos.x,Z.X+mn,Z.X+mx)} // 絵のはしまで行くと、ピヨちゃんが画面の外に出て絵がのびて見えるので、見える範囲にとどめる
   const rx=player.pos.x-Z.X,d=Z.Z-player.pos.z;
   if(state.camMode){ // カメラモード: 既存のカメラ処理に任せる(目線・自撮り・ドラッグ・ズーム)。部屋の外が見えすぎないよう向きを制限
-    if(!state.selfie)cam.yaw=clamp(cam.yaw,-.85,.85);else{ // 自撮り: 島テーブルの後ろにいるとき、テーブルがピヨちゃんを隠さないよう横から撮る
+    if(!state.selfie){cam.yaw=clamp(cam.yaw,-.85,.85);shopCamFp(Z)}else{ // 自撮り: 島テーブルの後ろにいるとき、テーブルがピヨちゃんを隠さないよう横から撮る
       const L=ZAK_DATA.L.table,dT=f0(),tw=L.w*dT/Z.f/2,tc=(L.x+L.w/2-Z.cx)*dT/Z.f;
       if(d>dT+.15&&Math.abs(rx-tc)<tw+.4)cam.sAng=(rx>tc?1:-1)*.75}Z.hadCam=true;blob.scale.x*=Z.pscale;blob.scale.z*=Z.pscale;hemi.intensity=.7;return}
-  if(Z.hadCam){Z.hadCam=false;cam.yaw=0;cam.cur=undefined;cam.pe=undefined;camera.fov=58;camera.view=null}
+  if(Z.hadCam){Z.hadCam=false;Z.camInit=false;cam.yaw=0;cam.cur=undefined;cam.pe=undefined;camera.fov=58;camera.view=null}
   const port=innerWidth/innerHeight<1.2,YM=port?.6:.26;cam.yaw=clamp(cam.yaw,-YM,YM); // ドラッグで、左右に少しだけ見まわせる(絵の外が見えない範囲)。向きそのものは動かさず、カメラを横にずらして奥行きを出す
   cam.pitch=clamp(cam.pitch,.04,.3);Z.up=(.3-cam.pitch)/.26;const lookY=0; // 上へ見上げる(外の街と同じ向き: 画面を上にドラッグすると上が見える)。下へは動かさない。絵の上の方(カウンター・棚)まで見える
   const look=-cam.yaw*(port?.9:1.8),tx=Z.freeze?0:clamp(rx*.18,-.38,.38)+look,td=Z.freeze?0:clamp((d-3.4)*.35,-.4,.9),k=Z.freeze?1:Math.min(1,dt*4); // freezeは確認用(元のカメラ位置に固定)
@@ -4477,7 +4486,7 @@ function flwQuad(P,tex,n){
     for(let i=0;i<=n;i++){const p=lerp3(l,r,i/n);pos.push(FLW.X+p[0],p[1],FLW.Z-p[2]);const s=flwScr(p[0],p[1],p[2]);uv.push(s[0]/FLW.W,1-s[1]/FLW.H)}}
   for(let j=0;j<n;j++)for(let i=0;i<n;i++){const a=j*(n+1)+i,b=a+1,c=a+n+1,d=c+1;idx.push(a,b,d,a,d,c)}
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(idx);
-  const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({map:tex,side:THREE.DoubleSide,fog:false}));m.frustumCulled=false;return m}
+  const m=new THREE.Mesh(g,roomEdgeDim(new THREE.MeshBasicMaterial({map:tex,side:THREE.DoubleSide,fog:false})));m.frustumCulled=false;return m}
 function flwBoard(key,d){
   const L=FLW_DATA.L[key],f=FLW.f,xc=L.x+L.w/2,yc=L.y+L.h/2;
   const m=new THREE.Mesh(new THREE.PlaneGeometry(L.w*d/f,L.h*d/f),new THREE.MeshBasicMaterial({map:flwTex(L.b),alphaTest:.4,side:THREE.DoubleSide,fog:false}));
@@ -4572,11 +4581,11 @@ function flowerTalk(){
 function flowerTick(dt,t){
   if(!FLW.in)return;const Z=FLW;
   if(player.fly)setFly(false);
-  {const dd=Math.max(d0(Z),1.6),mx=(Z.W-200-Z.cx)*dd/Z.f,mn=(200-Z.cx)*dd/Z.f;player.pos.x=clamp(player.pos.x,Z.X+mn,Z.X+mx)} // 絵のはしまで行くと、ピヨちゃんが画面の外に出て絵がのびて見えるので、見える範囲にとどめる
+  {const dd=Math.max(d0(Z),1.6),mx=(Z.W-120-Z.cx)*dd/Z.f,mn=(120-Z.cx)*dd/Z.f;player.pos.x=clamp(player.pos.x,Z.X+mn,Z.X+mx)} // 絵のはしまで行くと、ピヨちゃんが画面の外に出て絵がのびて見えるので、見える範囲にとどめる
   const rx=player.pos.x-Z.X,d=Z.Z-player.pos.z;
   if(state.camMode){
-    if(!state.selfie)cam.yaw=clamp(cam.yaw,-.85,.85);Z.hadCam=true;blob.scale.x*=Z.pscale;blob.scale.z*=Z.pscale;hemi.intensity=.7;return}
-  if(Z.hadCam){Z.hadCam=false;cam.yaw=0;cam.cur=undefined;cam.pe=undefined;camera.fov=58;camera.view=null}
+    if(!state.selfie){cam.yaw=clamp(cam.yaw,-.85,.85);shopCamFp(Z)}Z.hadCam=true;blob.scale.x*=Z.pscale;blob.scale.z*=Z.pscale;hemi.intensity=.7;return}
+  if(Z.hadCam){Z.hadCam=false;Z.camInit=false;cam.yaw=0;cam.cur=undefined;cam.pe=undefined;camera.fov=58;camera.view=null}
   const port=innerWidth/innerHeight<1.2,YM=port?.6:.26;cam.yaw=clamp(cam.yaw,-YM,YM);
   cam.pitch=clamp(cam.pitch,.04,.3);Z.up=(.3-cam.pitch)/.26;
   const look=-cam.yaw*(port?.9:1.8),tx=Z.freeze?0:clamp(rx*.18,-.38,.38)+look,td=Z.freeze?0:clamp((d-3.4)*.35,-.4,.9),k=Z.freeze?1:Math.min(1,dt*4);
