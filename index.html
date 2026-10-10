@@ -4182,7 +4182,7 @@ function cafeBuild(){
   const WT=.25;
   addBoxCol(OX,OZ-HD-WT,HW+.6,WT,0);addBoxCol(OX,OZ+HD+WT,HW+.6,WT,0);addBoxCol(OX-HW-WT,OZ,WT,HD+.6,0);addBoxCol(OX+HW+WT,OZ,WT,HD+.6,0);
   addBoxCol(OX+2.875,OZ-2.6,3.2,.55,0,1.45);addBoxCol(OX+.1,OZ-4.05,.4,.95,0,1.45);
-  npcMake('cafe',root,OX+2.3,.45,OZ-3.7,0,1); // 店員ピヨちゃん(カウンターの中)
+  npcMake('cafe',root,OX+2.3,.75,OZ-3.7,0,1); // 店員ピヨちゃん(カウンターの中)
   camBox.push({x0:OX-HW-1,x1:OX+HW+1,y0:H-.35,y1:H+3,z0:OZ-HD-1,z1:OZ+HD+1});
   /* ---- lights (2 warm point lights; added only while inside) ---- */
   const l1=new THREE.PointLight(0xffb468,.75,9,1.5);l1.position.set(OX-3.4,2.3,OZ-.2);
@@ -4376,7 +4376,7 @@ function zakBuild(){
   const L=ZAK_DATA.L,xcOf=k=>L[k].x+L[k].w/2;
   const rug=L.rug,rp=[[rug.x,rug.y+rug.h],[rug.x+rug.w,rug.y+rug.h],[rug.x+rug.w,rug.y],[rug.x,rug.y]].map(p=>{const d=dB(p[1]);return[(p[0]-Z.cx)*d/f,.004,d]});
   const rm=zakQuad(rp,zakTex(rug.b),[rug.x,rug.y,rug.w,rug.h],{alphaTest:.4,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});root.add(rm);
-  npcMake('store',root,Z.X+(1000-Z.cx)*(dC+.5)/f,.75,Z.Z-(dC+.5),0,Z.pscale); // 店員ピヨちゃん(カウンターのうしろ。台に乗って顔が見える高さ)
+  npcMake('store',root,Z.X+(1000-Z.cx)*(dC+.5)/f,1.05,Z.Z-(dC+.5),0,Z.pscale); // 店員ピヨちゃん(カウンターのうしろ。台に乗って顔が見える高さ)
   root.add(zakBoard('counter',dC)); // 左の棚は壁に接しているので背景に焼き込み済み(浮かない)
   root.add(zakBoard('ivy',f*Wr/(xcOf('ivy')-Z.cx)-.04));
   root.add(zakBoard('table',dT));
@@ -4623,6 +4623,11 @@ const NPC={dir:'assets/piyo/',buf:{},list:[],
 function npcGet(n){return NPC.buf[n]||(NPC.buf[n]=fetch(NPC.dir+n+'.glb').then(r=>{if(!r.ok)throw new Error(n+' '+r.status);return r.arrayBuffer()}))}
 function npcMake(shop,parent,x,y,z,ry,sc){
   const holder=new THREE.Group();holder.position.set(x,y,z);holder.rotation.y=ry||0;holder.scale.setScalar(sc||1);parent.add(holder);
+  if(y>.05){const k=sc||1,st=new THREE.Group(),M=shop==='cafe'?THREE.MeshLambertMaterial:THREE.MeshBasicMaterial,w=new M({color:0xb07a45}),d=new M({color:0x8a5a34}); // 踏み台(カウンターの中で、顔が見える高さに)
+    const top=new THREE.Mesh(new THREE.BoxGeometry(.9*k,.08*k,.7*k),w);top.position.y=y-.04*k;st.add(top);
+    for(const sx of [-1,1])for(const sz of [-1,1]){const l=new THREE.Mesh(new THREE.BoxGeometry(.08*k,y-.08*k,.08*k),d);l.position.set(sx*.38*k,(y-.08*k)/2,sz*.28*k);st.add(l)}
+    const bar=new THREE.Mesh(new THREE.BoxGeometry(.8*k,.06*k,.06*k),d);bar.position.set(0,y*.4,.28*k);st.add(bar);
+    st.position.set(x,0,z);parent.add(st)}
   const parts=NPC.outfits[shop];
   Promise.all([npcGet('piyo_base_rig'),...parts.map(npcGet)]).then(bufs=>{
     const model=miniGLB(bufs[0].slice(0)),bones={};let base=null;
