@@ -4680,9 +4680,8 @@ function flowerAct(act){
 /* 店員さんのせりふ。着せ替えポーション(帽子とマントの色がえ)は、キャラと色がえのしくみが そろってから ここに入れる */
 function flowerTalk(){
   if(typeof dressUnlocked==='function'&&dressUnlocked()){toast('まほうの ポーションで おきがえ しよう！',2400);openDress();return} // ぜんぶ集めたら、店員さんからも おきがえ
-  const done=(()=>{try{return panels.every(p=>p.found)&&ghostChans.every(g=>g.found)}catch(e){return false}})();
   $('spotTitle').textContent='まほうの おはなやさん';
-  $('spotCap').textContent=done?'ぜんぶ みつけたね、すごい！\nまほうのポーションは じゅんびちゅうだよ。もうすこし まっててね':'まほうのポーションは じゅんびちゅうだよ。\nパネルと おばけちゃんを ぜんぶ みつけたら いいことが あるかも…';
+  $('spotCap').textContent='まほうの ポーションで おきがえが できるよ。\nパネルと かくれおばけちゃんを ぜんぶ みつけたら つかえるよ。\nいまは '+dressProgress();
   $('spotLink').hidden=true;$('spotNone').hidden=true;openModal('mSpot');
 }
 function flowerTick(dt,t){
@@ -5250,6 +5249,7 @@ const piyoDress=(()=>{
   function init(){apply(save.dress)}
   return{init,apply};
 })();
+function dressProgress(){return'パネル '+Math.min(save.found.length,panels.length)+' / '+panels.length+'　おばけちゃん '+Math.min(save.ghosts.length,ghostChans.length)+' / '+ghostChans.length} // いまの あつまりぐあい(なぜ まだ使えないかが わかるように)
 function dressUnlocked(){return panels.length>0&&save.found.length>=panels.length&&ghostChans.length>0&&save.ghosts.length>=ghostChans.length}
 let dressPrevYaw=null;
 const dressPrev={rot:0,spin:false,drag:false,pc:null,lx:0};
@@ -5327,7 +5327,7 @@ function potionTick(dt,t,playing){
   if(playing&&!state.editOn&&POT.armed&&dd<2.1&&Math.abs(player.pos.y-gy)<2.5){
     POT.armed=false;
     if(un)openDress();
-    else toast('ふしぎな びん…\nおばけちゃんと パネルを ぜんぶ あつめたら つかえるよ',3600);
+    else toast('ふしぎな びん…\nパネルと かくれおばけちゃんを ぜんぶ みつけたら つかえるよ\n'+dressProgress(),4200);
   }
 }
 
