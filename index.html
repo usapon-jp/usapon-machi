@@ -473,6 +473,7 @@ body.selfie #camFlip{background:rgba(255,226,168,.42);border-color:#ffe2a8;color
   #mDress .sheet{width:min(54%,430px)}
   #dressPrev{left:max(12px,env(safe-area-inset-left,0px));transform:none;top:12px;bottom:12px;height:auto;max-height:none;width:calc(46% - 28px)}
 }
+body.dressing #quest,body.dressing #mini,body.dressing #joy{visibility:hidden} /* おきがえのプレビューと重ならないように */
 #mCandy h2{margin:0 0 4px}
 #mCandy .cmNote{margin:0 0 6px;font-size:13px;opacity:.9}
 #candyMap{width:min(100%,58vh);aspect-ratio:1;display:block;margin:6px auto;border-radius:14px;border:1px solid var(--line);background:#1b1238;touch-action:manipulation;cursor:pointer}
@@ -3267,7 +3268,7 @@ function openModal(id){$(id).classList.add('on');state.mode='modal';if(id==='mPh
 function fixHelpHeight(){const sh=$('helpSheet'),m=$('mHelp'),bs=['opBody','oriBody','photoAboutBody'].map(x=>$(x));if(!sh||!m.classList.contains('on'))return;const pv=bs.map(b=>b.hidden);sh.style.height='';sh.style.maxHeight='none';bs.forEach(b=>b.hidden=false);const full=sh.scrollHeight+2;bs.forEach((b,i)=>b.hidden=pv[i]);sh.style.maxHeight='';const cs=getComputedStyle(m),av=m.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);sh.style.height=Math.min(full,av)+'px'}
 window.addEventListener('resize',()=>{if($('mHelp').classList.contains('on'))fixHelpHeight()});
 function photoGuide(){const n=$('photoNote');if(!n||n.dataset.inapp)return;let first=true;try{first=localStorage.getItem('usapon-photo-guide')!=='1';localStorage.setItem('usapon-photo-guide','1')}catch(e){}n.classList.toggle('first',first)}
-function closeModal(id){$(id).classList.remove('on');if(id==='mDress'){const pp=$('paper');if(pp)pp.style.visibility=''}if(!document.querySelector('.modal.on'))state.mode='play'}
+function closeModal(id){$(id).classList.remove('on');if(id==='mDress'){const pp=$('paper');if(pp)pp.style.visibility='';document.body.classList.remove('dressing')}if(!document.querySelector('.modal.on'))state.mode='play'}
 let bookTab='zukan',albumFilter='all';
 const SIL={};
 function panelSil(p){ // dark silhouette of a found-but-not-yet-photographed panel (same look as unfound ghost-chan)
@@ -3614,6 +3615,7 @@ function doAct(){
   if(a.type==='zakkaEnter'){zakkaEnter();return}
   if(a.type==='zakkaExit'){zakkaExit();return}
   if(a.type==='zakkaMenu'){zakMenuOpen();return}
+  if(a.type==='zakkaTalk'){toast('いらっしゃいませ！\nSUZURIの しょうひんを みていってね',2600);zakMenuOpen();return}
   if(a.type==='cafeEnter'){cafeEnter(a.via);return}
   if(a.type==='cafeExit'){cafeExit(a.via);return}
   if(a.type==='stand'){standUp();return}
@@ -4312,7 +4314,8 @@ function cafeAct(act,playing){
   const fs=flowerDoor();
   if(fs&&!player.fly&&Math.hypot(player.pos.x-fs.x,player.pos.z-fs.z)<2.0)return{type:'flowerEnter',label:'おはなやさんに はいる'};
   const zs=zakkaDoor();
-  if(zs&&!player.fly&&Math.hypot(player.pos.x-zs.x,player.pos.z-zs.z)<2.0)return{type:'zakkaEnter',label:'ざっかやに はいる'}; // ドア前では「はいる」を優先(少し横の「みる」はそのまま)
+  if(zs&&!player.fly&&Math.hypot(player.pos.x-zs.x,player.pos.z-zs.z)<2.0)return{type:'zakkaEnter',label:'ざっかやに はいる'};
+  {const sa=CAFE.signAt&&CAFE.signAt.zakka;if(sa&&!player.fly&&Math.hypot(player.pos.x-sa[0],player.pos.z-sa[1])<1.7)return{type:'zakkaMenu',label:'しょうひんを みる'}} // お店の外の看板からも SUZURI の しょうひんへ // ドア前では「はいる」を優先(少し横の「みる」はそのまま)
   const s=cafeDoor();
   if(s&&!player.fly&&!act){
     if(Math.hypot(player.pos.x-s.x,player.pos.z-s.z)<2.6)return{type:'cafeEnter',via:'front',label:'カフェに はいる'};
@@ -4375,7 +4378,7 @@ function shopSign(shopKey,mapFn,lx){ // 店先の看板(カフェの看板モデ
     const pl=new THREE.Mesh(new THREE.PlaneGeometry(.8,1.02),new THREE.MeshBasicMaterial({map:mapFn(),side:THREE.DoubleSide}));pl.position.set(0,-.02,.28);pl.rotation.x=-.17;sg.add(pl);
     const px=h.x+lx*cs+lz*sn,pz=h.z-lx*sn+lz*cs;
     sg.scale.setScalar(.6);sg.position.set(px,gy+.57,pz);sg.rotation.y=h.rot+(lx>0?.25:-.25);scene.add(sg);
-    addCircle(px,pz,.42,1.3);
+    addCircle(px,pz,.42,1.3);CAFE.signAt=CAFE.signAt||{};CAFE.signAt[shopKey]=[px,pz];
   }catch(e){console.warn('shop sign failed',shopKey,e)}
 }
 function flowerModels(){shopSign('flower',flowerBoardCanvas,2.75);shopSign('zakka',zakkaBoardCanvas,2.75)}
@@ -4437,7 +4440,7 @@ function zakBuild(){
   const L=ZAK_DATA.L,xcOf=k=>L[k].x+L[k].w/2;
   const rug=L.rug,rp=[[rug.x,rug.y+rug.h],[rug.x+rug.w,rug.y+rug.h],[rug.x+rug.w,rug.y],[rug.x,rug.y]].map(p=>{const d=dB(p[1]);return[(p[0]-Z.cx)*d/f,.004,d]});
   const rm=zakQuad(rp,zakTex(rug.b),[rug.x,rug.y,rug.w,rug.h],{alphaTest:.4,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});root.add(rm);
-  npcMake('store',root,Z.X+(1000-Z.cx)*(dC+.5)/f,.85,Z.Z-(dC+.5),0,Z.pscale); // 店員ピヨちゃん(カウンターのうしろ。台に乗って顔が見える高さ)
+  Z.npcAt=[(1000-Z.cx)*(dC+.5)/f,dC-.55,1.0];npcMake('store',root,Z.X+(1000-Z.cx)*(dC+.5)/f,.85,Z.Z-(dC+.5),0,Z.pscale); // 店員ピヨちゃん(カウンターのうしろ。台に乗って顔が見える高さ)
   root.add(zakBoard('counter',dC)); // 左の棚は壁に接しているので背景に焼き込み済み(浮かない)
   root.add(zakBoard('ivy',f*Wr/(xcOf('ivy')-Z.cx)-.04));
   root.add(zakBoard('table',dT));
@@ -4501,6 +4504,7 @@ function zakkaExit(){
 }
 function zakkaAct(act){
   const Z=ZAK,rx=player.pos.x-Z.X,d=Z.Z-player.pos.z;
+  if(Z.npcAt&&Math.hypot(rx-Z.npcAt[0],d-Z.npcAt[1])<Z.npcAt[2])return{type:'zakkaTalk',label:'おはなしする'}; // 店員ピヨちゃん → しょうひんメニュー
   if(Math.hypot(rx-Z.menuAt[1][0],d-Z.menuAt[1][1])<Z.menuAt[1][2]||Math.hypot(rx-Z.menuAt[0][0],d-Z.menuAt[0][1])<Z.menuAt[0][2])return{type:'zakkaMenu',label:'しょうひんを みる'};
   if(Math.hypot(rx-Z.exit[0],d-Z.exit[1])<1.5)return{type:'zakkaExit',label:'そとへ でる'};
   return null;
@@ -4653,6 +4657,7 @@ function flowerAct(act){
 }
 /* 店員さんのせりふ。着せ替えポーション(帽子とマントの色がえ)は、キャラと色がえのしくみが そろってから ここに入れる */
 function flowerTalk(){
+  if(typeof dressUnlocked==='function'&&dressUnlocked()){toast('まほうの ポーションで おきがえ しよう！',2400);openDress();return} // ぜんぶ集めたら、店員さんからも おきがえ
   const done=(()=>{try{return panels.every(p=>p.found)&&ghostChans.every(g=>g.found)}catch(e){return false}})();
   $('spotTitle').textContent='まほうの おはなやさん';
   $('spotCap').textContent=done?'ぜんぶ みつけたね、すごい！\nまほうのポーションは じゅんびちゅうだよ。もうすこし まっててね':'まほうのポーションは じゅんびちゅうだよ。\nパネルと おばけちゃんを ぜんぶ みつけたら いいことが あるかも…';
@@ -5234,7 +5239,7 @@ let dressPrevYaw=null;
 const dressPrev={rot:0,spin:false,drag:false,pc:null,lx:0};
 function openDress(){
   buildDressRows();dressPrev.rot=0;dressPrev.spin=false;$('dressSpin').classList.remove('on');
-  const pp=$('paper');if(pp)pp.style.visibility='hidden';
+  const pp=$('paper');if(pp)pp.style.visibility='hidden';document.body.classList.add('dressing');
   openModal('mDress');
 }
 function closeDress(){closeModal('mDress');const pp=$('paper');if(pp)pp.style.visibility=''}
@@ -5254,8 +5259,8 @@ function dressPreviewRender(dt){
   if(!dressPrev.pc)dressPrev.pc=new THREE.PerspectiveCamera(28,1,.1,60);
   const pc=dressPrev.pc;pc.aspect=w/h;pc.updateProjectionMatrix();
   if(dressPrev.spin&&!dressPrev.drag)dressPrev.rot+=dt*.9;
-  const g=piyo.group,f=g.rotation.y+dressPrev.rot,px=g.position.x,py=g.position.y+.82,pz=g.position.z,d=5.2;
-  pc.position.set(px+Math.sin(f)*d,py+.2,pz+Math.cos(f)*d);pc.lookAt(px,py,pz);
+  const g=piyo.group,gs=g.scale.x||1,f=g.rotation.y+dressPrev.rot,px=g.position.x,py=g.position.y+.82*gs,pz=g.position.z,d=5.2*gs; // お店の中(小さめのピヨちゃん)でも同じ大きさに映す
+  pc.position.set(px+Math.sin(f)*d,py+.2*gs,pz+Math.cos(f)*d);pc.lookAt(px,py,pz);
   const hid=[];scene.children.forEach(o=>{if(o!==g&&o.visible){o.visible=false;hid.push(o)}});
   const bg=scene.background,fog=scene.fog;scene.background=null;scene.fog=null;
   const cc=new THREE.Color();renderer.getClearColor(cc);const ca=renderer.getClearAlpha();
