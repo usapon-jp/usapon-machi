@@ -4429,7 +4429,7 @@ function zakBuild(){
   const root=new THREE.Group();root.visible=false;scene.add(root);Z.root=root;
   const room=zakTex(ZAK_DATA.room),db=Z.db,Wl=Z.Wl,Wr=Z.Wr,Hr=Z.Hr,dnF=.3;  // 床は手前へ少し延ばす(板の向きと引き伸ばす向きが同じなので自然)
   root.add(zakQuad([[-Wl,0,dnF],[Wr,0,dnF],[Wr,0,db],[-Wl,0,db]],room));          // 床
-  root.add(zakQuad([[-Wl,Hr,1.2],[Wr,Hr,1.2],[Wr,Hr,db],[-Wl,Hr,db]],room)); // 天井
+  root.add(zakQuad([[-Wl,Hr,.3],[Wr,Hr,.3],[Wr,Hr,db],[-Wl,Hr,db]],room)); // 天井
   const dnL=1.2,dnR=1.2; // 壁の手前の端はカメラのそばまで延ばす(絵の外は端の色が伸びる)
   root.add(zakQuad([[-Wl,0,dnL],[-Wl,0,db],[-Wl,Hr,db],[-Wl,Hr,dnL]],room));      // 左の壁(扉と窓)
   root.add(zakQuad([[Wr,0,dnR],[Wr,0,db],[Wr,Hr,db],[Wr,Hr,dnR]],room));          // 右の壁(窓)
@@ -4534,23 +4534,23 @@ function shopViewOut(Z,fov){ // 画面のふち(8方向)が、絵の外(部屋�
     const v=new V(nx,ny,.5).applyMatrix4(inv).applyMatrix4(camera.matrixWorld).sub(o).normalize(),r=[o.x-Z.X,o.y,Z.Z-o.z],e=[v.x,v.y,-v.z];
     let bt=1e9,hit=null,fl=false;
     for(const [ax,val] of [[0,-Z.Wl],[0,Z.Wr],[1,0],[1,Z.Hr],[2,Z.db]]){if(Math.abs(e[ax])<1e-6)continue;const t=(val-r[ax])/e[ax];if(t<=0||t>=bt)continue;
-      const h=[r[0]+e[0]*t,r[1]+e[1]*t,r[2]+e[2]*t];if(h[0]<-Z.Wl-.01||h[0]>Z.Wr+.01||h[1]<-.01||h[1]>Z.Hr+.01||h[2]>Z.db+.01)continue;bt=t;hit=h;fl=ax===1&&val===0}
+      const h=[r[0]+e[0]*t,r[1]+e[1]*t,r[2]+e[2]*t];if(h[0]<-Z.Wl-.01||h[0]>Z.Wr+.01||h[1]<-.01||h[1]>Z.Hr+.01||h[2]>Z.db+.01)continue;bt=t;hit=h;fl=ax===1}
     if(!hit){tot+=3000;continue}
-    if(fl){if(hit[2]<.3){tot+=1500;continue}const px=Z.cx+Z.f*hit[0]/Math.max(hit[2],1.5);tot+=Math.max(0,-px)+Math.max(0,px-Z.W);continue} // 床は手前へミラーでのばしてあるので、手前(絵の下の外)は見えてよい
+    if(fl){if(hit[2]<.3){tot+=1500;continue}const px=Z.cx+Z.f*hit[0]/Math.max(hit[2],1.5);tot+=Math.max(0,-px)+Math.max(0,px-Z.W);continue} // 床と天井は手前へミラーでのばしてあるので、手前(絵の上下の外)は見えてよい
     if(hit[2]<1.2){tot+=1500;continue}
     const px=Z.cx+Z.f*hit[0]/hit[2],py=Z.cy-Z.f*(hit[1]-Z.yf)/hit[2];tot+=Math.max(0,-px)+Math.max(0,px-Z.W)+Math.max(0,-py)+Math.max(0,py-Z.H)}
   return tot}
 function shopOrbit(Z,dt){ // 外の街と同じ: ピヨちゃんを画面のまん中に、ドラッグでピヨちゃんのまわりを くるくる。絵の外が見えそうになったら、そこで止まる
   const s=Z.pscale,bf=innerWidth/innerHeight<.8?66:58,R=4.6*s*clamp(cam.dist/(Z.dist0||cam.dist),.75,1.3);
   if(Z.oz===undefined)Z.oz=1;
-  cam.yaw=clamp(cam.yaw,-1.3,1.3);cam.pitch=clamp(cam.pitch,-.05,.7);
+  cam.yaw=clamp(cam.yaw,-1.3,1.3);cam.pitch=clamp(cam.pitch,-.6,.7);
   const tx=player.pos.x,ty=player.pos.y+1.15*s,tz=player.pos.z; // ピヨちゃんの少し上を見る(外の街と同じく、ピヨちゃんは画面のまん中より少し下・奥のお店が見える)
-  const place=()=>{const cp=Math.cos(cam.pitch),x=clamp(tx+Math.sin(cam.yaw)*cp*R,Z.X-Z.Wl+.15,Z.X+Z.Wr-.15),y=ty+.1*s+Math.sin(cam.pitch)*R,z=Math.min(tz+Math.cos(cam.yaw)*cp*R,Z.Z-.35);
-    camera.position.set(x,Math.min(y,Z.Hr-.1),z);camera.lookAt(tx,ty,tz);camera.updateMatrixWorld(true)};
+  const place=()=>{const p=Math.max(cam.pitch,0),cp=Math.cos(p),up=Math.max(0,-cam.pitch),x=clamp(tx+Math.sin(cam.yaw)*cp*R,Z.X-Z.Wl+.15,Z.X+Z.Wr-.15),y=ty+.1*s+Math.sin(p)*R-up*.35*R,z=Math.min(tz+Math.cos(cam.yaw)*cp*R,Z.Z-.35);
+    camera.position.set(x,clamp(y,.15,Z.Hr-.1),z);camera.lookAt(tx,ty+up*1.5*R,tz);camera.updateMatrixWorld(true)}; // 上へドラッグすると見上げる(店員さん・天井まで)
   const fit=()=>{ // 絵の外が見えるときは、カメラを元の絵のカメラの位置(部屋の手前のまん中)へ少しずつ寄せる。ピヨちゃんは まん中のまま
     place();let V=shopViewOut(Z,bf*Z.oz);if(V<=40)return V;
     const p0=camera.position.clone(),an=new THREE.Vector3(Z.X,Z.yf,Z.Z-.35);
-    for(let u=.15;u<=1.001;u+=.15){camera.position.lerpVectors(p0,an,u);camera.lookAt(tx,ty,tz);camera.updateMatrixWorld(true);const v=shopViewOut(Z,bf*Z.oz);if(v<=40)return v;V=Math.min(V,v)}
+    for(let u=.15;u<=1.001;u+=.15){camera.position.lerpVectors(p0,an,u);camera.lookAt(tx,ty+Math.max(0,-cam.pitch)*1.5*R,tz);camera.updateMatrixWorld(true);const v=shopViewOut(Z,bf*Z.oz);if(v<=40)return v;V=Math.min(V,v)}
     return V};
   if(Z.okYaw===undefined){cam.yaw=0;while(Z.oz>.6&&fit()>40)Z.oz*=.95} // 最初から絵の外が見えるなら、画角を少しせまく
   const V=fit();
@@ -4602,7 +4602,7 @@ function flwBuild(){
   const root=new THREE.Group();root.visible=false;scene.add(root);Z.root=root;
   const room=flwTex(FLW_DATA.room),db=Z.db,Wl=Z.Wl,Wr=Z.Wr,Hr=Z.Hr;
   root.add(flwQuad([[-Wl,0,.3],[Wr,0,.3],[Wr,0,db],[-Wl,0,db]],room));
-  root.add(flwQuad([[-Wl,Hr,1.2],[Wr,Hr,1.2],[Wr,Hr,db],[-Wl,Hr,db]],room));
+  root.add(flwQuad([[-Wl,Hr,.3],[Wr,Hr,.3],[Wr,Hr,db],[-Wl,Hr,db]],room));
   root.add(flwQuad([[-Wl,0,1.2],[-Wl,0,db],[-Wl,Hr,db],[-Wl,Hr,1.2]],room));
   root.add(flwQuad([[Wr,0,1.2],[Wr,0,db],[Wr,Hr,db],[Wr,Hr,1.2]],room));
   root.add(flwQuad([[-Wl,0,db],[Wr,0,db],[Wr,Hr,db],[-Wl,Hr,db]],room));
