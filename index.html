@@ -3668,7 +3668,7 @@ canvas.addEventListener('pointermove',e=>{
   if(state.selfie){if(ptrs.size<2){cam.sAng-=dx*.0068;cam.sp=clamp(cam.sp+dy*.003,-.12,.45)}return}
   if(state.camMode){const zf=Math.max(.4,cam.zoom||1);cam.yaw-=dx*.0068*zf;cam.fp=clamp((cam.fp||0)+dy*.0052*zf,-1.1,1.25);return}
   const sk=1; // お店の中も外と同じ(ピヨちゃんのまわりを くるくる)
-  cam.yaw-=dx*.0068*sk;cam.pitch=clamp(cam.pitch+dy*.0052*sk,.04,1.45);
+  cam.yaw-=dx*.0068*sk;cam.pitch=clamp(cam.pitch+dy*.0052*sk,(ZAK.in||FLW.in)?-.6:.04,1.45); // お店の中(ふつうの視点)は 見上げられるように 下限を -0.6 に
 });
 const endPtr=e=>{ptrs.delete(e.pointerId);pinch0=0};
 window.addEventListener('blur',()=>{ptrs.clear();pinch0=0});document.addEventListener('visibilitychange',()=>{ptrs.clear();pinch0=0});window.addEventListener('pointerup',endPtr,true);window.addEventListener('mouseup',()=>{if(ptrs.size){ptrs.clear();pinch0=0}},true);
