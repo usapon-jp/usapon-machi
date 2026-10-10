@@ -4376,7 +4376,7 @@ function zakBuild(){
   const L=ZAK_DATA.L,xcOf=k=>L[k].x+L[k].w/2;
   const rug=L.rug,rp=[[rug.x,rug.y+rug.h],[rug.x+rug.w,rug.y+rug.h],[rug.x+rug.w,rug.y],[rug.x,rug.y]].map(p=>{const d=dB(p[1]);return[(p[0]-Z.cx)*d/f,.004,d]});
   const rm=zakQuad(rp,zakTex(rug.b),[rug.x,rug.y,rug.w,rug.h],{alphaTest:.4,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});root.add(rm);
-  npcMake('store',root,Z.X+(1000-Z.cx)*(dC+.5)/f,1.05,Z.Z-(dC+.5),0,Z.pscale); // 店員ピヨちゃん(カウンターのうしろ。台に乗って顔が見える高さ)
+  npcMake('store',root,Z.X+(1000-Z.cx)*(dC+.5)/f,.85,Z.Z-(dC+.5),0,Z.pscale); // 店員ピヨちゃん(カウンターのうしろ。台に乗って顔が見える高さ)
   root.add(zakBoard('counter',dC)); // 左の棚は壁に接しているので背景に焼き込み済み(浮かない)
   root.add(zakBoard('ivy',f*Wr/(xcOf('ivy')-Z.cx)-.04));
   root.add(zakBoard('table',dT));
