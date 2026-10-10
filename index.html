@@ -2763,6 +2763,7 @@ const SAVE_KEY='usapon-halloween-machi-v1';
 /* ---------- save data (per browser) ---------- */
 let save={found:[],photos:{},done:false,broom:false,wand:false,ghosts:[],cand:[],gift:0,dress:[0,0,0,0]};
 try{const s=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');if(s&&Array.isArray(s.found)){save={found:s.found,photos:s.photos||{},done:!!s.done,broom:s.broom!==undefined?!!s.broom:!!s.done,wand:!!s.wand,ghosts:Array.isArray(s.ghosts)?s.ghosts:[],cand:Array.isArray(s.cand)?s.cand.filter(v=>v>=0&&v<6):[],gift:s.gift?1:0,dress:(Array.isArray(s.dress)&&s.dress.length===4)?s.dress.map(v=>Math.max(0,Math.min(5,v|0))):[0,0,0,0]}}}catch(e){}
+save.candPos={};save.candBag=[];try{const s=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');if(s&&s.candPos&&typeof s.candPos==='object')for(const k in s.candPos){const v=s.candPos[k];if(Array.isArray(v)&&v.length===2&&isFinite(v[0])&&isFinite(v[1]))save.candPos[k]=[+v[0],+v[1]]}if(s&&Array.isArray(s.candBag))save.candBag=s.candBag.filter(v=>v>=0&&v<6)}catch(e){} // おかしの おき場所 / もちもの
 function persist(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(save))}catch(e){}}
 
 /* ---------- data ---------- */
@@ -3798,7 +3799,7 @@ $('btnStart').addEventListener('click',()=>{closeModal('mIntro');quickPop();stat
 $('btnReset').addEventListener('click',()=>{closeModal('mBook');openModal('mReset')});
 $('btnResetNo').addEventListener('click',()=>{closeModal('mReset');refreshBook();openModal('mBook')});
 $('btnResetYes').addEventListener('click',()=>{
-  save={found:[],photos:{},done:false,broom:false,wand:false,ghosts:[],cand:[],gift:0,dress:[0,0,0,0]};ghostChans.forEach(o=>{o.found=false});if(typeof resetGifts==='function')resetGifts();piyoDress.apply(save.dress);persist();state.party=false;setFly(false);presentReset();flyUI();
+  save={found:[],photos:{},done:false,broom:false,wand:false,ghosts:[],cand:[],gift:0,dress:[0,0,0,0],candPos:{},candBag:[]};ghostChans.forEach(o=>{o.found=false});if(typeof resetGifts==='function')resetGifts();try{candyPlaceEnd();candySync()}catch(e){}piyoDress.apply(save.dress);persist();state.party=false;setFly(false);presentReset();flyUI();
   panels.forEach(p=>{p.found=false;setFace(p);setPlate(p)});refreshHUD();closeModal('mReset');toast('はじめからスタート！');
 });
 $('btnPhotoClose').addEventListener('click',()=>{closeModal('mPhoto');if(state.pendingDone){state.pendingDone=false;setTimeout(showComplete,500)}});
@@ -4026,7 +4027,7 @@ function update(dt){
   // shop doors (interiors are not built yet)
   if(playing){shopsOut.forEach(s=>{if(s.shop==='cupcake'||s.shop==='zakka'||s.shop==='flower')return;const d=Math.hypot(player.pos.x-s.x,player.pos.z-s.z);if(d<2.6&&!s.told){s.told=true;toast('おみせの中は じゅんびちゅう\nもうすぐ入れるようになるよ',3400)}else if(d>5)s.told=false})}
   tvScreens.forEach((m,i)=>{const f=.8+.2*Math.sin(t*9+i)*Math.sin(t*3.1);m.color.setRGB(f,f,f)});
-  ghostChanTick(dt,t);giftTick(dt,t,playing);potionTick(dt,t,playing);
+  ghostChanTick(dt,t);giftTick(dt,t,playing);potionTick(dt,t,playing);candyTick(dt,t,playing);
   ghosts.forEach(o=>{
     const a=t*o.sp+o.ph;o.g.position.set(o.bx+Math.cos(a)*1.4,o.by+Math.sin(t*1.6+o.ph)*.35,o.bz+Math.sin(a)*1.4);
     o.g.rotation.y=Math.atan2(player.pos.x-o.g.position.x,player.pos.z-o.g.position.z);o.g.rotation.z=Math.sin(t*1.3+o.ph)*.12;
@@ -5167,7 +5168,7 @@ function resetGifts(){gReveal=false;gAnnT=-1;G.forEach(g=>{gDrop(g);g.phase=0;g.
 function openGift(g){
   g.phase=1;g.t0=state.t;
   const first=save.cand.length===0;g.first=first;
-  if(save.cand.indexOf(g.i)<0){save.cand.push(g.i);persist()}
+  if(save.cand.indexOf(g.i)<0){save.cand.push(g.i);const q=gp(g);save.candPos[g.i]=[q.x,q.z];persist()}
   const gc=ghostChans[g.i],p=gp(g),gy=groundY(p.x,p.z);
   if(gc&&gc.sF&&gc.sF.material.map){g.gs=new THREE.Sprite(new THREE.SpriteMaterial({map:gc.sF.material.map,transparent:true,depthWrite:false,color:GHOST_DEF[g.i].c}));g.gs.scale.set(.01,.01,1);scene.add(g.gs)}
   g.cs=new THREE.Sprite(new THREE.SpriteMaterial({map:candyTex(g.i),transparent:true,depthWrite:false}));g.cs.scale.set(.01,.01,1);scene.add(g.cs);
@@ -5175,7 +5176,7 @@ function openGift(g){
   toast(GHOST_DEF[g.i].name+'からの プレゼント！\n'+CANDY[g.i].n+'を もらったよ！',2800);
 }
 function candyGuide(){ // はじめて おかしを もらったときの つかいかた
-  const show=()=>{$('spotTitle').textContent='おかしの つかいかた';$('spotCap').textContent='もらった おかしは 地図に のるよ。\n画面の すみの 小さな 地図を タッチすると「おかしのワープ」が ひらくよ。\nおかしを タッチすると、その場所へ ワープできるよ！\nおかしは ぜんぶで 6こ。街の あちこちの プレゼントを さがしてね';$('spotLink').hidden=true;$('spotNone').hidden=true;openModal('mSpot')};
+  const show=()=>{$('spotTitle').textContent='おかしの つかいかた';$('spotCap').textContent='もらった おかしは、プレゼントの あった ばしょに おいてあるよ。\n画面の すみの 小さな 地図を タッチすると「おかしのワープ」が ひらくよ。\nおかしを タッチすると、その場所へ ワープできるよ！\n街の おかしを タッチすると、すきな ばしょへ おきかえる ことも できるよ。\nおかしは ぜんぶで 6こ。街の あちこちの プレゼントを さがしてね';$('spotLink').hidden=true;$('spotNone').hidden=true;openModal('mSpot')};
   if(state.mode==='play')show();else{const w=setInterval(()=>{if(state.mode==='play'){clearInterval(w);show()}},500)}}
 function giftTick(dt,t,playing){
   if(!G.length)return;
@@ -5185,7 +5186,7 @@ function giftTick(dt,t,playing){
     if(save.gift)gReveal=true;
     else if(gAnnT<0)gAnnT=state.t+3.4;
     else if(state.t>=gAnnT){
-      gReveal=true;save.gift=1;persist();toast('おばけちゃんからのプレゼント！\n街に隠してくるね！🎁',3800);AUDIO.sfx('found');
+      gReveal=true;save.gift=1;persist();AUDIO.sfx('found');showMsg('おめでとう！','かくれおばけちゃんを ぜんぶ みつけたね！\nおれいに プレゼントを あげる！\n街の あちこちに かくしたから さがしてね🎁');
       G.forEach(g=>{if(save.cand.indexOf(g.i)<0){const p=gp(g);burst(p.x,groundY(p.x,p.z)+.7,p.z,16,SPARK,2.4,1.6)}});
     }
   }
@@ -5206,21 +5207,21 @@ function giftTick(dt,t,playing){
         g.gs.visible=fade>0;g.gs.material.opacity=fade;g.gs.scale.set(1.6*GC_ASP.f*k+.01,1.6*k+.01,1);g.gs.position.set(p.x-.55,gy+.5+k*1.0,p.z)}
       if(g.cs){if(el>.35){const k=Math.min((el-.35)/.45,1),b=1-Math.pow(1-k,3),fade=el<1.9?1:Math.max(0,1-(el-1.9)/.5);
         g.cs.material.opacity=fade;g.cs.scale.setScalar(1.05*b+.01);g.cs.position.set(p.x+.55,gy+1.0+b*1.1+Math.sin(el*5)*.05,p.z)}}
-      if(el>2.5){gDrop(g);g.phase=2;g.grp.visible=state.editOn;if(g.first){g.first=false;candyGuide()}
+      if(el>2.5){gDrop(g);g.phase=2;g.grp.visible=state.editOn;candySync();if(g.first){g.first=false;candyGuide()}
         if(save.cand.length>=6)toast('おかしが ぜんぶ そろったよ！\n地図をタッチすると ワープできるよ',3400)}
     }
   });
 }
 function candyDrawMini(){
   if(!G.length)return;
-  G.forEach(g=>{if(save.cand.indexOf(g.i)<0)return;const p=gp(g),q=toM(p.x,p.z);candyIcon(mg,g.i,q[0],q[1],8)});
+  G.forEach(g=>{const p=cpos(g.i);if(!p)return;const q=toM(p.x,p.z);candyIcon(mg,g.i,q[0],q[1],8)});
 }
 /* warp map (big) */
 const candyCv=$('candyMap'),cg2=candyCv.getContext('2d');let candyHits=[];
 function drawCandyMap(){
   const S=candyCv.width,k=S/MS;cg2.clearRect(0,0,S,S);cg2.drawImage(mapBase,0,0,S,S);cg2.globalAlpha=.85;cg2.drawImage(fogC,0,0,S,S);cg2.globalAlpha=1;
   candyHits=[];
-  G.forEach(g=>{if(save.cand.indexOf(g.i)<0)return;const p=gp(g),q=toM(p.x,p.z),x=q[0]*k,y=q[1]*k;
+  G.forEach(g=>{const p=cpos(g.i);if(!p)return;const q=toM(p.x,p.z),x=q[0]*k,y=q[1]*k;
     candyIcon(cg2,g.i,x,y,24);candyHits.push({x,y,g});
     cg2.font='bold 17px sans-serif';cg2.textAlign='center';cg2.lineWidth=4;cg2.strokeStyle='#1a1033';cg2.strokeText(CANDY[g.i].n,x,y+44);cg2.fillStyle='#fff1d8';cg2.fillText(CANDY[g.i].n,x,y+44)});
   const a=toM(player.pos.x,player.pos.z);cg2.save();cg2.translate(a[0]*k,a[1]*k);cg2.rotate(PI-player.face);cg2.scale(1.7,1.7);
@@ -5232,10 +5233,68 @@ candyCv.addEventListener('click',ev=>{
   const r=candyCv.getBoundingClientRect(),x=(ev.clientX-r.left)*candyCv.width/r.width,y=(ev.clientY-r.top)*candyCv.height/r.height;
   let best=null,bd=46;candyHits.forEach(h=>{const d=Math.hypot(h.x-x,h.y-y);if(d<bd){bd=d;best=h}});
   if(!best)return;
-  const p=gp(best.g);closeModal('mCandy');tpTo(p.x,p.z,0);burst(p.x,groundY(p.x,p.z)+.8,p.z,30,SPARK,3,2);AUDIO.sfx('found');toast('ワープ！\n'+CANDY[best.g.i].n+'のところ',2200);
+  const p=cpos(best.g.i);if(!p)return;closeModal('mCandy');tpTo(p.x+1.1,p.z,0);burst(p.x,groundY(p.x,p.z)+.8,p.z,30,SPARK,3,2);AUDIO.sfx('found');toast('ワープ！\n'+CANDY[best.g.i].n+'のところ',2200);
 });
 $('btnCandyClose').addEventListener('click',()=>closeModal('mCandy'));
 $('btnCandyX').addEventListener('click',()=>closeModal('mCandy'));
+/* ---------- おかしの おき場所: 街に おかしを置く(ワープ先)。タッチ→「ばしょを かえる？」→ もちもの → 「ここに おく？」(緑の丸なら おける) ---------- */
+function cpos(i){const v=save.candPos[i];return v?{x:v[0],z:v[1]}:null}
+function showMsg(title,txt){const show=()=>{$('spotTitle').textContent=title;$('spotCap').textContent=txt;$('spotLink').hidden=true;$('spotNone').hidden=true;openModal('mSpot')};
+  if(state.mode==='play')show();else{const w=setInterval(()=>{if(state.mode==='play'){clearInterval(w);show()}},500)}}
+const CW={};let candyPlace=null;
+function candySprite(i){
+  if(CW[i])return CW[i];const p=cpos(i);if(!p)return null;
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:candyTex(i),transparent:true,depthWrite:false}));sp.scale.setScalar(.95);sp.userData.candy=i;scene.add(sp);CW[i]=sp;return sp}
+function candySync(){ // おかれている おかしだけ 街に出す
+  for(let i=0;i<6;i++){const p=cpos(i),has=save.cand.indexOf(i)>=0&&p;
+    if(has&&!CW[i])candySprite(i);if(!has&&CW[i]){scene.remove(CW[i]);CW[i].material.map.dispose();CW[i].material.dispose();delete CW[i]}}
+  candyBtnUI()}
+const candyBtn=(()=>{const b=document.createElement('button');b.type='button';b.id='candyBtn';b.setAttribute('aria-label','おかしを おく');b.hidden=true;
+  const c=cv(96,96);candyIcon(c.getContext('2d'),2,48,48,36);b.appendChild(c);const n=document.createElement('span');n.className='cnt';b.appendChild(n);
+  const st=document.createElement('style');st.textContent='#candyBtn{position:fixed;z-index:30;width:52px;height:52px;border-radius:50%;padding:0;border:1.5px solid rgba(255,255,255,.7);background:rgba(255,255,255,.16);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);display:grid;place-items:center;touch-action:manipulation;cursor:pointer}#candyBtn[hidden]{display:none}#candyBtn canvas{width:34px;height:34px}#candyBtn .cnt{position:absolute;right:-4px;top:-4px;min-width:20px;height:20px;border-radius:10px;background:#ff7aa8;color:#fff;font:900 12px/20px sans-serif;text-align:center;border:2px solid #fff}#candyBtn.on{background:rgba(120,220,140,.45);border-color:#fff}'
+    +'#candyPlace{position:fixed;left:50%;transform:translateX(-50%);top:max(118px,calc(env(safe-area-inset-top,0px) + 112px));z-index:31;background:rgba(26,16,51,.82);color:#fff1d8;border:1px solid rgba(255,255,255,.3);border-radius:14px;padding:8px 12px;text-align:center;font-weight:800;font-size:14px;max-width:92vw}#candyPlace[hidden]{display:none}#candyPlace .row{display:flex;gap:8px;justify-content:center;margin-top:6px}#candyPlace button{border-radius:999px;border:2px solid rgba(255,255,255,.35);background:rgba(255,255,255,.1);color:#fff1d8;font-weight:900;font-size:14px;padding:6px 16px;cursor:pointer}#candyPlace button.ok{background:#5cc77a;border-color:#dff7e5;color:#123}#candyPlace button.ok:disabled{background:#777;color:#ccc;border-color:#999;cursor:default}';
+  document.head.appendChild(st);document.body.appendChild(b);
+  const pl=document.createElement('div');pl.id='candyPlace';pl.hidden=true;pl.innerHTML='<div id="cpMsg">ここに おく？</div><div class="row"><button type="button" class="ok" id="cpOk">おく</button><button type="button" id="cpNo">やめる</button></div>';document.body.appendChild(pl);
+  b.addEventListener('click',()=>{if(state.mode!=='play')return;if(candyPlace)candyPlaceEnd();else candyPlaceStart()});
+  pl.querySelector('#cpOk').addEventListener('click',()=>candyPlaceOk());pl.querySelector('#cpNo').addEventListener('click',()=>candyPlaceEnd());
+  return b})();
+function candyBtnUI(){const n=save.candBag.length;candyBtn.hidden=!(n>0||candyPlace);candyBtn.querySelector('.cnt').textContent=n;candyBtn.classList.toggle('on',!!candyPlace);candyBtnPos()}
+function candyBtnPos(){ // ほうきボタンの うえ(ほうきが まだなら しゃしんボタンの うえ)
+  if(candyBtn.hidden)return;const a=$('broomBtn'),bb=(a&&!a.hidden&&a.offsetParent)?a:$('photoBtn');if(!bb)return;const r=bb.getBoundingClientRect();if(!r.width)return;
+  candyBtn.style.left=(r.left+r.width/2-26)+'px';candyBtn.style.top=(r.top-62)+'px'}
+let ring=null;
+function candyPlaceStart(){
+  if(!save.candBag.length)return;if(INTERIOR.on){toast('おかしは 街の なかに おいてね',2200);return}
+  candyPlace={i:save.candBag[0],ok:false,x:0,z:0};
+  if(!ring){ring=new THREE.Mesh(new THREE.RingGeometry(.42,.6,32),new THREE.MeshBasicMaterial({color:0x5cc77a,transparent:true,opacity:.85,depthWrite:false,side:THREE.DoubleSide}));ring.rotation.x=-PI/2;ring.renderOrder=9;scene.add(ring)}
+  ring.visible=true;$('candyPlace').hidden=false;$('cpMsg').innerHTML='「'+CANDY[candyPlace.i].n+'」を ここに おく？<br><small style="font-weight:600;opacity:.85">みどりの まるの ところに おけるよ</small>';candyBtnUI()}
+function candyPlaceEnd(){candyPlace=null;if(ring)ring.visible=false;$('candyPlace').hidden=true;candyBtnUI()}
+function candyPlaceOk(){if(!candyPlace||!candyPlace.ok)return;const i=candyPlace.i;
+  save.candPos[i]=[candyPlace.x,candyPlace.z];save.candBag=save.candBag.filter(v=>v!==i);persist();candyPlaceEnd();candySync();
+  burst(save.candPos[i][0],groundY(save.candPos[i][0],save.candPos[i][1])+1,save.candPos[i][1],24,SPARK,2.4,1.6);AUDIO.sfx('found');toast('「'+CANDY[i].n+'」を おいたよ！\nここへ ワープできるよ',2600)}
+function candyPick(i){ // 回収して もちものへ
+  delete save.candPos[i];if(save.candBag.indexOf(i)<0)save.candBag.push(i);persist();candySync();AUDIO.sfx('found');
+  toast('おかしを ひろったよ！\nおかしボタンで すきな ばしょに おけるよ',3000);try{candyBtn.classList.add('pulse')}catch(e){}}
+function candyTick(dt,t,playing){
+  for(const k in CW){const p=cpos(+k);if(!p)continue;const sp=CW[k];sp.position.set(p.x,groundY(p.x,p.z)+1.05+Math.sin(t*2+ +k)*.08,p.z);sp.visible=!INTERIOR.on}
+  if(candyPlace){
+    if(INTERIOR.on||!playing&&state.mode!=='play'){if(INTERIOR.on)candyPlaceEnd()}
+    else{const f=player.face,x=player.pos.x+Math.sin(f)*1.6,z=player.pos.z+Math.cos(f)*1.6,gy=groundY(x,z);
+      const ok=!player.fly&&Math.abs(gy-player.pos.y)<.6&&!collidesAt(x,z,.45,gy+.1)&&Math.abs(groundY(x+.5,z)-gy)<.25&&Math.abs(groundY(x,z+.5)-gy)<.25&&Math.abs(x)<WORLD-2&&Math.abs(z)<WORLD-2;
+      candyPlace.ok=ok;candyPlace.x=x;candyPlace.z=z;ring.position.set(x,gy+.06,z);ring.material.color.set(ok?0x5cc77a:0xe0455a);ring.scale.setScalar(1+Math.sin(t*5)*.06);
+      const b=$('cpOk');if(b.disabled===ok)b.disabled=!ok}}
+  if((t*2|0)!==(candyTick.k||0)){candyTick.k=t*2|0;candyBtnPos()}
+}
+{ // 街の おかしを タッチ → ばしょを かえる？
+  let d0=null;const rc=new THREE.Raycaster(),v2=new THREE.Vector2();
+  canvas.addEventListener('pointerdown',e=>{d0={x:e.clientX,y:e.clientY,t:performance.now()}},true);
+  canvas.addEventListener('pointerup',e=>{if(!d0)return;const mv=Math.hypot(e.clientX-d0.x,e.clientY-d0.y),dt=performance.now()-d0.t;d0=null;
+    if(mv>10||dt>450||state.mode!=='play'||candyPlace||state.camMode)return;const sps=Object.values(CW).filter(s=>s.visible);if(!sps.length)return;
+    const r=canvas.getBoundingClientRect();v2.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1);rc.setFromCamera(v2,camera);
+    const h=rc.intersectObjects(sps)[0];if(!h||h.distance>40)return;const i=h.object.userData.candy;
+    askYN('おかしの ばしょ','「'+CANDY[i].n+'」の ばしょを かえる？\n(いちど ひろって、すきな ばしょに おけるよ)',()=>candyPick(i))},true);
+}
+
 
 
 const paperHole=(()=>{let el=null,lx=-1e4,ly=-1e4,lr=-1;const v=new THREE.Vector3();
@@ -5352,7 +5411,7 @@ function potionTick(dt,t,playing){
   $('qTitle').textContent=DATA.mission||'うさぎたちを探して撮影しよう';
   $('introTitle').textContent=DATA.title||'うさぽんのハロウィン街';
   $('introMission').textContent=DATA.mission||'';$('introTeaser').textContent=DATA.teaser||'';
-  buildPanels();buildSpots();buildPresent();buildGifts();buildPotion();piyoDress.init();buildGlow();layoutInit();rotateCafePon();cafeModels();flowerModels();flyUI();drawMapBase();refreshHUD();
+  buildPanels();buildSpots();buildPresent();buildGifts();candySync();buildPotion();piyoDress.init();buildGlow();layoutInit();rotateCafePon();cafeModels();flowerModels();flyUI();drawMapBase();refreshHUD();
   cam.yaw=1.4;player.face=Math.atan2(-Math.sin(cam.yaw),-Math.cos(cam.yaw));onResize(); // opening view: Piyo just inside the gate, welcome sign + first panel ahead-left, town beyond
   if(state.debug)buildDebug();
   let last=performance.now(),first=true;
@@ -5370,7 +5429,7 @@ function potionTick(dt,t,playing){
     let tot=0;for(let j=0;j<=n;j++)for(let i=0;i<=n;i++)if(free(i,j))tot++;
     const pt=(x,z)=>seen[idx(Math.round((x+40)/st),Math.round((z+40)/st))]===1;
     return {reached:c,freeCells:tot,pct:Math.round(c/tot*100),gateN:pt(0,-38),fountain:pt(2,12),plazaS:pt(0,30),plazaN:pt(0,-28),stairs:STAIRS.map(s=>pt(s.x,(s.a+s.b)/2))}};
-  window.__usapon={NPC,shopViewOut,gifts:()=>G,flowerEnter,flowerExit,flwState:()=>FLW,input,zakkaEnter,zakkaExit,zakState:()=>ZAK,cafeEnter,cafeExit,cafeState:()=>CAFE,reach,tpTo,state,player,cam,panels:()=>panels,save:()=>save,warnings,slots,seats,spots:()=>spots,setFly,presentReset,presentPos:()=>PRESENT&&presentPos(),props:()=>ED.list,layout:()=>edExport(false),cordTest:{GARL,cordAdd,cordsExport,cordsLoad,cordRemove,cordKey,cordDefault,cordChanged}};
+  window.__usapon={NPC,shopViewOut,gifts:()=>G,candyW:()=>CW,flowerEnter,flowerExit,flwState:()=>FLW,input,zakkaEnter,zakkaExit,zakState:()=>ZAK,cafeEnter,cafeExit,cafeState:()=>CAFE,reach,tpTo,state,player,cam,panels:()=>panels,save:()=>save,warnings,slots,seats,spots:()=>spots,setFly,presentReset,presentPos:()=>PRESENT&&presentPos(),props:()=>ED.list,layout:()=>edExport(false),cordTest:{GARL,cordAdd,cordsExport,cordsLoad,cordRemove,cordKey,cordDefault,cordChanged}};
 
 })();
 })();
