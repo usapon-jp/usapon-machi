@@ -3618,7 +3618,7 @@ function doAct(){
   if(a.type==='zakkaEnter'){zakkaEnter();return}
   if(a.type==='zakkaExit'){zakkaExit();return}
   if(a.type==='zakkaMenu'){zakMenuOpen();return}
-  if(a.type==='zakkaTalk'){toast('いらっしゃいませ！\nSUZURIの しょうひんを みていってね',2600);zakMenuOpen();return}
+  if(a.type==='zakkaTalk'){askYN('SUZURIの ざっかやさん','いらっしゃいませ！\nおみせを みてみる？',zakMenuOpen);return}
   if(a.type==='cafeEnter'){cafeEnter(a.via);return}
   if(a.type==='cafeExit'){cafeExit(a.via);return}
   if(a.type==='stand'){standUp();return}
@@ -3633,7 +3633,7 @@ function doAct(){
 /* ---------- input ---------- */
 const GAMEKEYS=['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','ShiftLeft','ShiftRight','KeyQ','KeyC'];
 window.addEventListener('keydown',e=>{
-  if(e.code==='Escape'){if(state.camMode&&state.mode==='play'){setCamMode(false);return}['mBook','mReset','mPhoto','mDone','mSpot','mZak','mCandy','mDress'].forEach(id=>{const e=$(id);if(e&&e.classList.contains('on'))closeModal(id)});return}
+  if(e.code==='Escape'){if(state.camMode&&state.mode==='play'){setCamMode(false);return}['mBook','mReset','mPhoto','mDone','mSpot','mZak','mCandy','mDress','mAsk'].forEach(id=>{const e=$(id);if(e&&e.classList.contains('on'))closeModal(id)});return}
   if(state.mode!=='play'){return}
   if(GAMEKEYS.includes(e.code))e.preventDefault();
   input.keys[e.code]=true;
@@ -4681,8 +4681,17 @@ function flowerAct(act){
   return null;
 }
 /* 店員さんのせりふ。着せ替えポーション(帽子とマントの色がえ)は、キャラと色がえのしくみが そろってから ここに入れる */
+function askYN(title,q,onYes){ // 店員さんの「はい / いいえ」(RPGの会話のように)
+  let m=$('mAsk');
+  if(!m){const st=document.createElement('style');st.textContent='#mAsk .sheet{max-width:min(420px,92vw)}#mAsk .askQ{font-size:17px;font-weight:800;margin:6px 0 12px;white-space:pre-line}#mAsk .askBtns{display:flex;flex-direction:column;gap:8px}#mAsk .askBtns button{text-align:left;font-size:16px;font-weight:800;padding:10px 14px;border-radius:12px;border:2px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff1d8;cursor:pointer}#mAsk .askBtns button::before{content:"▶ ";opacity:0}#mAsk .askBtns button:hover::before,#mAsk .askBtns button:focus::before,#mAsk .askBtns button.yes::before{opacity:1}#mAsk .askBtns button.yes{border-color:#ffc95e}';document.head.appendChild(st);
+    m=document.createElement('div');m.className='modal';m.id='mAsk';m.innerHTML='<div class="sheet"><h2 id="askT"></h2><div class="askQ" id="askQ"></div><div class="askBtns"><button type="button" class="yes" id="askY">はい</button><button type="button" id="askN">いいえ</button></div></div>';
+    ($('mSpot').parentNode).appendChild(m);
+    $('askN').addEventListener('click',()=>closeModal('mAsk'));m.addEventListener('click',e=>{if(e.target===m)closeModal('mAsk')})}
+  $('askT').textContent=title;$('askQ').textContent=q;
+  $('askY').onclick=()=>{closeModal('mAsk');onYes()};
+  openModal('mAsk');setTimeout(()=>{try{$('askY').focus()}catch(e){}},50)}
 function flowerTalk(){
-  if(typeof dressUnlocked==='function'&&dressUnlocked()){toast('まほうの ポーションで おきがえ しよう！',2400);openDress();return} // ぜんぶ集めたら、店員さんからも おきがえ
+  if(typeof dressUnlocked==='function'&&dressUnlocked()){askYN('まほうの おはなやさん','まほうの ポーションで\nおきがえ する？',openDress);return} // ぜんぶ集めたら、店員さんからも おきがえ
   $('spotTitle').textContent='まほうの おはなやさん';
   $('spotCap').textContent='まほうの ポーションで おきがえが できるよ。\nパネルと かくれおばけちゃんを ぜんぶ みつけたら つかえるよ。\nいまは '+dressProgress();
   $('spotLink').hidden=true;$('spotNone').hidden=true;openModal('mSpot');
