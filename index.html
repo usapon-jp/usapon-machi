@@ -4397,7 +4397,7 @@ function zakScr(X,Y,d){return[ZAK.cx+ZAK.f*X/d,ZAK.cy-ZAK.f*(Y-ZAK.yf)/d]} // �
 function zakTex(b64){const im=new Image(),t=new THREE.Texture(im);im.onload=()=>{t.needsUpdate=true};im.src='data:image/webp;base64,'+b64;
   t.minFilter=t.magFilter=THREE.LinearFilter;t.wrapS=t.wrapT=THREE.MirroredRepeatWrapping;t.generateMipmaps=false;return t}
 function roomEdgeDim(mat){ // 絵の外がわ(ミラーでのばした部分)は、だんだん暗くして「絵のはし」だと分かるように
-  mat.onBeforeCompile=sh=>{sh.fragmentShader=sh.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\n  {vec2 o=max(-vUv,vUv-1.);diffuseColor.rgb*=mix(.3,1.,clamp(1.-max(o.x,o.y)*9.,0.,1.));}')};return mat}
+  mat.onBeforeCompile=sh=>{sh.fragmentShader=sh.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\n  {vec2 o=max(-vUv,vUv-1.);diffuseColor.rgb*=mix(.06,1.,clamp(1.-max(o.x,o.y)*30.,0.,1.));}')};return mat}
 function zakQuad(P,tex,crop,opts,n){ // 4つの角から面を作り、UVは「元のカメラで見た位置」から決める。面を細かく割って(n×n)、遠近のずれを抑える
   n=n||24;const pos=[],uv=[],idx=[];
   const lerp3=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
@@ -4452,21 +4452,14 @@ function zakBuild(){
   Z.menuAt=[[.5,2.5,1.5],[-.9,4.45,1.2]]; // しょうひんメニューを開ける場所(島テーブルの前 / カウンターの前): [横,奥行き,半径]
   // 当たり判定(既存の仕組み): 壁・カウンター・テーブル・左の棚・手前の境目
   const wx=x=>Z.X+x,wz=d=>Z.Z-d,box=(x0,x1,d0,d1)=>addBoxCol(wx((x0+x1)/2),wz((d0+d1)/2),(x1-x0)/2,(d1-d0)/2,0);
-  box(-Wl-.6,-Wl,1,db+1);box(Wr,Wr+.6,1,db+1);box(-Wl-1,Wr+1,dC,db+1);box(-Wl-1,Wr+1,1.2,2.3-.38);
+  box(-Wl-.6,-Wl,1,db+1);box(Wr,Wr+.6,1,db+1);box(-Wl-1,Wr+1,dC,db+1);box(-Wl-1,Wr+1,1.2,Z.f*Z.yf/(Z.H-Z.cy)+.1);
   const tw=L.table.w*dT/f,tx=(xcOf('table')-Z.cx)*dT/f;box(tx-tw/2+.12,tx+tw/2-.12,dT+.1,dT+.7);
   const rw=358*dR/f,rx=(105+179-Z.cx)*dR/f; // 左の棚(元の絵の位置 x105〜463)の当たり判定。box(rx-rw/2+.1,rx+rw/2,dR,dR+.9);
-  Z.exit=[-Wl+.5,dB(740)-.3];Z.spawn=[-1.3,2.55];
+  Z.exit=[-Wl+.5,dB(740)-.3];Z.spawn=[-1.3,Math.max(2.55,Z.f*Z.yf/(Z.H-Z.cy)+.6)];
 }
 function zakProj(cm){
-  if(state.camMode||ZAK.orbit){cm.view=null;cm.aspect=window.innerWidth/window.innerHeight;THREE.PerspectiveCamera.prototype.updateProjectionMatrix.call(cm);return} // カメラモード中は普通の遠近法
-  // 2.5D専用の投影: 絵の主点(cx,cy)をレンズシフトで合わせ、画面の縦横比に合わせて絵の一部を映す
-  const Z=ZAK,sz=renderer.getSize(new THREE.Vector2()),A=sz.x/sz.y,zoom=(A>=Z.W/Z.H?1.3:1)/clamp(cam.dist/(Z.dist0||cam.dist),1,A>=Z.W/Z.H?1.3:1.4); // ピンチで少し引いて(ひろげる=ちかく/ちぢめる=ひろく)、画面全体を見わたせる
-  let vw,vh;if(A>=Z.W/Z.H){vw=Z.W/zoom;vh=vw/A}else{vh=Z.H/zoom;vw=vh*A}
-  const feet=Z.cy+Z.f*Z.yf/Math.max(Z.pd||2.5,1.6),x0=vw>=Z.W?(Z.W-vw)/2:clamp(Z.panX-vw/2,0,Z.W-vw),y0=vh>=Z.H?(Z.H-vh)/2:clamp(Z.freeze?Z.panY-vh/2:(feet+90-vh)*(1-(Z.up||0)),0,Z.H-vh); // 足元が切れないよう、縦は足元に合わせて動かす
-  const hw=Math.max(Z.cx-x0,x0+vw-Z.cx),hh=Math.max(Z.cy-y0,y0+vh-Z.cy);
-  cm.fov=2*Math.atan(hh/Z.f)*180/PI;cm.aspect=hw/hh;
-  cm.view={enabled:true,fullWidth:2*hw,fullHeight:2*hh,offsetX:x0-(Z.cx-hw),offsetY:y0-(Z.cy-hh),width:vw,height:vh};
-  THREE.PerspectiveCamera.prototype.updateProjectionMatrix.call(cm);
+  if(state.camMode){cm.view=null;cm.aspect=window.innerWidth/window.innerHeight;THREE.PerspectiveCamera.prototype.updateProjectionMatrix.call(cm);return} // カメラモード中は普通の遠近法
+  shopProj(cm,ZAK);
 }
 function zakSet(on){
   if(on===ZAK.in)return;const Z=ZAK;
@@ -4492,7 +4485,7 @@ function zakkaEnter(){
   if(ZAK.busy||ZAK.in||CAFE.in||CAFE.busy||!zakkaDoor())return;ZAK.busy=true;CAFE.fade.classList.add('on');
   setTimeout(()=>{
     zakSet(true);const Z=ZAK;Z.dist0=cam.dist;
-    player.pos.set(Z.X+Z.spawn[0],0,Z.Z-Z.spawn[1]);player.face=PI;cafeResetCam(0,.16);Z.cam.x=Z.cam.d=0;Z.okYaw=undefined;Z.oz=undefined;
+    player.pos.set(Z.X+Z.spawn[0],0,Z.Z-Z.spawn[1]);player.face=PI;cafeResetCam(0,.3);Z.cam.x=Z.cam.d=0;Z.okYaw=undefined;Z.oz=undefined;Z.zk=1;Z.offX=Z.offY=0;Z.viewC=null;Z.lastDist=undefined;
     CAFE.fade.classList.remove('on');toast('ざっかやに はいったよ\nしょうひんに ちかづくと「みる」が でるよ',3600);
     setTimeout(()=>{ZAK.busy=false},380);
   },400);
@@ -4544,6 +4537,31 @@ function shopViewOut(Z,fov){ // 画面のふち(8方向)が、絵の外(部屋�
     if(hit[2]<1.2){tot+=1500;continue}
     const px=Z.cx+Z.f*hit[0]/hit[2],py=Z.cy-Z.f*(hit[1]-Z.yf)/hit[2];tot+=Math.max(0,-px)+Math.max(0,px-Z.W)+Math.max(0,-py)+Math.max(0,py-Z.H)}
   return tot}
+function shopProj(cm,Z){ // 固定カメラ(元の絵の視点)。絵の一部を画面に映す。ピンチ・ホイールで拡大縮小(いちばん引くと絵の全体)、ピヨちゃんを追って左右上下にスクロール
+  const sz=renderer.getSize(new THREE.Vector2()),A=sz.x/sz.y,wide=A>=Z.W/Z.H;
+  const vwC=wide?Z.W:Z.H*A,vwK=wide?Z.H*A:Z.W;Z.zkMax=Math.max(1,vwK/vwC);const zk=clamp(Z.zk||1,.6,Z.zkMax);
+  const vw=vwC*zk,vh=vw/A,c=Z.viewC||[Z.W/2,Z.H/2];
+  const x0=vw>=Z.W?(Z.W-vw)/2:clamp(c[0]-vw/2,0,Z.W-vw),y0=vh>=Z.H?(Z.H-vh)/2:clamp(c[1]-vh/2,0,Z.H-vh);
+  if(Z.tp&&vw<Z.W)Z.offX=clamp(Z.offX||0,-Z.tp[0]+vw/2,Z.W-vw/2-Z.tp[0]); // 絵の はしより先へは ずれない
+  if(Z.tp&&vh<Z.H)Z.offY=clamp(Z.offY||0,-Z.tp[1]+vh/2,Z.H-vh/2-Z.tp[1]);
+  Z.vw=vw;const hw=Math.max(Z.cx-x0,x0+vw-Z.cx),hh=Math.max(Z.cy-y0,y0+vh-Z.cy);
+  cm.fov=2*Math.atan(hh/Z.f)*180/PI;cm.aspect=hw/hh;
+  cm.view={enabled:true,fullWidth:2*hw,fullHeight:2*hh,offsetX:x0-(Z.cx-hw),offsetY:y0-(Z.cy-hh),width:vw,height:vh};
+  THREE.PerspectiveCamera.prototype.updateProjectionMatrix.call(cm);
+}
+function shopFixed(Z,dt){
+  const s=Z.pscale;
+  if(Z.lastDist!==undefined&&cam.dist!==Z.lastDist)Z.zk=clamp((Z.zk||1)*cam.dist/Z.lastDist,.6,Z.zkMax||2); // ピンチ・ホイール → 拡大縮小
+  cam.dist=8;Z.lastDist=8;
+  const sc=(Z.vw||Z.W)/Math.max(1,innerWidth),dx=-cam.yaw/.0068,dy=(cam.pitch-.3)/.0052; // ドラッグ → 見る場所をずらす(外の街と同じ向き: 上へドラッグで上が見える)
+  Z.offX=(Z.offX||0)+dx*sc;Z.offY=(Z.offY||0)+dy*sc;cam.yaw=0;cam.pitch=.3;
+  if(Math.hypot(player.vx||0,player.vz||0)>.3){const k=Math.max(0,1-dt*2.5);Z.offX*=k;Z.offY*=k} // 歩きだすと ピヨちゃんに もどる
+  const rx=player.pos.x-Z.X,d=Math.max(Z.Z-player.pos.z,.5);
+  Z.tp=[Z.cx+Z.f*rx/d,Z.cy-Z.f*(player.pos.y+.45*s-Z.yf)/d];
+  const want=[Z.tp[0]+Z.offX,Z.tp[1]+Z.offY];
+  if(!Z.viewC)Z.viewC=want.slice();const k=Math.min(1,dt*6);Z.viewC[0]+=(want[0]-Z.viewC[0])*k;Z.viewC[1]+=(want[1]-Z.viewC[1])*k;
+  camera.position.set(Z.X,Z.yf,Z.Z);camera.quaternion.set(0,0,0,1);camera.updateMatrixWorld(true);camera.updateProjectionMatrix();
+  piyo.group.visible=true;blob.visible=true}
 function shopOrbit(Z,dt){ // 外の街と同じ: ピヨちゃんを画面のまん中に、ドラッグでピヨちゃんのまわりを くるくる。
   // まわりこむと絵の外が見えるところでは、カメラはそこで止めて「向きだけ」横へふる(ピヨちゃんは少し横へ。横の絵が見える)。それでも絵の外なら止まる
   const s=Z.pscale,bf=innerWidth/innerHeight<.8?66:58,R=4.6*s*clamp(cam.dist/(Z.dist0||cam.dist),.75,1.3);
@@ -4577,14 +4595,14 @@ function shopHold(Z,vw2,dt,rx){ // ピヨちゃんを画面の中心あたりに
 function zakkaTick(dt,t){
   if(!ZAK.in)return;const Z=ZAK,f0=()=>Z.f*Z.yf/(884-Z.cy);
   if(player.fly)setFly(false);
-  {const dd=Math.max(d0(Z),1.6),mx=(Z.W-120-Z.cx)*dd/Z.f,mn=(120-Z.cx)*dd/Z.f;player.pos.x=clamp(player.pos.x,Z.X+mn,Z.X+mx)} // 絵のはしまで行くと、ピヨちゃんが画面の外に出て絵がのびて見えるので、見える範囲にとどめる
+  {const dd=Math.max(d0(Z),1.6),mx=(Z.W-45-Z.cx)*dd/Z.f,mn=(45-Z.cx)*dd/Z.f;player.pos.x=clamp(player.pos.x,Z.X+mn,Z.X+mx)} // 絵のはしまで行くと、ピヨちゃんが画面の外に出て絵がのびて見えるので、見える範囲にとどめる
   const rx=player.pos.x-Z.X,d=Z.Z-player.pos.z;
   if(state.camMode){ // カメラモード: 既存のカメラ処理に任せる(目線・自撮り・ドラッグ・ズーム)。部屋の外が見えすぎないよう向きを制限
     if(!Z.hadCam)Z.okYaw=undefined;if(!state.selfie){cam.yaw=clamp(cam.yaw,-.85,.85);shopCamFp(Z)}else{ // 自撮り: 島テーブルの後ろにいるとき、テーブルがピヨちゃんを隠さないよう横から撮る
       const L=ZAK_DATA.L.table,dT=f0(),tw=L.w*dT/Z.f/2,tc=(L.x+L.w/2-Z.cx)*dT/Z.f;
       if(d>dT+.15&&Math.abs(rx-tc)<tw+.4)cam.sAng=(rx>tc?1:-1)*.75}Z.hadCam=true;blob.scale.x*=Z.pscale;blob.scale.z*=Z.pscale;hemi.intensity=.7;return}
   if(Z.hadCam){Z.hadCam=false;Z.camInit=false;Z.okYaw=undefined;cam.yaw=0;cam.cur=undefined;cam.pe=undefined;camera.fov=58;camera.view=null}
-  Z.orbit=true;shopOrbit(Z,dt);Z.pd=d;
+  Z.orbit=false;shopFixed(Z,dt);Z.pd=d;
   piyo.group.visible=true;blob.visible=true;blob.scale.x*=Z.pscale;blob.scale.z*=Z.pscale;hemi.intensity=.7;
 }
 /* ===== /ZAKKA PARALLAX ===== */
@@ -4627,24 +4645,18 @@ function flwBuild(){
   // 当たり判定(既存の仕組み)
   const wx=x=>Z.X+x,wz=d=>Z.Z-d,box=(x0,x1,d0,d1)=>addBoxCol(wx((x0+x1)/2),wz((d0+d1)/2),(x1-x0)/2,(d1-d0)/2,0);
   const px=(x,d)=>(x-Z.cx)*d/f;
-  box(-Wl-.6,-Wl,1,db+1);box(Wr,Wr+.6,1,db+1);box(-Wl-1,Wr+1,1.2,2.3-.38);
+  box(-Wl-.6,-Wl,1,db+1);box(Wr,Wr+.6,1,db+1);box(-Wl-1,Wr+1,1.2,Z.f*Z.yf/(Z.H-Z.cy)+.1);
   box(px(365,dC),px(1175,dC),dC-.2,db+1);                       // カウンター(の奥は入れない)
   box(px(265,dPL),px(596,dPL),dPL-.1,dPL+.6);                   // 左の花の山
   box(px(905,dPR),px(1356,dPR),dPR-.1,dPR+.6);                  // 右の花の山
   box(px(1403,dCat),px(1497,dCat),dCat-.1,dCat+.5);
-  box(-Wl-1,px(596,dPL),dPL-.1,db+1);box(px(905,dPR),Wr+1,Math.min(dPR,dCat)-.1,db+1); // 花の山・ねこの うしろへは入れない(入ると ぬけられなくなるので)
+  box(-Wl-1,px(596,dPL),dPL-.1,db+1);box(px(905,dPR),px(1356,dPR),dPR-.1,db+1);box(px(1356,dPR)-.05,Wr+1,dCat-.1,db+1); // 花の山・ねこの うしろへは入れない(見えている床は歩ける)
   Z.menuAt=[px(768,dC)-.2,dC-.95,1.5];                          // カウンターの前で、店員さんに話しかけられる
-  Z.exit=[px(165,dC)+.2,dC-.45];Z.spawn=[-.9,2.6];             // 左の扉の前が出口
+  Z.exit=[px(165,dC)+.2,dC-.45];Z.spawn=[-.9,Math.max(2.6,Z.f*Z.yf/(Z.H-Z.cy)+.6)];             // 左の扉の前が出口
 }
 function flwProj(cm){
-  if(state.camMode||FLW.orbit){cm.view=null;cm.aspect=window.innerWidth/window.innerHeight;THREE.PerspectiveCamera.prototype.updateProjectionMatrix.call(cm);return}
-  const Z=FLW,sz=renderer.getSize(new THREE.Vector2()),A=sz.x/sz.y,zoom=(A>=Z.W/Z.H?1.3:1)/clamp(cam.dist/(Z.dist0||cam.dist),1,A>=Z.W/Z.H?1.3:1.4);
-  let vw,vh;if(A>=Z.W/Z.H){vw=Z.W/zoom;vh=vw/A}else{vh=Z.H/zoom;vw=vh*A}
-  const feet=Z.cy+Z.f*Z.yf/Math.max(Z.pd||2.5,1.6),x0=vw>=Z.W?(Z.W-vw)/2:clamp(Z.panX-vw/2,0,Z.W-vw),y0=vh>=Z.H?(Z.H-vh)/2:clamp(Z.freeze?Z.panY-vh/2:(feet+90-vh)*(1-(Z.up||0)),0,Z.H-vh);
-  const hw=Math.max(Z.cx-x0,x0+vw-Z.cx),hh=Math.max(Z.cy-y0,y0+vh-Z.cy);
-  cm.fov=2*Math.atan(hh/Z.f)*180/PI;cm.aspect=hw/hh;
-  cm.view={enabled:true,fullWidth:2*hw,fullHeight:2*hh,offsetX:x0-(Z.cx-hw),offsetY:y0-(Z.cy-hh),width:vw,height:vh};
-  THREE.PerspectiveCamera.prototype.updateProjectionMatrix.call(cm);
+  if(state.camMode){cm.view=null;cm.aspect=window.innerWidth/window.innerHeight;THREE.PerspectiveCamera.prototype.updateProjectionMatrix.call(cm);return}
+  shopProj(cm,FLW);
 }
 function flwSet(on){
   if(on===FLW.in)return;const Z=FLW;
@@ -4670,7 +4682,7 @@ function flowerEnter(){
   if(FLW.busy||FLW.in||ZAK.in||CAFE.in||CAFE.busy||ZAK.busy||!flowerDoor())return;FLW.busy=true;CAFE.fade.classList.add('on');
   setTimeout(()=>{
     flwSet(true);const Z=FLW;Z.dist0=cam.dist;
-    player.pos.set(Z.X+Z.spawn[0],0,Z.Z-Z.spawn[1]);player.face=PI;cafeResetCam(0,.16);Z.cam.x=Z.cam.d=0;Z.okYaw=undefined;Z.oz=undefined;
+    player.pos.set(Z.X+Z.spawn[0],0,Z.Z-Z.spawn[1]);player.face=PI;cafeResetCam(0,.3);Z.cam.x=Z.cam.d=0;Z.okYaw=undefined;Z.oz=undefined;Z.zk=1;Z.offX=Z.offY=0;Z.viewC=null;Z.lastDist=undefined;
     CAFE.fade.classList.remove('on');toast('おはなやさんに はいったよ\nカウンターの前で「おはなしする」が でるよ',3600);
     setTimeout(()=>{FLW.busy=false},380);
   },400);
@@ -4709,12 +4721,12 @@ function flowerTalk(){
 function flowerTick(dt,t){
   if(!FLW.in)return;const Z=FLW;
   if(player.fly)setFly(false);
-  {const dd=Math.max(d0(Z),1.6),mx=(Z.W-120-Z.cx)*dd/Z.f,mn=(120-Z.cx)*dd/Z.f;player.pos.x=clamp(player.pos.x,Z.X+mn,Z.X+mx)} // 絵のはしまで行くと、ピヨちゃんが画面の外に出て絵がのびて見えるので、見える範囲にとどめる
+  {const dd=Math.max(d0(Z),1.6),mx=(Z.W-45-Z.cx)*dd/Z.f,mn=(45-Z.cx)*dd/Z.f;player.pos.x=clamp(player.pos.x,Z.X+mn,Z.X+mx)} // 絵のはしまで行くと、ピヨちゃんが画面の外に出て絵がのびて見えるので、見える範囲にとどめる
   const rx=player.pos.x-Z.X,d=Z.Z-player.pos.z;
   if(state.camMode){
     if(!Z.hadCam)Z.okYaw=undefined;if(!state.selfie){cam.yaw=clamp(cam.yaw,-.85,.85);shopCamFp(Z)}Z.hadCam=true;blob.scale.x*=Z.pscale;blob.scale.z*=Z.pscale;hemi.intensity=.7;return}
   if(Z.hadCam){Z.hadCam=false;Z.camInit=false;Z.okYaw=undefined;cam.yaw=0;cam.cur=undefined;cam.pe=undefined;camera.fov=58;camera.view=null}
-  Z.orbit=true;shopOrbit(Z,dt);Z.pd=d;
+  Z.orbit=false;shopFixed(Z,dt);Z.pd=d;
   piyo.group.visible=true;blob.visible=true;blob.scale.x*=Z.pscale;blob.scale.z*=Z.pscale;hemi.intensity=.7;
 }
 /* ===== /FLOWER PARALLAX ===== */
