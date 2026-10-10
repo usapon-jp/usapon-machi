@@ -4544,21 +4544,29 @@ function shopViewOut(Z,fov){ // 画面のふち(8方向)が、絵の外(部屋�
     if(hit[2]<1.2){tot+=1500;continue}
     const px=Z.cx+Z.f*hit[0]/hit[2],py=Z.cy-Z.f*(hit[1]-Z.yf)/hit[2];tot+=Math.max(0,-px)+Math.max(0,px-Z.W)+Math.max(0,-py)+Math.max(0,py-Z.H)}
   return tot}
-function shopOrbit(Z,dt){ // 外の街と同じ: ピヨちゃんを画面のまん中に、ドラッグでピヨちゃんのまわりを くるくる。絵の外が見えそうになったら、そこで止まる
+function shopOrbit(Z,dt){ // 外の街と同じ: ピヨちゃんを画面のまん中に、ドラッグでピヨちゃんのまわりを くるくる。
+  // まわりこむと絵の外が見えるところでは、カメラはそこで止めて「向きだけ」横へふる(ピヨちゃんは少し横へ。横の絵が見える)。それでも絵の外なら止まる
   const s=Z.pscale,bf=innerWidth/innerHeight<.8?66:58,R=4.6*s*clamp(cam.dist/(Z.dist0||cam.dist),.75,1.3);
   if(Z.oz===undefined)Z.oz=1;
-  cam.yaw=clamp(cam.yaw,-1.3,1.3);cam.pitch=clamp(cam.pitch,-.6,.7);
-  const tx=player.pos.x,ty=player.pos.y+1.15*s,tz=player.pos.z; // ピヨちゃんの少し上を見る(外の街と同じく、ピヨちゃんは画面のまん中より少し下・奥のお店が見える)
-  const place=()=>{const p=Math.max(cam.pitch,0),cp=Math.cos(p),up=Math.max(0,-cam.pitch),x=clamp(tx+Math.sin(cam.yaw)*cp*R,Z.X-Z.Wl+.15,Z.X+Z.Wr-.15),y=ty+.1*s+Math.sin(p)*R-up*.35*R,z=Math.min(tz+Math.cos(cam.yaw)*cp*R,Z.Z-.35);
-    camera.position.set(x,clamp(y,.15,Z.Hr-.1),z);camera.lookAt(tx,ty+up*1.5*R,tz);camera.updateMatrixWorld(true)}; // 上へドラッグすると見上げる(店員さん・天井まで)
-  const fit=()=>{ // 絵の外が見えるときは、カメラを元の絵のカメラの位置(部屋の手前のまん中)へ少しずつ寄せる。ピヨちゃんは まん中のまま
+  cam.yaw=clamp(cam.yaw,-1.6,1.6);cam.pitch=clamp(cam.pitch,-.6,.7);
+  const tx=player.pos.x,ty=player.pos.y+1.15*s,tz=player.pos.z;
+  let oy=cam.yaw,ly=0;
+  const aim=()=>{const up=Math.max(0,-cam.pitch),P=camera.position,dx=tx-P.x,dy=ty+up*1.5*R-P.y,dz=tz-P.z,a=Math.atan2(dx,dz)+ly,h=Math.hypot(dx,dz);
+    camera.lookAt(P.x+Math.sin(a)*h,P.y+dy,P.z+Math.cos(a)*h);camera.updateMatrixWorld(true)};
+  const place=()=>{const p=Math.max(cam.pitch,0),cp=Math.cos(p),up=Math.max(0,-cam.pitch),x=clamp(tx+Math.sin(oy)*cp*R,Z.X-Z.Wl+.15,Z.X+Z.Wr-.15),y=ty+.1*s+Math.sin(p)*R-up*.35*R,z=Math.min(tz+Math.cos(oy)*cp*R,Z.Z-.35);
+    camera.position.set(x,clamp(y,.15,Z.Hr-.1),z);aim()}; // 上へドラッグすると見上げる(店員さん・天井まで)
+  const fit=()=>{ // 絵の外が見えるときは、カメラを元の絵のカメラの位置(部屋の手前のまん中)へ少しずつ寄せる
     place();let V=shopViewOut(Z,bf*Z.oz);if(V<=40)return V;
     const p0=camera.position.clone(),an=new THREE.Vector3(Z.X,Z.yf,Z.Z-.35);
-    for(let u=.15;u<=1.001;u+=.15){camera.position.lerpVectors(p0,an,u);camera.lookAt(tx,ty+Math.max(0,-cam.pitch)*1.5*R,tz);camera.updateMatrixWorld(true);const v=shopViewOut(Z,bf*Z.oz);if(v<=40)return v;V=Math.min(V,v)}
+    for(let u=.15;u<=1.001;u+=.15){camera.position.lerpVectors(p0,an,u);aim();const v=shopViewOut(Z,bf*Z.oz);if(v<=40)return v;V=Math.min(V,v)}
     return V};
-  if(Z.okYaw===undefined){cam.yaw=0;while(Z.oz>.6&&fit()>40)Z.oz*=.95} // 最初から絵の外が見えるなら、画角を少しせまく
-  const V=fit();
-  if(Z.okYaw!==undefined&&V>Z.okV+2){cam.yaw=Z.okYaw;cam.pitch=Z.okPitch;fit()}else{Z.okYaw=cam.yaw;Z.okPitch=cam.pitch;Z.okV=V}
+  if(Z.okYaw===undefined){cam.yaw=0;oy=0;while(Z.oz>.6&&fit()>40)Z.oz*=.95;Z.oy=0;Z.okV0=Math.max(40,fit())} // 最初から絵の外が見えるなら、画角を少しせまく
+  const lim=Z.okV0||40;
+  let V=fit();
+  if(Z.okYaw!==undefined&&V>lim){ // まわりこめない → 向きだけ ふる
+    oy=Z.oy;ly=cam.yaw-Z.oy;V=fit();
+    if(V>lim){cam.yaw=Z.okYaw;cam.pitch=Z.okPitch;oy=Z.oy;ly=Z.okYaw-Z.oy;fit()}else{Z.okYaw=cam.yaw;Z.okPitch=cam.pitch}
+  }else{Z.oy=cam.yaw;Z.okYaw=cam.yaw;Z.okPitch=cam.pitch}
   const f=bf*Z.oz;if(Math.abs(camera.fov-f)>.01)camera.fov=f;camera.updateProjectionMatrix();
   piyo.group.visible=true;blob.visible=true}
 function d0(Z){return Z.Z-player.pos.z}
@@ -4624,6 +4632,7 @@ function flwBuild(){
   box(px(265,dPL),px(596,dPL),dPL-.1,dPL+.6);                   // 左の花の山
   box(px(905,dPR),px(1356,dPR),dPR-.1,dPR+.6);                  // 右の花の山
   box(px(1403,dCat),px(1497,dCat),dCat-.1,dCat+.5);
+  box(-Wl-1,px(596,dPL),dPL-.1,db+1);box(px(905,dPR),Wr+1,Math.min(dPR,dCat)-.1,db+1); // 花の山・ねこの うしろへは入れない(入ると ぬけられなくなるので)
   Z.menuAt=[px(768,dC)-.2,dC-.95,1.5];                          // カウンターの前で、店員さんに話しかけられる
   Z.exit=[px(165,dC)+.2,dC-.45];Z.spawn=[-.9,2.6];             // 左の扉の前が出口
 }
