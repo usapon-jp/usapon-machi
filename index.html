@@ -2855,7 +2855,8 @@ function miniGLB(buf){ // minimal GLB reader (no GLTFLoader / no CDN needed)
     if(sk){g.setAttribute('skinIndex',new THREE.BufferAttribute(new Uint16Array(acc(p.attributes.JOINTS_0)),4));
     g.setAttribute('skinWeight',new THREE.BufferAttribute(acc(p.attributes.WEIGHTS_0),4));}
     g.setIndex(new THREE.BufferAttribute(acc(p.indices),1));
-    const mat=new THREE.MeshBasicMaterial({map:tex,skinning:!!sk,side:THREE.DoubleSide});const m=sk?new THREE.SkinnedMesh(g,mat):new THREE.Mesh(g,mat);
+    const ca=p.attributes.COLOR_0;if(ca!==undefined){const A=json.accessors[ca];g.setAttribute('color',new THREE.BufferAttribute(acc(ca),N[A.type],!!A.normalized))} // 影を焼き込んだ頂点カラー(店員ピヨちゃんの衣装)
+    const mat=new THREE.MeshBasicMaterial({map:tex,skinning:!!sk,side:THREE.DoubleSide,vertexColors:ca!==undefined});const m=sk?new THREE.SkinnedMesh(g,mat):new THREE.Mesh(g,mat);
     m.name=nodes[i].name;m.frustumCulled=false;nodes[i].add(m);m._sk=n.skin;});
   root.updateMatrixWorld(true);
   if(sk){ // keep feet rigid: vertices at/below the ankle follow only their leg (no sole flapping)
@@ -3551,6 +3552,7 @@ function doAct(){
   if(a.type==='flowerEnter'){flowerEnter();return}
   if(a.type==='flowerExit'){flowerExit();return}
   if(a.type==='flowerTalk'){flowerTalk();return}
+  if(a.type==='cafeTalk'){$('spotTitle').textContent='カフェの てんいんさん';$('spotCap').textContent=['いらっしゃいませ！\nゆっくり していってね','きょうの おすすめは かぼちゃの ラテだよ。\nまどの そとも ながめてみてね','パネルは みつかった？\nまちの あちこちに かくれているよ'][(CAFE.talkN=(CAFE.talkN||0)+1)%3];$('spotLink').hidden=true;$('spotNone').hidden=true;openModal('mSpot');return}
   if(a.type==='zakkaEnter'){zakkaEnter();return}
   if(a.type==='zakkaExit'){zakkaExit();return}
   if(a.type==='zakkaMenu'){zakMenuOpen();return}
@@ -3974,7 +3976,7 @@ function update(dt){
   stepParticles(dt);updateHint();presentTick(dt,t,playing);
   miniT+=dt;if(miniT>.1){miniT=0;drawMini()}
   if(state.editOn&&W.edTick)W.edTick(t);
-  cafeTick(dt,t);zakkaTick(dt,t);flowerTick(dt,t);
+  cafeTick(dt,t);zakkaTick(dt,t);flowerTick(dt,t);npcTick(dt,t);
 }
 function onResize(){
   const w=window.innerWidth,h=window.innerHeight;
@@ -4180,6 +4182,7 @@ function cafeBuild(){
   const WT=.25;
   addBoxCol(OX,OZ-HD-WT,HW+.6,WT,0);addBoxCol(OX,OZ+HD+WT,HW+.6,WT,0);addBoxCol(OX-HW-WT,OZ,WT,HD+.6,0);addBoxCol(OX+HW+WT,OZ,WT,HD+.6,0);
   addBoxCol(OX+2.875,OZ-2.6,3.2,.55,0,1.45);addBoxCol(OX+.1,OZ-4.05,.4,.95,0,1.45);
+  npcMake('cafe',root,OX+2.3,.45,OZ-3.7,0,1); // 店員ピヨちゃん(カウンターの中)
   camBox.push({x0:OX-HW-1,x1:OX+HW+1,y0:H-.35,y1:H+3,z0:OZ-HD-1,z1:OZ+HD+1});
   /* ---- lights (2 warm point lights; added only while inside) ---- */
   const l1=new THREE.PointLight(0xffb468,.75,9,1.5);l1.position.set(OX-3.4,2.3,OZ-.2);
@@ -4242,6 +4245,7 @@ function cafeAct(act,playing){
     const lx=player.pos.x-CAFE.X,lz=player.pos.z-CAFE.Z;
     if(Math.abs(lx-CAFE.DOOR)<1.5&&lz>CAFE.HD-2.0)return{type:'cafeExit',via:'front',label:'テラスへ でる'};
     if(Math.abs(lz-2.6)<1.5&&lx>CAFE.HW-2.0)return{type:'cafeExit',via:'side',label:'広場へ でる'};
+    if(lz<-.6&&lz>-2.2&&Math.abs(lx-2.3)<1.6)return{type:'cafeTalk',label:'おはなしする'}; // カウンターの店員ピヨちゃん
     return null;
   }
   const fs=flowerDoor();
@@ -4372,6 +4376,7 @@ function zakBuild(){
   const L=ZAK_DATA.L,xcOf=k=>L[k].x+L[k].w/2;
   const rug=L.rug,rp=[[rug.x,rug.y+rug.h],[rug.x+rug.w,rug.y+rug.h],[rug.x+rug.w,rug.y],[rug.x,rug.y]].map(p=>{const d=dB(p[1]);return[(p[0]-Z.cx)*d/f,.004,d]});
   const rm=zakQuad(rp,zakTex(rug.b),[rug.x,rug.y,rug.w,rug.h],{alphaTest:.4,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});root.add(rm);
+  npcMake('store',root,Z.X+(1000-Z.cx)*(dC+.5)/f,.75,Z.Z-(dC+.5),0,Z.pscale); // 店員ピヨちゃん(カウンターのうしろ。台に乗って顔が見える高さ)
   root.add(zakBoard('counter',dC)); // 左の棚は壁に接しているので背景に焼き込み済み(浮かない)
   root.add(zakBoard('ivy',f*Wr/(xcOf('ivy')-Z.cx)-.04));
   root.add(zakBoard('table',dT));
@@ -4518,6 +4523,7 @@ function flwBuild(){
   const dB=y=>f*Z.yf/(y-Z.cy),L=FLW_DATA.L;
   // 切り抜き(元の絵の足元のy座標から距離を決める): カウンター / 左右の花の山 / 猫とランタン
   const dC=dB(690),dPL=dB(712),dPR=dB(722),dCat=dB(730);
+  {const nd=dC-.4,nx=(850-Z.cx)*nd/f;npcMake('flower',root,Z.X+nx,0,Z.Z-nd,0,Z.pscale);addCircle(Z.X+nx,Z.Z-nd,.32)} // 店員ピヨちゃん(カウンターの前。うしろは棚と花で かくれるので)
   root.add(flwBoard('counter',dC));root.add(flwBoard('pileL',dPL));root.add(flwBoard('pileR',dPR));root.add(flwBoard('cat',dCat));
   // 当たり判定(既存の仕組み)
   const wx=x=>Z.X+x,wz=d=>Z.Z-d,box=(x0,x1,d0,d1)=>addBoxCol(wx((x0+x1)/2),wz((d0+d1)/2),(x1-x0)/2,(d1-d0)/2,0);
@@ -4609,6 +4615,40 @@ function flowerTick(dt,t){
   piyo.group.visible=true;blob.visible=true;blob.scale.x*=Z.pscale;blob.scale.z*=Z.pscale;hemi.intensity=.7;
 }
 /* ===== /FLOWER PARALLAX ===== */
+/* ===== SHOP NPC ===== (店員ピヨちゃん: docs/piyo-new の素体と衣装。assets/piyo/ から、お店に入ったときにだけ読み込む)
+   素体の骨に衣装パーツ(同じ9本の骨・同じバインド)をまとめて付ける。フェルトのパーツは店の色を掛ける */
+const NPC={dir:'assets/piyo/',buf:{},list:[],
+  tint:{flower:[.59,.71,.52],cafe:[.59,.33,.22],store:[.63,.40,.86]},tinted:{beret_felt:1,scarf_felt:1,hat_store:1},
+  outfits:{flower:['apron_flower','scarf_felt','beret_felt','deco_flower'],cafe:['apron_cafe','scarf_felt','beret_felt','deco_cafe'],store:['apron_store','scarf_felt','hat_store','star_hat','star_scarf']}};
+function npcGet(n){return NPC.buf[n]||(NPC.buf[n]=fetch(NPC.dir+n+'.glb').then(r=>{if(!r.ok)throw new Error(n+' '+r.status);return r.arrayBuffer()}))}
+function npcMake(shop,parent,x,y,z,ry,sc){
+  const holder=new THREE.Group();holder.position.set(x,y,z);holder.rotation.y=ry||0;holder.scale.setScalar(sc||1);parent.add(holder);
+  const parts=NPC.outfits[shop];
+  Promise.all([npcGet('piyo_base_rig'),...parts.map(npcGet)]).then(bufs=>{
+    const model=miniGLB(bufs[0].slice(0)),bones={};let base=null;
+    model.traverse(o=>{if(o.isBone)bones[o.name]=o;if(o.isSkinnedMesh&&!base)base=o});
+    parts.forEach((p,i)=>{let m=null;miniGLB(bufs[i+1].slice(0)).traverse(o=>{if(o.isSkinnedMesh&&!m)m=o});if(!m)return;
+      const sk=new THREE.Skeleton(m.skeleton.bones.map(b=>bones[b.name]),m.skeleton.boneInverses),bm=m.bindMatrix.clone();
+      base.parent.add(m);m.bind(sk,bm);if(NPC.tinted[p])m.material.color.setRGB(...NPC.tint[shop])});
+    base.geometry.computeBoundingBox();const bb=base.geometry.boundingBox,k=1.7/(bb.max.y-bb.min.y)*.85;
+    model.scale.setScalar(k);model.position.set(-(bb.max.x+bb.min.x)/2*k,-bb.min.y*k,-(bb.max.z+bb.min.z)/2*k);
+    holder.add(model);holder.updateMatrixWorld(true);
+    const B={};model.traverse(o=>{if(o.isBone){const pq=new THREE.Quaternion();o.parent.getWorldQuaternion(pq);B[o.name.replace('mixamorig:','')]={b:o,q:o.quaternion.clone(),pq,pqi:pq.clone().invert()}}});
+    holder.userData.npc={B,ph:Math.random()*6,look:0};NPC.list.push(holder);
+  }).catch(e=>console.warn('shop npc failed',shop,e));
+  return holder}
+const _nq=new THREE.Quaternion(),_nq2=new THREE.Quaternion(),_nv=new THREE.Vector3(),_nY=new THREE.Vector3(0,1,0),_nX=new THREE.Vector3(1,0,0),_nZ=new THREE.Vector3(0,0,1);
+function npcBone(o,ry,rx,rz){if(!o)return;_nq.setFromAxisAngle(_nY,ry);_nq2.setFromAxisAngle(_nX,rx);_nq.multiply(_nq2);_nq2.setFromAxisAngle(_nZ,rz);_nq.multiply(_nq2);
+  o.b.quaternion.copy(o.pqi).multiply(_nq).multiply(o.pq).multiply(o.q)}
+function npcTick(dt,t){ // ゆらゆら・息・お客さん(ピヨちゃん)のほうを見る
+  if(NPC.still)return;for(const h of NPC.list){if(!h.parent||!h.parent.visible)continue;const n=h.userData.npc,B=n.B,ph=t*1.6+n.ph;
+    h.getWorldPosition(_nv);const dx=player.pos.x-_nv.x,dz=player.pos.z-_nv.z,near=Math.hypot(dx,dz)<4.5*h.scale.x+1.5;
+    const want=near?clamp(Math.atan2(dx,dz)-h.rotation.y,-.7,.7):Math.sin(t*.4+n.ph)*.25;n.look+=(want-n.look)*Math.min(1,dt*3);
+    npcBone(B.Head,n.look,Math.sin(ph*.5)*.04,Math.sin(ph*.7)*.08);
+    npcBone(B.Spine,n.look*.25,0,Math.sin(ph*.5)*.03);
+    npcBone(B.LeftArm,0,0,Math.sin(ph)*.06);npcBone(B.RightArm,0,0,-Math.sin(ph)*.06)}
+}
+/* ===== /SHOP NPC ===== */
 /* ===== /CAFE INTERIOR ===== */
 
 /* ---------- debug helpers (open with #debug) ---------- */
@@ -4979,7 +5019,7 @@ function rotateCafePon(){
     let tot=0;for(let j=0;j<=n;j++)for(let i=0;i<=n;i++)if(free(i,j))tot++;
     const pt=(x,z)=>seen[idx(Math.round((x+40)/st),Math.round((z+40)/st))]===1;
     return {reached:c,freeCells:tot,pct:Math.round(c/tot*100),gateN:pt(0,-38),fountain:pt(2,12),plazaS:pt(0,30),plazaN:pt(0,-28),stairs:STAIRS.map(s=>pt(s.x,(s.a+s.b)/2))}};
-  window.__usapon={flowerEnter,flowerExit,flwState:()=>FLW,input,zakkaEnter,zakkaExit,zakState:()=>ZAK,cafeEnter,cafeExit,cafeState:()=>CAFE,reach,tpTo,state,player,cam,panels:()=>panels,save:()=>save,warnings,slots,seats,spots:()=>spots,setFly,presentReset,presentPos:()=>PRESENT&&presentPos(),props:()=>ED.list,layout:()=>edExport(false),cordTest:{GARL,cordAdd,cordsExport,cordsLoad,cordRemove,cordKey,cordDefault,cordChanged}};
+  window.__usapon={NPC,flowerEnter,flowerExit,flwState:()=>FLW,input,zakkaEnter,zakkaExit,zakState:()=>ZAK,cafeEnter,cafeExit,cafeState:()=>CAFE,reach,tpTo,state,player,cam,panels:()=>panels,save:()=>save,warnings,slots,seats,spots:()=>spots,setFly,presentReset,presentPos:()=>PRESENT&&presentPos(),props:()=>ED.list,layout:()=>edExport(false),cordTest:{GARL,cordAdd,cordsExport,cordsLoad,cordRemove,cordKey,cordDefault,cordChanged}};
 
 })();
 })();
