@@ -1133,7 +1133,8 @@ const AUDIO=(function(){
   }
   function sfx(kind){
     if(!ctx||!on||ctx.state!=='running')return;const t=ctx.currentTime+.01;
-    if(kind==='found'){[84,88,91,96].forEach((m,i)=>bell(t+i*.07,m,.5,.28,sfxG,.3))}
+    if(kind==='shutter'){const o=OUT;OUT=sfxG;noise(t,.035,.5,4200);noise(t+.012,.12,.22,1700);noise(t+.085,.04,.38,3200);OUT=o} // パシャッ(シャッター)
+    else if(kind==='found'){[84,88,91,96].forEach((m,i)=>bell(t+i*.07,m,.5,.28,sfxG,.3))}
     else if(kind==='broom'){[67,71,74,79,83].forEach((m,i)=>bell(t+i*.05,m+12,.35,.16,sfxG,.3))}
     else if(kind==='wand'){[84,88,91,96,100,103].forEach((m,i)=>bell(t+i*.06,m,.6,.22,sfxG,.5));[108,103,108].forEach((m,i)=>bell(t+.45+i*.12,m,.9,.12,sfxG,.6))}
     else if(kind==='fanfare'){[72,76,79,84,79,84,88,91,96].forEach((m,i)=>bell(t+i*.11,m,.7,.3,sfxG,.4))}
@@ -3476,6 +3477,7 @@ function ghostChanTick(dt,t){
 let lastShot={p:null,k:0};
 function setWings(up,t){piyo.wings[0].rotation.z=up?(-1.9+Math.sin(t*14)*.1):-.15;piyo.wings[1].rotation.z=up?(1.9-Math.sin(t*14)*.1):.15}
 function takePhoto(p,k){
+  try{AUDIO.sfx('shutter')}catch(e){}
   lastShot={p,k};const bv=!!(broomG&&broomG.visible);if(broomG)broomG.visible=false;
   const n=p.n,r=new THREE.Vector3(n.z,0,-n.x),gyP=p.y0;
   const side=(k%3===1)?-1:1,close=k%3===2;
@@ -3581,6 +3583,7 @@ function frameCanvas(src,IW,IH,selfie){
 }
 function updateFrameTog(){$('btnFrameTog').textContent=lastFree&&lastFree.framed?'わくを はずす':'わくを つける'}
 function takeFreePhoto(){
+  try{AUDIO.sfx('shutter')}catch(e){}
   lastShot={free:true,panel:state.nearPanel};
   const SS=renderer.capabilities.maxTextureSize>=4096?1.5:1,LS=window.innerWidth>window.innerHeight*1.15,IW=LS?1440:1080,IH=LS?1080:1440,PW=IW*SS|0,PH=IH*SS|0;
   const oldPR=renderer.getPixelRatio();let url=null;
@@ -5154,14 +5157,17 @@ function gDrop(g){[g.gs,g.cs].forEach(sp=>{if(sp){scene.remove(sp);if(sp.materia
 function resetGifts(){gReveal=false;gAnnT=-1;G.forEach(g=>{gDrop(g);g.phase=0;g.lid.position.y=.72;g.lid.rotation.z=0})}
 function openGift(g){
   g.phase=1;g.t0=state.t;
-  const first=save.cand.length===0;
+  const first=save.cand.length===0;g.first=first;
   if(save.cand.indexOf(g.i)<0){save.cand.push(g.i);persist()}
   const gc=ghostChans[g.i],p=gp(g),gy=groundY(p.x,p.z);
   if(gc&&gc.sF&&gc.sF.material.map){g.gs=new THREE.Sprite(new THREE.SpriteMaterial({map:gc.sF.material.map,transparent:true,depthWrite:false,color:GHOST_DEF[g.i].c}));g.gs.scale.set(.01,.01,1);scene.add(g.gs)}
   g.cs=new THREE.Sprite(new THREE.SpriteMaterial({map:candyTex(g.i),transparent:true,depthWrite:false}));g.cs.scale.set(.01,.01,1);scene.add(g.cs);
   burst(p.x,gy+.9,p.z,36,SPARK,3,2);AUDIO.sfx('found');
-  toast(GHOST_DEF[g.i].name+'からの プレゼント！\n'+CANDY[g.i].n+'を もらったよ！'+(first?'\n地図をタッチすると ワープできるよ':''),first?3600:2800);
+  toast(GHOST_DEF[g.i].name+'からの プレゼント！\n'+CANDY[g.i].n+'を もらったよ！',2800);
 }
+function candyGuide(){ // はじめて おかしを もらったときの つかいかた
+  const show=()=>{$('spotTitle').textContent='おかしの つかいかた';$('spotCap').textContent='もらった おかしは 地図に のるよ。\n画面の すみの 小さな 地図を タッチすると「おかしのワープ」が ひらくよ。\nおかしを タッチすると、その場所へ ワープできるよ！\nおかしは ぜんぶで 6こ。街の あちこちの プレゼントを さがしてね';$('spotLink').hidden=true;$('spotNone').hidden=true;openModal('mSpot')};
+  if(state.mode==='play')show();else{const w=setInterval(()=>{if(state.mode==='play'){clearInterval(w);show()}},500)}}
 function giftTick(dt,t,playing){
   if(!G.length)return;
   const want=save.cand.length?'auto':'none';if(mini.style.pointerEvents!==want){mini.style.pointerEvents=want;mini.classList.toggle('tap',!!save.cand.length)}
@@ -5191,7 +5197,7 @@ function giftTick(dt,t,playing){
         g.gs.visible=fade>0;g.gs.material.opacity=fade;g.gs.scale.set(1.6*GC_ASP.f*k+.01,1.6*k+.01,1);g.gs.position.set(p.x-.55,gy+.5+k*1.0,p.z)}
       if(g.cs){if(el>.35){const k=Math.min((el-.35)/.45,1),b=1-Math.pow(1-k,3),fade=el<1.9?1:Math.max(0,1-(el-1.9)/.5);
         g.cs.material.opacity=fade;g.cs.scale.setScalar(1.05*b+.01);g.cs.position.set(p.x+.55,gy+1.0+b*1.1+Math.sin(el*5)*.05,p.z)}}
-      if(el>2.5){gDrop(g);g.phase=2;g.grp.visible=state.editOn;
+      if(el>2.5){gDrop(g);g.phase=2;g.grp.visible=state.editOn;if(g.first){g.first=false;candyGuide()}
         if(save.cand.length>=6)toast('おかしが ぜんぶ そろったよ！\n地図をタッチすると ワープできるよ',3400)}
     }
   });
@@ -5342,7 +5348,7 @@ function potionTick(dt,t,playing){
   if(state.debug)buildDebug();
   let last=performance.now(),first=true;
   function loop(now){
-    const dt=Math.min(.05,(now-last)/1000);last=now;
+    const dt=Math.max(0,Math.min(.05,(now-last)/1000));last=now;
     update(dt);sky.position.copy(camera.position);
     renderer.render(scene,camera);paperHole();dressPreviewRender(dt);
     if(first){first=false;$('loading').style.display='none'}
@@ -5355,7 +5361,7 @@ function potionTick(dt,t,playing){
     let tot=0;for(let j=0;j<=n;j++)for(let i=0;i<=n;i++)if(free(i,j))tot++;
     const pt=(x,z)=>seen[idx(Math.round((x+40)/st),Math.round((z+40)/st))]===1;
     return {reached:c,freeCells:tot,pct:Math.round(c/tot*100),gateN:pt(0,-38),fountain:pt(2,12),plazaS:pt(0,30),plazaN:pt(0,-28),stairs:STAIRS.map(s=>pt(s.x,(s.a+s.b)/2))}};
-  window.__usapon={NPC,shopViewOut,flowerEnter,flowerExit,flwState:()=>FLW,input,zakkaEnter,zakkaExit,zakState:()=>ZAK,cafeEnter,cafeExit,cafeState:()=>CAFE,reach,tpTo,state,player,cam,panels:()=>panels,save:()=>save,warnings,slots,seats,spots:()=>spots,setFly,presentReset,presentPos:()=>PRESENT&&presentPos(),props:()=>ED.list,layout:()=>edExport(false),cordTest:{GARL,cordAdd,cordsExport,cordsLoad,cordRemove,cordKey,cordDefault,cordChanged}};
+  window.__usapon={NPC,shopViewOut,gifts:()=>G,flowerEnter,flowerExit,flwState:()=>FLW,input,zakkaEnter,zakkaExit,zakState:()=>ZAK,cafeEnter,cafeExit,cafeState:()=>CAFE,reach,tpTo,state,player,cam,panels:()=>panels,save:()=>save,warnings,slots,seats,spots:()=>spots,setFly,presentReset,presentPos:()=>PRESENT&&presentPos(),props:()=>ED.list,layout:()=>edExport(false),cordTest:{GARL,cordAdd,cordsExport,cordsLoad,cordRemove,cordKey,cordDefault,cordChanged}};
 
 })();
 })();
