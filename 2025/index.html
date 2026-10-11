@@ -1,5 +1,6 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1a1033"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="うさぽんハロウィン2025"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><link rel="icon" href="icons/icon-192.png"><link rel="apple-touch-icon" href="icons/apple-touch-icon.png"><script>if("serviceWorker" in navigator&&/^https:/.test(location.protocol)&&/github\.io$/.test(location.hostname)){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}</script><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
-<title>うさぽんハロウィン2025</title>
+<title>うさぽん村のハロウィン ピヨちゃんのパネル探し（2025年版）</title>
+<meta name="description" content="ピヨちゃんになって、うさぽん村を歩こう。かくれたうさぎのパネルを見つけて、写真をとるハロウィンのゲームです。ブラウザですぐ遊べます（無料）。"><meta property="og:type" content="website"><meta property="og:site_name" content="うさぽん"><meta property="og:title" content="うさぽん村のハロウィン ピヨちゃんのパネル探し（2025年版）"><meta property="og:description" content="ピヨちゃんになって、うさぽん村を歩こう。かくれたうさぎのパネルを見つけて、写真をとるハロウィンのゲームです。ブラウザですぐ遊べます（無料）。"><meta property="og:url" content="https://usapon-jp.github.io/usapon-machi/2025/"><meta property="og:image" content="https://usapon-jp.github.io/usapon-machi/ogp.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
@@ -554,7 +555,7 @@ body.selfie #camFlip{background:rgba(255,226,168,.42);border-color:#ffe2a8;color
       <div class="r"><span>ドラッグ</span><em>視点をまわす</em></div>
       <div class="r"><span>ホイール</span><em>ズーム</em></div>
       <div class="r"><span><kbd>F</kbd></span><em>パネルの前で写真</em></div>
-      <div class="r"><span><kbd>E</kbd></span><em>いす・テレビで行動</em></div>
+      <div class="r"><span><kbd>E</kbd></span><em>いすにすわる</em></div>
     </div>
     <div class="rows hp" id="hp-sp">
       <div class="r"><span>左のスティック</span><em>丸の中＝ゆっくり<br>丸の外まで＝スタスタ</em></div>
@@ -590,6 +591,7 @@ body.selfie #camFlip{background:rgba(255,226,168,.42);border-color:#ffe2a8;color
         <div class="sethint" style="color:var(--mist)">※パネルの写真には、いつも わくがつきます。</div>
       </div>
     </div>
+    <div class="actions"><a class="btn sub" id="btnGuide" href="https://usa-pon.com/halloween/game/guide" target="_blank" rel="noopener" style="text-decoration:none">あそびかたガイド・ヒント</a></div>
     <div class="actions"><button class="btn sub" id="btnHelpClose" type="button">とじる</button></div>
     <div class="actions"><button class="btn sub" id="btnEditMode" type="button" hidden style="font-size:12px;opacity:.8">配置を編集する（おとな用）</button><button class="btn sub" id="btnTestBroom" type="button" hidden style="font-size:12px;opacity:.8">テスト用：ほうきを使えるようにする</button></div>
   </div>
@@ -758,23 +760,11 @@ body.selfie #camFlip{background:rgba(255,226,168,.42);border-color:#ffe2a8;color
   ],
   "spots": [
     {
-      "type": "tv",
-      "title": "むかしのテレビ",
-      "caption": "うさぽんの動画が見られるよ。\n（テスト用：リンクは仮です）",
-      "url": "",
-      "button": "みる",
-      "button2": "YouTubeをひらく（べつタブ）",
-      "signText": "うさぽんTV",
-      "x": -5.8,
-      "z": 10.5,
-      "rot": 60
-    },
-    {
       "type": "shop",
       "shop": "zakka",
       "title": "ざっかやさんのネットショップ",
-      "caption": "うさぽんのグッズはこちら。\n（テスト用：リンクは仮です）",
-      "url": "",
+      "caption": "うさぽんのハロウィングッズはこちら。",
+      "url": "https://suzuri.jp/usaponshop/sections/71518",
       "button": "みる",
       "button2": "SUZURIをひらく（べつタブ）",
       "signText": "うさぽんグッズ"
