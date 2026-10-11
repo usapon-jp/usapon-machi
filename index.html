@@ -1,5 +1,6 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1a1033"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="うさぽん街"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><link rel="icon" href="icons/icon-192.png"><link rel="apple-touch-icon" href="icons/apple-touch-icon.png"><script>if("serviceWorker" in navigator&&/^https:/.test(location.protocol)&&/github\.io$/.test(location.hostname)){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}</script><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
-<title>うさぽん街 うねうね版</title>
+<title>うさぽん村のハロウィン ピヨちゃんのパネル探し</title>
+<meta name="description" content="ピヨちゃんになって、うさぽん村を歩こう。かくれたうさぎのパネルを見つけて、写真をとるハロウィンのゲームです。ブラウザですぐ遊べます（無料）。"><meta property="og:type" content="website"><meta property="og:site_name" content="うさぽん"><meta property="og:title" content="うさぽん村のハロウィン ピヨちゃんのパネル探し"><meta property="og:description" content="ピヨちゃんになって、うさぽん村を歩こう。かくれたうさぎのパネルを見つけて、写真をとるハロウィンのゲームです。ブラウザですぐ遊べます（無料）。"><meta property="og:url" content="https://usapon-jp.github.io/usapon-machi/"><meta property="og:image" content="https://usapon-jp.github.io/usapon-machi/ogp.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
@@ -98,6 +99,7 @@ body.touch .keys{display:none}
 .modal{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top,0px)) 16px max(16px,env(safe-area-inset-bottom,0px));box-sizing:border-box;background:rgba(14,8,32,.62);z-index:20;pointer-events:auto;-webkit-user-select:none;user-select:none}
 .modal.on{display:flex}
 .sheet{width:min(520px,100%);max-height:100%;overflow:auto;background:linear-gradient(180deg,#2d1d58,#1d1240);border:1px solid rgba(255,201,94,.5);border-radius:20px;padding:22px 22px 20px;box-sizing:border-box;box-shadow:0 10px 50px rgba(0,0,0,.5),0 0 40px rgba(255,138,42,.18)}
+#introTitle{text-align:center;margin-bottom:4px}#introTitle small{display:block;font-size:.62em;color:var(--paper);opacity:.85;margin-bottom:2px}
 .sheet h1{font-family:var(--font-display);font-weight:400;font-size:25px;line-height:1.3;margin:0;color:var(--lantern);text-wrap:balance}
 .sheet h2{font-family:var(--font-display);font-weight:400;font-size:19px;margin:0;color:var(--lantern);text-wrap:balance}
 .sheet p{margin:10px 0 0;line-height:1.75}
@@ -569,8 +571,8 @@ body.dressing #quest,body.dressing #mini,body.dressing #joy{visibility:hidden} /
 
 <div class="modal on" id="mIntro">
   <div class="sheet">
-    <h1 id="introTitle" hidden></h1>
-    <p class="lead">小さな街を歩いて、ハロウィンを楽しもう。<br>パネルを見つけたら、写真を撮ってね。</p>
+    <h1 id="introTitle"><small>うさぽん村のハロウィン</small>ピヨちゃんの<wbr>パネル探し</h1>
+    <p class="lead"><span class="nb">小さな街を歩いて、</span><span class="nb">ハロウィンを楽しもう。</span><br>パネルを見つけたら、写真を撮ってね。</p>
     <span id="introMission" hidden></span><span id="introTeaser" hidden></span>
     <div id="inAppWarn" hidden><b>LINEやインスタのアプリ内で開いていませんか？</b><br>この画面だと、写真の保存がうまくいかないことがあります。あとでブラウザ（Safari・Chrome）で開き直すと、進み具合も引きつがれません。<br><b>はじめからブラウザで開いてあそんでね。</b><br><button class="btn sub" id="btnCopyUrl" type="button">URLをコピー</button></div>
     <div class="actions"><button class="btn" id="btnStart" type="button">街へ出かける</button></div>
@@ -593,7 +595,7 @@ body.dressing #quest,body.dressing #mini,body.dressing #joy{visibility:hidden} /
       <div class="r"><span>ドラッグ</span><em>視点をまわす</em></div>
       <div class="r"><span>ホイール</span><em>ズーム</em></div>
       <div class="r"><span><kbd>F</kbd></span><em>パネルの前で写真</em></div>
-      <div class="r"><span><kbd>E</kbd></span><em>いす・テレビで行動</em></div>
+      <div class="r"><span><kbd>E</kbd></span><em>いすにすわる・お店に入る</em></div>
     </div>
     <div class="rows hp" id="hp-sp">
       <div class="r"><span>左のスティック</span><em>丸の中＝ゆっくり<br>丸の外まで＝スタスタ</em></div>
@@ -624,7 +626,7 @@ body.dressing #quest,body.dressing #mini,body.dressing #joy{visibility:hidden} /
         <div class="setl" style="margin-top:10px">ふつうに とった写真に わくを…</div>
         <div class="frameopts" id="frameOpts">
           <button type="button" data-f="0"><div class="fs plain"><b></b></div><span>つけない</span></button>
-          <button type="button" data-f="1"><div class="fs framed"><b></b><u>うさぽんのハロウィン街</u><s>2026.10.8</s></div><span>つける</span></button>
+          <button type="button" data-f="1"><div class="fs framed"><b></b><u>うさぽん村のハロウィン</u><s>2026.10.8</s></div><span>つける</span></button>
         </div>
         <div class="sethint" style="color:var(--mist)">※パネルの写真には、いつも わくがつきます。</div>
       </div>
@@ -733,7 +735,7 @@ body.dressing #quest,body.dressing #mini,body.dressing #joy{visibility:hidden} /
 
 <script type="application/json" id="panel-data">
 {
-  "title": "うさぽんのハロウィン街",
+  "title": "うさぽん村のハロウィン",
   "mission": "うさぎたちを探して撮影しよう",
   "teaser": "ぜんぶ見つけると…？",
   "completion": {
@@ -818,23 +820,11 @@ body.dressing #quest,body.dressing #mini,body.dressing #joy{visibility:hidden} /
   ],
   "spots": [
     {
-      "type": "tv",
-      "title": "むかしのテレビ",
-      "caption": "うさぽんの動画が見られるよ。\n（テスト用：リンクは仮です）",
-      "url": "",
-      "button": "みる",
-      "button2": "YouTubeをひらく",
-      "signText": "うさぽんTV",
-      "x": -5.8,
-      "z": 10.5,
-      "rot": 60
-    },
-    {
       "type": "shop",
       "shop": "zakka",
       "title": "ざっかやさんのネットショップ",
-      "caption": "うさぽんのグッズはこちら。\n（テスト用：リンクは仮です）",
-      "url": "",
+      "caption": "うさぽんのハロウィングッズはこちら。",
+      "url": "https://suzuri.jp/usaponshop/sections/71518",
       "button": "みる",
       "button2": "SUZURIをひらく",
       "signText": "うさぽんグッズ"
@@ -5430,7 +5420,7 @@ function potionTick(dt,t,playing){
 (async function boot(){
   DATA=await loadData();
   $('qTitle').textContent=DATA.mission||'うさぎたちを探して撮影しよう';
-  $('introTitle').textContent=DATA.title||'うさぽんのハロウィン街';
+  
   $('introMission').textContent=DATA.mission||'';$('introTeaser').textContent=DATA.teaser||'';
   buildPanels();buildSpots();buildPresent();buildGifts();candySync();buildPotion();piyoDress.init();buildGlow();layoutInit();rotateCafePon();cafeModels();flowerModels();flyUI();drawMapBase();refreshHUD();
   cam.yaw=1.4;player.face=Math.atan2(-Math.sin(cam.yaw),-Math.cos(cam.yaw));onResize(); // opening view: Piyo just inside the gate, welcome sign + first panel ahead-left, town beyond
