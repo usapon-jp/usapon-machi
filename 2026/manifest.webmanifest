@@ -1,7 +1,8 @@
 {
-  "name": "うさぽんのハロウィン街",
-  "short_name": "うさぽん街",
-  "description": "ピヨちゃんと歩く、うさぽんのハロウィン街",
+  "id": "./",
+  "name": "うさぽん村のハロウィン2026",
+  "short_name": "ハロウィン2026",
+  "description": "ピヨちゃんと歩く、うさぽん村のハロウィン2026",
   "start_url": "./",
   "scope": "./",
   "display": "fullscreen",
