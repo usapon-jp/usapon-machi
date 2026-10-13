@@ -4658,18 +4658,28 @@ function springExit(){
   SPR.face=Math.atan2(SPR.land.x-SPR.from.x,SPR.land.z-SPR.from.z);
 }
 const _sc=new THREE.Vector3(),_sq=new THREE.Quaternion(),_sd=new THREE.Vector3(),_st=new THREE.Vector3();
-// lawn decorations (flowers, grass tufts, fallen leaves) that were scattered where the pond now is: hidden inside the shore
-// line and the rim stones, so nothing grows out of the water or pokes into Piyo's face at the edge
-function sprClearRim(){
-  sprClearRim.done=true;const m=new THREE.Matrix4(),v=new THREE.Vector3(),zero=new THREE.Matrix4().makeScale(0,0,0);let n=0;
-  scene.updateMatrixWorld(true);
-  scene.traverse(o=>{if(!o.isInstancedMesh)return;for(let q=o;q;q=q.parent)if(q===SPRING.group)return;let hit=false;
+// flowers and grass tufts of the lawn that stand in the shallow water: they stay (they look nice), but Piyo's head and hat
+// glide around them instead of passing through (positions collected once, cheap circle tests while in the water)
+function sprPlants(){
+  if(sprPlants.l)return sprPlants.l;const l=sprPlants.l=[],m=new THREE.Matrix4(),v=new THREE.Vector3();scene.updateMatrixWorld(true);
+  scene.traverse(o=>{if(!o.isInstancedMesh)return;for(let q=o;q;q=q.parent)if(q===SPRING.group)return;
     for(let i=0;i<o.count;i++){o.getMatrixAt(i,m);v.setFromMatrixPosition(m).applyMatrix4(o.matrixWorld);
-      if(v.y<SPR.level+.9&&sprRho(v.x,v.z)<1.22){o.setMatrixAt(i,zero);hit=true;n++}}
-    if(hit)o.instanceMatrix.needsUpdate=true});
-  return n}
+      if(v.y>SPR.level+.1&&v.y<SPR.level+.5&&sprRho(v.x,v.z)<1.3)l.push([v.x,v.z])}}); // standing plants only (flat fallen leaves lie under the surface)
+  return l}
+// points of Piyo's body seen from above (offsets: along the head direction, sideways), for the shore and the plants
+const SPR_FOOT_FLOAT=[[0,0,.62],[.5,0,.8],[.9,.2,.84],[.9,-.2,.84],[.45,.42,.8],[.45,-.42,.8],[-.15,0,.66]], // [head-ward, side, max rho]
+      SPR_FOOT_SWIM=[[0,0,.68],[-.45,0,.8],[.3,0,.8]];
+function sprFootprint(px,pz,face,fw){ // returns the push that keeps every point inside the water and out of the plants
+  const P=fw>.5?SPR_FOOT_FLOAT:SPR_FOOT_SWIM,hx=-Math.sin(face),hz=-Math.cos(face),sx=Math.cos(face),sz=-Math.sin(face),pl=sprPlants();
+  let ox=0,oz=0,near=0;
+  for(let it=0;it<3;it++){let mx=0,mz=0;
+    for(const [a,b,L] of P){const qx=px+ox+hx*a+sx*b,qz=pz+oz+hz*a+sz*b,lx=qx-SPR.X,lz=qz-SPR.Z,rr=SPRING.rhoAt(lx,lz);
+      if(it===0)near=Math.max(near,sEase((rr-(L-.12))/.12));
+      if(rr>L){const k=L/rr-1;mx+=lx*k;mz+=lz*k}
+      for(const c of pl){const dx=qx-c[0],dz=qz-c[1],d=Math.hypot(dx,dz);if(d<.42&&d>1e-4){mx+=dx/d*(.42-d);mz+=dz/d*(.42-d)}}}
+    if(!mx&&!mz)break;ox+=mx;oz+=mz}
+  return [ox,oz,near]}
 function springTick(dt,t,playing){
-  if(!sprClearRim.done)sprClearRim();
   if(SPR.demo){springDemoTick(dt);return}
   const visibleNear=Math.hypot(camera.position.x-SPR.X,camera.position.z-SPR.Z)<70;
   // ask once when walking up to the pond
@@ -4705,12 +4715,13 @@ function springTick(dt,t,playing){
   // floating: a long, soft glide (accelerates gently, coasts to a stop when the stick is let go)
   const ka=Math.min(1,dt*(SPR.phase==='toEdge'?2.4:floating?(mag>.05?1.4:.9):(mag>.05?2.4:1.3)));SPR.vx+=(tx-SPR.vx)*ka;SPR.vz+=(tz-SPR.vz)*ka;
   { // stay in the deep part: slow down near the shore, then a soft wall (no bounce, no pulling back to the middle)
-    const lx=player.pos.x-SPR.X,lz=player.pos.z-SPR.Z,rr=SPRING.rhoAt(lx,lz),nl=Math.hypot(lx/SPRING.o.sx,lz)||1,ux=lx/SPRING.o.sx/nl,uz=lz/nl,vn=SPR.vx*ux+SPR.vz*uz;
-    const near=sEase((rr-(SPR.swimR-.12))/.12);if(vn>0&&near>0){SPR.vx-=vn*ux*near;SPR.vz-=vn*uz*near}
+    const lx=player.pos.x-SPR.X,lz=player.pos.z-SPR.Z,nl=Math.hypot(lx/SPRING.o.sx,lz)||1,ux=lx/SPRING.o.sx/nl,uz=lz/nl,vn=SPR.vx*ux+SPR.vz*uz;
+    const near=SPR.phase==='swim'?sprFootprint(player.pos.x,player.pos.z,player.face,SPR.fw)[2]:0;if(vn>0&&near>0){SPR.vx-=vn*ux*near;SPR.vz-=vn*uz*near}
   }
   let nx=player.pos.x+SPR.vx*dt,nz=player.pos.z+SPR.vz*dt;
-  { const lx=nx-SPR.X,lz=nz-SPR.Z,rr=SPRING.rhoAt(lx,lz);
-    if(rr>SPR.swimR){const k=SPR.swimR/rr;nx=SPR.X+lx*k;nz=SPR.Z+lz*k;const nl=Math.hypot(lx/SPRING.o.sx,lz)||1,ux=lx/SPRING.o.sx/nl,uz=lz/nl,vn=SPR.vx*ux+SPR.vz*uz;if(vn>0){SPR.vx-=vn*ux;SPR.vz-=vn*uz}}
+  if(SPR.phase==='swim'){ // the whole body (head, hat, arms) stays off the rocks and out of the plants; the push only removes speed going into them
+    const f=sprFootprint(nx,nz,player.face,SPR.fw),l=Math.hypot(f[0],f[1]);
+    if(l>1e-5){nx+=f[0];nz+=f[1];const ux=f[0]/l,uz=f[1]/l,vn=SPR.vx*ux+SPR.vz*uz;if(vn<0){SPR.vx-=vn*ux;SPR.vz-=vn*uz}}
   }
   player.pos.x=nx;player.pos.z=nz;
   const spd=Math.hypot(SPR.vx,SPR.vz);
@@ -4841,7 +4852,7 @@ function springRender(){
   if(isTouch&&SPR.cb>.9)SPRING.materials.water.uniforms.uReflOn.value=0;
   else SPRING.renderReflection(renderer,scene,camera,isTouch?.3:.42);
 }
-window.__spring={SPR,SPRING,enter:springEnter,exit:springExit,ask:springAsk,demo:springDemo,toggleFloat:sprToggleMode,shoot:sprShoot,pose:SPR_FLOAT_POSE};
+window.__spring={SPR,SPRING,plants:sprPlants,foot:sprFootprint,enter:springEnter,exit:springExit,ask:springAsk,demo:springDemo,toggleFloat:sprToggleMode,shoot:sprShoot,pose:SPR_FLOAT_POSE};
 /* ===== /HEALING SPRING ===== */
 
 /* ===== CAFE INTERIOR ===== (カフェの店内: 街から離れた別エリア。入店でここへ移動し、退店でドア前に戻る)
