@@ -40,7 +40,7 @@ const MODES={
     padLvl:.14, padCutLo:900, padCutHi:2600, bassLvl:.018, chordMin:28, chordMax:52,
     glassRate:1/22, glassLvl:.04, epRate:1/60, epLvl:.024, sparkRate:1/36, sparkLvl:.013,
     waterLvl:1.1, flowFreq:820, babble:.3, plopRate:1/48, dropRate:1/18, wash:.14,
-    harpLvl:.024, birdLvl:.0028,
+    harpLvl:.034, birdLvl:.0028,
     rev:.5, lp:8200
   }
 };
@@ -63,7 +63,7 @@ function create(ctx,dest,opts){
 
   /* ゆらぎ(1/f): 用途ごとに独立 */
   const S=Pink(rand,8,10);                 // 数十秒〜十数分で動く1/f: 場面の長さ・ハープの間・鳥の間隔に使う
-  const SP=[0,1,2,3].map(()=>Pink(rand,7,6)); // 声ごとのゆっくりした出入り(1/f)
+  const SP=[0,1,2,3].map(()=>Pink(rand,7,10)); // 声ごとのゆっくりした出入り(1/f)
   const P={pad:Pink(rand,10,2.5),cut:Pink(rand,10,2.5),water:Pink(rand,10,2),tex:Pink(rand,9,1.5),dens:Pink(rand,11,2.5),wide:Pink(rand,9,3)}; // 最速の揺れでも周期 約3〜5秒
 
   /* ---------- 構築 ---------- */
@@ -143,10 +143,10 @@ function create(ctx,dest,opts){
     // ハープ(主役の一つ): 倍音を持つ波形1本 + ローパスの減衰で「爪弾いたあとだんだん丸くなる」音にする
     N.harpBus=gain(mf('harp')*T.harp);N.harpBus.connect(N.mix);
     {const s=gain(.6);N.harpBus.connect(s);s.connect(N.revIn);const e=gain(.1);N.harpBus.connect(e);e.connect(N.echoIn)}
-    N.harpWave=ctx.createPeriodicWave(new Float32Array(9),new Float32Array([0,1,.55,.32,.18,.1,.06,.035,.02]));
+    N.birdWave=ctx.createPeriodicWave(new Float32Array(4),new Float32Array([0,1,.35,.12]));
     // 遠景の鳥: 高域をおさえ、ほとんどを残響に送って「遠く」に置く
     N.birdBus=gain(mf('birds')*T.birds);
-    {const bl=biq('lowpass',5200,.4),bd=gain(.4),bs=gain(.95);N.birdBus.connect(bl);bl.connect(bd);bd.connect(N.mix);bl.connect(bs);bs.connect(N.revIn)}
+    {const bl=biq('lowpass',3800,.4),bd=gain(.3),bs=gain(.95);N.birdBus.connect(bl);bl.connect(bd);bd.connect(N.mix);bl.connect(bs);bs.connect(N.revIn)}
     N.curve=new Float32Array(64);for(let i=0;i<64;i++){const x=i/63;N.curve[i]=Math.sin(x*Math.PI/2)**2}
   }
 
@@ -202,37 +202,49 @@ function create(ctx,dest,opts){
     const rv=gain(.5);p.connect(rv);rv.connect(N.revIn); // 余韻は残響にまかせる
     o.start(t);o.stop(t+dur*1.6);cleanup(o,[o,g,lp,p,rv]);reg(t+dur*1.6+.05)}
   function plop(t){drop(t,false);L(t,'plop');stat.events.plop++}
-  /* ハープ1音: 少し離調した2本 + ローパスが閉じていく減衰 + 一瞬の爪弾きノイズ。低い音ほど長く響く */
+  /* ハープ1音(加算合成): 参考録音の測定をもとに、基音と2倍音が主で、3倍音以上は急に小さくする(-9/-14/-25/-33/-40dB)。
+     高い倍音ほど早く消える(減衰時間は基音の 1 / .75 / .5 / .35 / .25 / .2 倍)。立ち上がり直後に約5dB落ちてから
+     ゆっくり響く二段の減衰と、指先が弦に触れる一瞬の低いノイズで「爪弾いた」感じにする。離調ペア(ピアノのうなり)は使わない */
+  const HK=[[1,0,1],[2,-9,.75],[3,-14,.5],[4,-25,.35],[5,-33,.25],[6,-40,.2]]; // [倍音, dB, 減衰倍率]
   function harpNote(t,midi,vel,panv){
     if(!mf('harp'))return;
-    const f=hz(midi),tau=clamp(2.1*Math.pow(2,-(midi-60)/20),.9,4.2),peak=cur.harpLvl*vel,end=t+tau*6;
-    const o=ctx.createOscillator(),o2=ctx.createOscillator(),lp=biq('lowpass',Math.min(7000,f*10),.5),g=gain(0),p=pan(panv),m2=gain(.5);
-    o.setPeriodicWave(N.harpWave);o2.setPeriodicWave(N.harpWave);o.frequency.value=f;o2.frequency.value=f;o2.detune.value=3+R()*2;
-    lp.frequency.setValueAtTime(Math.min(7000,f*10),t);lp.frequency.setTargetAtTime(Math.max(f*2.2,500),t+.01,.45);
-    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(peak,t+.004);g.gain.setTargetAtTime(0,t+.004,tau);
-    o.connect(lp);o2.connect(m2);m2.connect(lp);lp.connect(g);g.connect(p);p.connect(N.harpBus);
-    o.start(t);o2.start(t);o.stop(end);o2.stop(end);
-    const ns=ctx.createBufferSource();ns.buffer=N.bufs[1];const nb=biq('bandpass',Math.min(f*5,6000),1.3),ng=gain(0);
-    ng.gain.setValueAtTime(0,t);ng.gain.linearRampToValueAtTime(peak*.3,t+.002);ng.gain.setTargetAtTime(0,t+.002,.012);
-    ns.connect(nb);nb.connect(ng);ng.connect(p);ns.start(t,R()*8,.12);
-    cleanup(o,[o,o2,m2,lp,g,p,ns,nb,ng]);reg(end+.1)}
-  /* 遠くの鳥: 短いさえずり(2〜4音)かゆるい口笛(2〜3音)。倍音のにごりと息のノイズを少し混ぜて、電子音ぽさを避ける */
+    const f=hz(midi),tau0=clamp(2.2*Math.pow(2,-(midi-60)/20),.9,4.2),peak=cur.harpLvl*vel/1.3;
+    const p=pan(panv),nodes=[p];p.connect(N.harpBus);let lastO=null,end=t;
+    for(const [k,db,dk] of HK){
+      if(f*k>6500)break;
+      const a=peak*Math.pow(10,(db+(k>1?(R()-.5)*6:0))/20),tk=tau0*dk,e=t+.5+tk*6;
+      const o=ctx.createOscillator(),g=gain(0);o.type='sine';o.frequency.value=f*k;o.detune.value=(R()-.5)*2;
+      const bo=k>=3?2.4:k===2?1.4:1;                   // 爪弾いた瞬間は高い倍音が明るく、すぐに丸くなる
+      g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(a*bo,t+.003);
+      g.gain.setTargetAtTime(a*.55,t+.003,k>=3?.05:.09); // 立ち上がり直後の「プルッ」とした粒立ち
+      g.gain.setTargetAtTime(0,t+.5,tk);              // そのあとの長い余韻
+      o.connect(g);g.connect(p);o.start(t);o.stop(e);nodes.push(o,g);if(k===1)lastO=o;if(e>end)end=e} // 一番長く鳴る基音が終わったら後片付け
+    const ns=ctx.createBufferSource();ns.buffer=N.bufs[1];const nl=biq('lowpass',Math.min(1500,f*5),.5),ng=gain(0);
+    ng.gain.setValueAtTime(0,t);ng.gain.linearRampToValueAtTime(peak*.22,t+.002);ng.gain.setTargetAtTime(0,t+.002,.009);
+    ns.connect(nl);nl.connect(ng);ng.connect(p);ns.start(t,R()*8,.1);nodes.push(ns,nl,ng);
+    {const n2=ctx.createBufferSource();n2.buffer=N.bufs[1];const nb=biq('bandpass',2600,1),g2=gain(0); // 弦が指からはじける一瞬の高いノイズ
+     g2.gain.setValueAtTime(0,t);g2.gain.linearRampToValueAtTime(peak*.1,t+.001);g2.gain.setTargetAtTime(0,t+.001,.004);
+     n2.connect(nb);nb.connect(g2);g2.connect(p);n2.start(t,R()*8,.05);nodes.push(n2,nb,g2)}
+    cleanup(lastO,nodes);reg(end+.1)}
+  /* 遠くの鳥(試験・既定はオフ): 倍音をもつ波形、ゆらぐ音程、80〜120Hzの声帯のざらつき、息のノイズを混ぜ、低めの帯域に収めて残響に送る */
+  let birdsOn=!!opts.birds;
   function bird(t){
-    if(!mf('birds'))return 0;
-    const fb=2700+R()*1500,lvl=cur.birdLvl,type=R()<.6?0:1,syl=[];let tt=t;
-    if(type===0){const n=2+(R()*3|0);for(let k=0;k<n;k++){const d=.05+R()*.05,up=R()<.5;syl.push({t:tt,d,f0:fb*(up?.88:1.14)*(.97+R()*.06),f1:fb*(up?1.14:.88)*(.97+R()*.06),fm:90});tt+=d+.06+R()*.08}}
-    else{const n=2+(R()*2|0);let f=fb*1.1;for(let k=0;k<n;k++){const d=.16+R()*.1;syl.push({t:tt,d,f0:f,f1:f*.9,fm:14});f*=.88;tt+=d+.11+R()*.09}}
+    if(!mf('birds')||!birdsOn)return 0;
+    const fb=2300+R()*1200,lvl=cur.birdLvl,type=R()<.6?0:1,syl=[];let tt=t;
+    if(type===0){const n=3+(R()*4|0),rise=R()<.5;for(let k=0;k<n;k++){const d=.04+R()*.03,c=(rise?1:-1)*(k/(n-1)-.5)*.35;syl.push({t:tt,d,f0:fb*(1+c+.08),f1:fb*(1+c-.08),am:80+R()*40,env:Math.sin(Math.PI*(k+.5)/n)});tt+=d+.055+R()*.06}}
+    else{const n=2+(R()*2|0);let f=fb*1.05;for(let k=0;k<n;k++){const d=.16+R()*.1;syl.push({t:tt,d,f0:f,f1:f*.92,am:0,env:1-k*.2});f*=.89;tt+=d+.12+R()*.1}}
     const pn=R()*1.6-.8;
     for(const y of syl){
-      const o=ctx.createOscillator(),m=ctx.createOscillator(),mg=gain(y.fm),g=gain(0),p=pan(pn),end=y.t+y.d*2.4;
-      o.type='sine';m.type='sine';m.frequency.value=type===0?45+R()*30:6;
-      o.frequency.setValueAtTime(y.f0,y.t);o.frequency.exponentialRampToValueAtTime(y.f1,y.t+y.d);
-      g.gain.setValueAtTime(0,y.t);g.gain.linearRampToValueAtTime(lvl,y.t+.012);g.gain.setTargetAtTime(0,y.t+y.d*.55,y.d*.22);
-      m.connect(mg);mg.connect(o.frequency);o.connect(g);g.connect(p);p.connect(N.birdBus);
-      const ns=ctx.createBufferSource();ns.buffer=N.bufs[1];const nb=biq('bandpass',y.f0,4),ng=gain(0);
-      ng.gain.setValueAtTime(0,y.t);ng.gain.linearRampToValueAtTime(lvl*.5,y.t+.012);ng.gain.setTargetAtTime(0,y.t+y.d*.55,y.d*.22);
+      const o=ctx.createOscillator(),am=ctx.createOscillator(),amg=gain(y.am?.28:0),g=gain(0),ag=gain(.72),p=pan(pn),end=y.t+y.d*2.4,l=lvl*(.5+.5*y.env);
+      o.setPeriodicWave(N.birdWave);
+      const c=new Float32Array(8);for(let q=0;q<8;q++){const x=q/7;c[q]=(y.f0*Math.pow(y.f1/y.f0,x))*(1+(R()-.5)*.03)}
+      o.frequency.setValueCurveAtTime(c,y.t,y.d);am.type='sine';am.frequency.value=y.am||1;
+      g.gain.setValueAtTime(0,y.t);g.gain.linearRampToValueAtTime(l,y.t+.006);g.gain.setTargetAtTime(0,y.t+y.d*.5,y.d*.22);
+      am.connect(amg);amg.connect(ag.gain);o.connect(ag);ag.connect(g);g.connect(p);p.connect(N.birdBus);
+      const ns=ctx.createBufferSource();ns.buffer=N.bufs[1];const nb=biq('bandpass',y.f0*1.1,3),ng=gain(0);
+      ng.gain.setValueAtTime(0,y.t);ng.gain.linearRampToValueAtTime(l*.8,y.t+.006);ng.gain.setTargetAtTime(0,y.t+y.d*.5,y.d*.22);
       ns.connect(nb);nb.connect(ng);ng.connect(p);ns.start(y.t,R()*8,y.d*2.4);
-      o.start(y.t);m.start(y.t);o.stop(end);m.stop(end);cleanup(o,[o,m,mg,g,p,ns,nb,ng]);reg(end+.1)}
+      o.start(y.t);am.start(y.t);o.stop(end);am.stop(end);cleanup(o,[o,am,amg,ag,g,p,ns,nb,ng]);reg(end+.1)}
     stat.events.bird++;L(t,'bird',{kind:type,n:syl.length});return tt-t}
 
   /* ---------- 和音 ---------- */
@@ -283,12 +295,13 @@ function create(ctx,dest,opts){
      slots=和音の4声の出入り, bass=低音, bed=水と空気の前に出る度合い, hg=ハープの休みの長さ(秒), hn=1フレーズの音数,
      glass/bird=きらめき・鳥の出やすさ。どの場面でも水音と薄い和音は鳴り続け、無音にはならない */
   const SCN={
-    water:{slots:[.55,.5,.12,0],bass:.6,bed:1.55,hg:[30,60],hn:[1,1],glass:0,bird:1.7,dur:[22,42]},
-    chord:{slots:[1,1,1,.9],bass:1,bed:1,hg:[26,55],hn:[3,4],glass:1,bird:1,dur:[28,52]},
-    harp: {slots:[.85,.7,.4,0],bass:.8,bed:.9,hg:[3.5,13],hn:[4,7],glass:.3,bird:.5,dur:[36,70]}
+    water:{slots:[.42,.32,.05,0],bass:.5,bed:1.6,hg:[30,60],hn:[1,1],glass:0,bird:1.7,dur:[22,42]},
+    chord:{slots:[.9,.85,.7,.5],bass:.9,bed:1,hg:[26,55],hn:[3,4],glass:1,bird:1,dur:[28,52]},
+    harp: {slots:[.8,.6,.3,0],bass:.7,bed:.95,rest:[.16,.05,.02,0],hg:[6,18],hn:[4,7],glass:.3,bird:.5,dur:[36,70]}
   };
   const NEXT={water:[['chord',.6],['harp',.4]],chord:[['harp',.55],['water',.45]],harp:[['water',.55],['chord',.45]]};
-  const SL=[],HW=[]; // 予約済みの場面 / ハープの鳴っている時間帯
+  const SL=[],HW=[],RS=[],DP=[]; // DP: 和音の声が順番にゆっくり引く時間帯
+  // // 予約済みの場面 / ハープの鳴っている時間帯 / 声ごとの直前の目標値
   let forced=['harp','water'];
   function sceneAt(t){for(let i=SL.length-1;i>=0;i--)if(SL[i].a<=t)return SL[i];return SL[0]}
   function addScene(a,first){
@@ -323,7 +336,7 @@ function create(ctx,dest,opts){
   const duckAt=t=>{for(const w of HW)if(t>=w.a&&t<w.b)return .74;return 1};
 
   /* ---------- スケジューラ ---------- */
-  const EV={glass:0,ep:0,spark:0,plop:0,bloop:0,harp:0,bird:0,lastGlassMidi:[]};
+  const EV={glass:0,ep:0,spark:0,plop:0,bloop:0,harp:0,bird:0,dip:0,lastGlassMidi:[]};
   const poisson=(rate,min)=>Math.max(min||0,-Math.log(1-R()*.999)/rate);
   const dens=()=>Math.exp(.85*P.dens.v); // 0.43〜2.3倍の範囲でゆらぐ頻度
   function pickGlassMidi(lo,hi,pcsOverride){
@@ -336,8 +349,11 @@ function create(ctx,dest,opts){
     while(EV.harp<until){const t=EV.harp,sc=sceneAt(t);let end=t;
       if(t>=t0&&t>=sc.a+(sc.name==='harp'?5.5:3))end=harpPhrase(t,sc.sc.hn[0],sc.sc.hn[1]);
       const sc2=sceneAt(end).sc;EV.harp=end+lerp(sc2.hg[1],sc2.hg[0],clamp(.5+.45*S.v+(R()-.5)*.5,0,1))}
+    while(EV.dip<until){const t=EV.dip;               // 「和音」の場面では、4つの声のうち1つが9〜18秒かけて順番に引く
+      if(t>=t0&&sceneAt(t).name==='chord'){const d=9+R()*9;DP.push({i:R()*4|0,a:t,b:t+d});if(DP.length>6)DP.shift();L(t,'dip',{d:+d.toFixed(0)})}
+      EV.dip=t+8+R()*10}
     while(EV.bird<until){const t=EV.bird,sc=sceneAt(t).sc;
-      if(t>=t0)bird(t);
+      if(t>=t0&&birdsOn)bird(t);
       EV.bird=t+lerp(110,40,clamp(.5+.45*S.v+(R()-.5)*.5,0,1))/Math.max(.2,sceneAt(t).sc.bird)}
     while(EV.glass<until){const t=EV.glass;
       if(t>=t0&&R()<sceneAt(t).sc.glass){const m=pickGlassMidi(67,84);glass(t,m,cur.glassLvl*(.7+R()*.6),R()*1.4-.7);stat.events.glass++;L(t,'glass',{m})}
@@ -364,16 +380,19 @@ function create(ctx,dest,opts){
     for(const k in target)if(typeof target[k]==='number')cur[k]+=(target[k]-cur[k])*.04;
     const pad=P.pad.step(CTL),cut=P.cut.step(CTL),wat=P.water.step(CTL),tex=P.tex.step(CTL);P.dens.step(CTL);const wide=P.wide.step(CTL);
     const tau=.5,sc=sceneAt(t).sc,sd=S.step(CTL);
-    for(let i=0;i<4;i++)setp(N.slot[i].gain,sc.slots[i]*(1+.12*SP[i].step(CTL)),t,3.5);  // 声が自然に出入りする
-    setp(N.slot[4].gain,sc.bass,t,3.5);
+    // ハープが休んでいるあいだは、和音の声をさらに引く(ゆっくり消え、ハープが戻るときはもっとゆっくり戻る)
+    const rest=sc.rest&&!HW.some(w=>t+1>=w.a&&t<w.b)&&(EV.harp-t)>.5,rf=rest?sc.rest:[1,1,1,1];
+    for(let i=0;i<4;i++){const dip=DP.some(w=>w.i===i&&t>=w.a&&t<w.b)?.2:1,v=sc.slots[i]*rf[i]*dip*(1+.3*SP[i].step(CTL)),up=v>(RS[i]||0);RS[i]=v;setp(N.slot[i].gain,v,t,up?5:1.4)}
+    setp(N.slot[4].gain,sc.bass*(rest?.4:1),t,3);
     setp(N.padOut.gain,mf('pad')*T.pad*cur.padLvl*(1+.09*pad)*duckAt(t),t,.9);                                       // ① パッド音量の微細な強弱
     const cutoff=Math.exp(lerp(Math.log(cur.padCutLo),Math.log(cur.padCutHi),.5+.5*cut)); // ② フィルター周波数(対数でゆらぐ)
     setp(N.padLP.frequency,cutoff,t,tau);
-    setp(N.flowG.gain,.075*sc.bed*(1+.15*wat),t,3);                                               // ③ 水音の強弱
+    const bedK=sc.bed*(rest?1.25:1);
+    setp(N.flowG.gain,.075*bedK*(1+.15*wat),t,3);                                               // ③ 水音の強弱
     setp(N.flowBP.frequency,cur.flowFreq*Math.exp(.2*tex),t,tau);                         //    と質感
-    setp(N.babG.gain,.1*cur.babble*sc.bed*(1+.2*wat+.12*tex),t,3);
-    setp(N.washG.gain,.16*cur.wash*sc.bed*(1+.25*Math.max(wat,-.6)),t,3);
-    setp(N.airG.gain,.03*sc.bed*(1+.25*tex),t,3);
+    setp(N.babG.gain,.1*cur.babble*bedK*(1+.2*wat+.12*tex),t,3);
+    setp(N.washG.gain,.16*cur.wash*bedK*(1+.25*Math.max(wat,-.6)),t,3);
+    setp(N.airG.gain,.03*bedK*(1+.25*tex),t,3);
     setp(N.revWet.gain,cur.rev*.5*(1+.28*wide),t,tau*2);                                   // ⑤ 空間の広がり(残響量)
     setp(N.lp.frequency,cur.lp,t,.5);
     N.pv={pad,cut,wat,tex,dens:P.dens.v,wide,cutoff,sect:sd};
@@ -391,7 +410,7 @@ function create(ctx,dest,opts){
     if(!running){running=true;t0=now+.05;ctlT=now;
       SL.length=0;HW.length=0;forced=['harp','water'];EV.harp=t0+9999;addScene(t0,true);
       CS.nextChord=Infinity;changeChord(t0,true);CS.nextChord=t0+lerp(cur.chordMin,cur.chordMax,.5);
-      EV.glass=t0+7+R()*5;EV.spark=t0+11+R()*6;EV.ep=t0+19+R()*10;EV.plop=t0+9+R()*8;EV.bloop=t0+4+R()*6;EV.bird=t0+22+R()*14;
+      EV.glass=t0+7+R()*5;EV.spark=t0+11+R()*6;EV.ep=t0+19+R()*10;EV.plop=t0+9+R()*8;EV.bloop=t0+4+R()*6;EV.bird=t0+22+R()*14;EV.dip=t0+8+R()*6;DP.length=0;
       for(let i=0;i<8;i++)ctl(now+i*.01); // 初期値を先に入れる
       N.out.gain.cancelScheduledValues(now);N.out.gain.setValueAtTime(0,now);
       N.out.gain.setTargetAtTime(volGain(),now,(fade||7)/4);
@@ -423,8 +442,10 @@ function create(ctx,dest,opts){
     N.glassBus.gain.cancelScheduledValues(t);N.glassBus.gain.setTargetAtTime(mf('glass')*T.glass,t,.15);
     N.harpBus.gain.cancelScheduledValues(t);N.harpBus.gain.setTargetAtTime(mf('harp')*T.harp,t,.15);
     N.birdBus.gain.cancelScheduledValues(t);N.birdBus.gain.setTargetAtTime(mf('birds')*T.birds,t,.15)}
+  function setBirds(on){birdsOn=!!on;if(on&&running)EV.bird=Math.min(EV.bird,ctx.currentTime+12+R()*10)}
   function setMode(m){if(MODES[m]){mode=m;target=MODES[m]}}
-  return {start,stop,dispose,setVolume,setMode,setBalance,pump,
+  function _note(t,m,v,pn){build();harpNote(t,m,v,pn)} // 検査用: ハープ1音だけ鳴らす
+  return {_note,start,stop,dispose,setVolume,setMode,setBalance,setBirds,pump,get birds(){return birdsOn},
     get running(){return running},get mode(){return mode},
     get state(){return {chord:CS.chord,key:CS.key,pv:N.pv,cur,scene:(sceneAt(ctx.currentTime)||{}).name}},
     stats:()=>stat,log,P,CS,_ctl:ctl,_N:N};
