@@ -39,7 +39,7 @@ const MODES={
     pool:['I','IV','vi','V','ii','iii'], keys:[2,9,2,7], // D → A → D → G …(明るい調をゆっくり巡る)
     padLvl:.14, padCutLo:900, padCutHi:2600, bassLvl:.018, chordMin:28, chordMax:52,
     glassRate:1/22, glassLvl:.04, epRate:1/60, epLvl:.024, sparkRate:1/36, sparkLvl:.013,
-    waterLvl:1.1, flowFreq:820, babble:.3, plopRate:1/48, dropRate:1/18, wash:.14,
+    waterLvl:1.1, flowFreq:480, babble:.3, plopRate:1/48, dropRate:1/18, wash:.14,
     harpLvl:.034, birdLvl:.0028,
     rev:.5, lp:8200
   }
@@ -119,17 +119,18 @@ function create(ctx,dest,opts){
      N.padOut.connect(N.mix);const s=gain(.5);N.padOut.connect(s);s.connect(N.revIn);}
 
     /* 水音 */
-    N.water=gain(cur.waterLvl*mf('water')*T.water);N.bed=gain(mf('bed'));N.bed.connect(N.water);N.waterLP=biq('lowpass',2300,.4);N.water.connect(N.waterLP);N.waterLP.connect(N.mix);
+    N.water=gain(cur.waterLvl*mf('water')*T.water);N.bed=gain(.8*mf('bed'));N.bedLP1=biq('lowpass',1400,.5);N.bedLP2=biq('lowpass',1400,.5);N.bed.connect(N.bedLP1);N.bedLP1.connect(N.bedLP2);N.bedLP2.connect(N.water); // 床の音だけ急な高域カット(耳障りな「ザーッ」帯域を削る)
+    N.waterLP=biq('lowpass',2300,.4);N.water.connect(N.waterLP);N.waterLP.connect(N.mix);
     {const s=gain(.16);N.waterLP.connect(s);s.connect(N.revIn)}
     const bufA=noiseBuf(7,11),bufB=noiseBuf(11,23);N.bufs=[bufA,bufB];
     // (1) 流れ: やわらかな「ふわぁ」
     N.flowSrc=src(bufA,1,0);N.flowBP=biq('bandpass',cur.flowFreq,1.4);N.flowG=gain(.075);
-    {const hp=biq('highpass',330,.5);N.flowSrc.connect(hp);hp.connect(N.flowBP);N.flowBP.connect(N.flowG);N.flowG.connect(N.bed)}
+    {const hp=biq('highpass',260,.5);N.flowSrc.connect(hp);hp.connect(N.flowBP);N.flowBP.connect(N.flowG);N.flowG.connect(N.bed)}
     // (2) さざ波のあわ: 中域を、ずれた周期の揺れで細かく揺らす
-    N.babSrc=src(bufB,1.07,2.3);N.babBP=biq('bandpass',1250,1.8);N.babG=gain(.0);N.babAM=gain(.5);
+    N.babSrc=src(bufB,1.07,2.3);N.babBP=biq('bandpass',640,1.3);N.babG=gain(.0);N.babAM=gain(.5);
     {N.babSrc.connect(N.babBP);N.babBP.connect(N.babAM);N.babAM.connect(N.babG);N.babG.connect(N.bed);
      N.lfos=[lfo(2.9,.08,N.babAM.gain),lfo(4.7,.05,N.babAM.gain),lfo(.31,.2,N.babAM.gain)];
-     N.babFreqL=lfo(.21,300,N.babBP.frequency)}
+     N.babFreqL=lfo(.21,140,N.babBP.frequency)}
     // (3) 水辺のうねり(低めの ちゃぷ…ちゃぷ…)
     N.washSrc=src(bufA,.6,3.1);N.washLP=biq('lowpass',520,.6);const washHP=biq('highpass',220,.5);N.washG=gain(0);N.washAM=gain(.6);
     {N.washSrc.connect(washHP);washHP.connect(N.washLP);N.washLP.connect(N.washAM);N.washAM.connect(N.washG);N.washG.connect(N.bed);
