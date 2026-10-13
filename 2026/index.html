@@ -4658,7 +4658,18 @@ function springExit(){
   SPR.face=Math.atan2(SPR.land.x-SPR.from.x,SPR.land.z-SPR.from.z);
 }
 const _sc=new THREE.Vector3(),_sq=new THREE.Quaternion(),_sd=new THREE.Vector3(),_st=new THREE.Vector3();
+// lawn decorations (flowers, grass tufts, fallen leaves) that were scattered where the pond now is: hidden inside the shore
+// line and the rim stones, so nothing grows out of the water or pokes into Piyo's face at the edge
+function sprClearRim(){
+  sprClearRim.done=true;const m=new THREE.Matrix4(),v=new THREE.Vector3(),zero=new THREE.Matrix4().makeScale(0,0,0);let n=0;
+  scene.updateMatrixWorld(true);
+  scene.traverse(o=>{if(!o.isInstancedMesh)return;for(let q=o;q;q=q.parent)if(q===SPRING.group)return;let hit=false;
+    for(let i=0;i<o.count;i++){o.getMatrixAt(i,m);v.setFromMatrixPosition(m).applyMatrix4(o.matrixWorld);
+      if(v.y<SPR.level+.9&&sprRho(v.x,v.z)<1.22){o.setMatrixAt(i,zero);hit=true;n++}}
+    if(hit)o.instanceMatrix.needsUpdate=true});
+  return n}
 function springTick(dt,t,playing){
+  if(!sprClearRim.done)sprClearRim();
   if(SPR.demo){springDemoTick(dt);return}
   const visibleNear=Math.hypot(camera.position.x-SPR.X,camera.position.z-SPR.Z)<70;
   // ask once when walking up to the pond
@@ -4726,12 +4737,12 @@ function sprFloatY(sf,dip,t){ // floating sits higher in the water (lying on her
 // like pBone (rest-frame axes), with a pitch (x) and a roll (z) together
 const _sE=new THREE.Euler(),_sQ=new THREE.Quaternion();
 function sprBone2(n,x,z){const o=piyo.bones[n];if(!o)return;_sQ.setFromEuler(_sE.set(x,0,z));o.b.quaternion.copy(o.pqi).multiply(_sQ).multiply(o.pq).multiply(o.q)}
-const SPR_FLOAT_POSE={lean:-1.18,head:.32,arm:1.5,leg:.18,legOpen:.22,y:.42};
+const SPR_FLOAT_POSE={lean:-1.5,head:-.2,arm:1.6,armF:0,leg:.4,legOpen:.4,y:.18,yawOff:.22}; // flat on her back, hat resting on the water behind her head, lying a little diagonally
 function sprPose(dt,t,k,stroke,sf,sway,fw,direct){
   piyo.body.position.y=0;piyo.body.scale.set(1,1,1);
   const FP=SPR_FLOAT_POSE,swimLean=-.85+.45*k,lean=swimLean+(FP.lean-swimLean)*fw; // on her back, face up to the overhead camera
   SPR.rxs=direct||SPR.rxs===undefined?lean:SPR.rxs+(lean-SPR.rxs)*Math.min(1,dt*2.5);
-  piyo.body.rotation.x=SPR.rxs;piyo.body.rotation.z=(.05*sway-Math.atan(sf[1])*.6)*(1-.6*fw);
+  piyo.body.rotation.x=SPR.rxs;piyo.body.rotation.z=(.05*sway-Math.atan(sf[1])*.6)*(1-.6*fw)+(FP.yawOff||0)*fw;
   if(piyo.bones){piyo.anim(dt,'idle',0,player.phase,t);
     const s1=Math.sin(stroke),s2=Math.sin(stroke+PI),w=.35+.5*k;
     // swimming paddle
@@ -4740,7 +4751,7 @@ function sprPose(dt,t,k,stroke,sf,sway,fw,direct){
     const br=.04*Math.sin(t*1.1),sc=.22*k*Math.sin(stroke);
     const fla=FP.arm+br+sc,fra=-(FP.arm+br-sc);
     la+=(fla-la)*fw;ra+=(fra-ra)*fw;ll+=(FP.leg+.12*k*Math.sin(stroke*.5)-ll)*fw;rl+=(FP.leg-.12*k*Math.sin(stroke*.5)-rl)*fw;hp*=1-fw;
-    pBone('LeftArm',2,la);pBone('RightArm',2,ra);sprBone2('LeftUpLeg',ll,FP.legOpen*fw);sprBone2('RightUpLeg',rl,-FP.legOpen*fw);
+    const af=(FP.armF||0)*fw;sprBone2('LeftArm',af,la);sprBone2('RightArm',af,ra);sprBone2('LeftUpLeg',ll,FP.legOpen*fw);sprBone2('RightUpLeg',rl,-FP.legOpen*fw);
     pBone('Hips',2,hp);sprBone2('Head',FP.head*fw,-.04*s1*(1-fw));pBone('Spine',2,0)}
   blob.visible=false;
 }
@@ -4773,7 +4784,7 @@ function springDemoTick(dt){
   player.pos.set(SPR.X+q.x,0,SPR.Z+q.z);player.pos.y=fl?SPR.level-SPR_FLOAT_POSE.y+sf[0]+.023*Math.sin(2*u)+.008*Math.sin(u+1):SPR.level-SPR.sink+sf[0]+.035*Math.sin(2*u);player.face=q.face;
   const g=piyo.group;g.position.copy(player.pos);g.rotation.y=q.face;
   sprPose(dt,t,q.k,q.stroke,sf,Math.sin(u),SPR.fw,true);
-  if(fl&&piyo.bones){const br=.04*Math.sin(u*1),FP=SPR_FLOAT_POSE;pBone('LeftArm',2,FP.arm+br);pBone('RightArm',2,-(FP.arm+br))} // breathing on the loop period
+  if(fl&&piyo.bones){const br=.04*Math.sin(u*1),FP=SPR_FLOAT_POSE;sprBone2('LeftArm',FP.armF||0,FP.arm+br);sprBone2('RightArm',FP.armF||0,-(FP.arm+br))} // breathing on the loop period
   warm.position.set(player.pos.x,player.pos.y+2.3,player.pos.z);
   const c=_sc.set(SPR.X,SPR.level,SPR.Z),tall=window.innerWidth/window.innerHeight<.8;
   if(fl){c.x+=q.x*.55;c.z+=q.z*.55;
