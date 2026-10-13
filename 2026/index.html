@@ -4336,7 +4336,7 @@ function createSpring(THREE,opt){
         rimG.push(place(g2,x2[0],o.ground,x2[1],0))}}
   }
   if(o.bedStones){
-    for(let k=0;k<11;k++){const a=rnd()*TAU,rho=.25+rnd()*.62,xz=at(a,rho),sz=.12+rnd()*.22,g=stoneGeo(500+k,sz,.5+rnd()*.2);
+    const NB=Math.round(11*(o.R/2.4)*(o.R/2.4));for(let k=0;k<NB;k++){const a=rnd()*TAU,rho=.25+rnd()*.62,xz=at(a,rho),sz=.12+rnd()*.22,g=stoneGeo(500+k,sz,.5+rnd()*.2);
       bakeColors(g,STONE_PAL[(rnd()*6)|0],.15+.3*rnd());
       g.computeBoundingBox();const top=g.boundingBox.max.y;
       bedG.push(place(g,xz[0],Math.min(bedY(xz[0],xz[1])+sz*.12,-.12-top),xz[1],rnd()*TAU))}
@@ -4567,17 +4567,21 @@ function createSpring(THREE,opt){
   return api;
 }
 /* ===== HEALING SPRING (癒しの泉) =====
-   赤い屋根の家の南の草地にある小さな泉。近づくと「泉で泳ぐ？」→ はい で小さくジャンプして水に入り、
-   カメラが真上へ。スティック/キーでゆっくり泳げる。「泉から出る」で岸に跳び上がり、元の操作に戻る。
-   水の見た目は createSpring(下の関数)。ピヨちゃんのモデルには手を入れず、骨のポーズだけ付ける */
-const SPR={X:31.6,Z:37.4,in:false,busy:false,phase:'',t0:0,from:null,to:null,cb:0,cbFrom:0,cbTo:0,cbT0:0,cbDur:1.6,armed:true,asked:false,
-  vx:0,vz:0,dip:0,dipV:0,stroke:0,face:0,emit:0,camT:null,swimR:.6,sink:.44};
-const SPRING=createSpring(THREE,{R:2.4,sx:1.32,depth:1.0,ground:.14,seed:1031,rtScale:isTouch?.5:.7,sun:[-30,50,25]});
+   赤い屋根の家とオレンジの木の南、草地にある泉。近づくと「泉で泳ぐ？」→ はい で小さくジャンプして水に入り、
+   カメラが真上へ。スティック/キーでゆっくり泳げる。水の中ではダッシュボタン(PCは Shift)が「浮かぶ」になり、
+   あおむけで両手を広げてぷかぷか浮かぶ(ゆっくり好きな場所へ動ける)。「UIをかくす」で撮影用に画面をすっきりできる。
+   「泉から出る」で岸に跳び上がり、元の操作に戻る。
+   水の見た目は createSpring(上の関数)。ピヨちゃんのモデルには手を入れず、骨のポーズだけ付ける */
+const SPR={X:33.2,Z:36.3,in:false,busy:false,phase:'',mode:'swim',fw:0,t0:0,from:null,to:null,cb:0,cbFrom:0,cbTo:0,cbT0:0,cbDur:1.6,armed:true,
+  vx:0,vz:0,dip:0,dipV:0,stroke:0,face:0,camT:null,swimR:.68,sink:.44,shoot:false};
+const SPR_SWIM=1.15,SPR_FLOAT=SPR_SWIM*.3; // m/s: swimming, floating (about 30%)
+const SPRING=createSpring(THREE,{R:3.0,sx:1.32,depth:1.1,ground:.14,seed:1031,rtScale:isTouch?.5:.7,sun:[-30,50,25]});
 SPRING.group.position.set(SPR.X,groundY(SPR.X,SPR.Z)-.14,SPR.Z);scene.add(SPRING.group);
-SPRING.setLeaves([{x:-1.1,z:-.5,ax:.26,az:.12,p:0,s:.44,tex:0},{x:1.4,z:.45,ax:.22,az:.10,p:2.1,s:.4,tex:2},{x:.3,z:.95,ax:.24,az:.08,p:4.0,s:.42,tex:1}]);
+// fallen leaves: a little smaller than real-life scale on purpose (they read as leaves next to Piyo, not as plates)
+SPRING.setLeaves([{x:-1.4,z:-.6,ax:.32,az:.15,p:0,s:.33,tex:0},{x:1.75,z:.55,ax:.28,az:.12,p:2.1,s:.30,tex:2},{x:.4,z:1.2,ax:.30,az:.10,p:4.0,s:.32,tex:1},{x:.9,z:-1.5,ax:.24,az:.12,p:5.2,s:.28,tex:3}]);
 SPR.level=SPRING.group.position.y; // water surface height (world)
 // rim colliders: Piyo stops at the stones (swimming ignores them)
-for(let i=0;i<28;i++){const a=i/28*PI*2,p=SPRING.shapeAt(a,1.04);addCircle(SPR.X+p[0],SPR.Z+p[1],.42,SPR.level+.6)}
+for(let i=0;i<34;i++){const a=i/34*PI*2,p=SPRING.shapeAt(a,1.04);addCircle(SPR.X+p[0],SPR.Z+p[1],.42,SPR.level+.6)}
 // the ground has a hole where the pond is (terrain shader discards inside the shore line)
 W.MAT.ground.onBeforeCompile=sh=>{
   sh.uniforms.uSprC={value:new THREE.Vector2(SPR.X,SPR.Z)};
@@ -4588,6 +4592,35 @@ W.MAT.ground.onBeforeCompile=sh=>{
 function springMap(g,toM,MSC){const c=toM(SPR.X,SPR.Z);g.fillStyle='#7fd8c4';g.beginPath();g.ellipse(c[0],c[1],SPRING.o.R*SPRING.o.sx*MSC,SPRING.o.R*MSC,0,0,PI*2);g.fill()}
 const sEase=u=>u<=0?0:u>=1?1:u*u*(3-2*u);
 function sprRho(x,z){return SPRING.rhoAt(x-SPR.X,z-SPR.Z)}
+/* ---- UI while in the water: the dash button becomes 「浮かぶ」/「泳ぐ」, plus 「UIをかくす」 for clean shots ---- */
+(function sprUIInit(){
+  const st=document.createElement('style');
+  st.textContent='#sprUI{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));top:50%;transform:translateY(-50%);display:none;flex-direction:column;gap:8px;z-index:12;pointer-events:auto}'
+   +'body.inSpring #sprUI{display:flex}#sprUI button{font:inherit;font-size:13px;font-weight:800;color:#fff;padding:8px 13px;border-radius:999px;border:1.5px solid rgba(255,255,255,.6);background:rgba(40,26,70,.5);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);cursor:pointer;-webkit-tap-highlight-color:transparent}'
+   +'#sprUI button kbd{font-size:10px;opacity:.75;margin-left:5px;font-family:inherit}body.touch #sprUI #sprModeBtn{display:none}body.touch #sprUI button kbd{display:none}'
+   +'body.inSpring.touch #tbDash .mk-ic{display:none}body.inSpring.touch #tbDash span{display:block;position:static;margin:0;font-size:14px;font-weight:900;color:#fff;letter-spacing:.02em}'
+   +'body.sprShoot #hud>*:not(#joy):not(#tbtns):not(#sprShowUI){visibility:hidden!important}body.sprShoot #joy,body.sprShoot #tbtns,body.sprShoot #tbtns *{opacity:0!important}'
+   +'#sprShowUI{display:none;position:absolute;right:calc(12px + env(safe-area-inset-right,0px));top:calc(10px + env(safe-area-inset-top,0px));z-index:13;pointer-events:auto;font:inherit;font-size:12px;font-weight:800;color:#fff;padding:6px 11px;border-radius:999px;border:1px solid rgba(255,255,255,.45);background:rgba(40,26,70,.28);opacity:.55;cursor:pointer}'
+   +'body.sprShoot #sprShowUI{display:block}';
+  document.head.appendChild(st);
+  const hud=$('hud')||document.body,box=document.createElement('div');box.id='sprUI';
+  box.innerHTML='<button id="sprModeBtn" type="button"><span id="sprModeTxt">浮かぶ</span><kbd>Shift</kbd></button><button id="sprShootBtn" type="button">UIをかくす<kbd>U</kbd></button>';
+  hud.appendChild(box);
+  const show=document.createElement('button');show.id='sprShowUI';show.type='button';show.textContent='UIを表示';hud.appendChild(show);
+  $('sprModeBtn').addEventListener('click',e=>{e.preventDefault();sprToggleMode()});
+  $('sprShootBtn').addEventListener('click',e=>{e.preventDefault();sprShoot(true)});
+  show.addEventListener('click',e=>{e.preventDefault();sprShoot(false)});
+  // touch: the dash button is the float/swim toggle while in the water (runs before the game's own dash handler)
+  window.addEventListener('pointerdown',e=>{if(!SPR.in||!e.target.closest||!e.target.closest('#tbDash'))return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();sprToggleMode()},true);
+  window.addEventListener('keydown',e=>{if(!SPR.in||state.mode!=='play')return;
+    if((e.code==='ShiftLeft'||e.code==='ShiftRight')&&!e.repeat)sprToggleMode();
+    else if(e.code==='KeyU'&&!e.repeat)sprShoot(!SPR.shoot);
+    else if(e.code==='Escape'&&SPR.shoot){sprShoot(false);e.stopImmediatePropagation()}},true);
+})();
+function sprLabels(){const f=SPR.mode==='float',t=f?'泳ぐ':'浮かぶ';const d=$('tbDash');if(d){const sp=d.querySelector('span');if(sp)sp.textContent=SPR.in?t:'ダッシュ'}const m=$('sprModeTxt');if(m)m.textContent=t}
+function sprToggleMode(){if(!SPR.in||SPR.busy||SPR.phase!=='swim')return;SPR.mode=SPR.mode==='float'?'swim':'float';sprLabels()}
+function sprShoot(on){SPR.shoot=!!on&&SPR.in;document.body.classList.toggle('sprShoot',SPR.shoot)}
+function sprUIState(on){document.body.classList.toggle('inSpring',!!on);if(!on){SPR.mode='swim';sprShoot(false)}sprLabels()}
 function springAct(act,playing){
   if(!playing||state.editOn)return act;
   if(SPR.in)return SPR.busy?null:{type:'springExit',label:'泉から出る'};
@@ -4602,11 +4635,12 @@ function sprLayers(on){piyo.group.traverse(o=>{if(on){o.layers.enable(SPRING.o.l
 function springEnter(){
   if(SPR.in||player.fly)return;
   const dx=player.pos.x-SPR.X,dz=player.pos.z-SPR.Z,a=Math.atan2(dz/1,dx/SPRING.o.sx),p=SPRING.shapeAt(a,.42);
-  SPR.in=true;SPR.busy=true;SPR.phase='jumpIn';SPR.t0=state.t;SPR.dur=1.0;
+  SPR.in=true;SPR.busy=true;SPR.phase='jumpIn';SPR.t0=state.t;SPR.dur=1.0;SPR.mode='swim';SPR.fw=0;
   SPR.from=player.pos.clone();SPR.to=new THREE.Vector3(SPR.X+p[0],SPR.level-SPR.sink,SPR.Z+p[1]);
   SPR.face=Math.atan2(SPR.to.x-SPR.from.x,SPR.to.z-SPR.from.z);player.face=SPR.face;
   player.vx=player.vz=0;player.vy=0;SPR.vx=SPR.vz=0;SPR.dip=0;SPR.dipV=0;
-  sprLayers(true);sprCamBlend(1,1.7);try{AUDIO.sfx('jump')}catch(e){}
+  input.dash=false;input.dashLatch=false;const db=$('tbDash');if(db)db.classList.remove('hold');
+  sprLayers(true);sprCamBlend(1,1.7);sprUIState(true);try{AUDIO.sfx('jump')}catch(e){}
 }
 function springExit(){
   if(!SPR.in||SPR.busy)return;
@@ -4615,10 +4649,12 @@ function springExit(){
   if(Math.hypot(dx,dz)<.3)a0=Math.atan2(-Math.cos(cam.yaw),-Math.sin(cam.yaw)/SPRING.o.sx);
   let best=null;
   for(let k=0;k<24&&!best;k++){const a=a0+(k%2?1:-1)*Math.ceil(k/2)*.26,p=SPRING.shapeAt(a,1.42),x=SPR.X+p[0],z=SPR.Z+p[1];
-    if(Math.abs(x)>WORLD-.6||Math.abs(z)>WORLD-.6)continue;if(!collidesAt(x,z,.4,groundY(x,z)+.1))best={a,x,z}}
+    if(Math.abs(x)>WORLD-1.6||Math.abs(z)>WORLD-1.6)continue; // leave room to walk away from the map edge
+    if(!collidesAt(x,z,.4,groundY(x,z)+.1))best={a,x,z}}
   if(!best){toast('ここからは 出られないみたい\nほかの ほうへ およいでみてね');return}
-  const p0=SPRING.shapeAt(best.a,.5);
-  SPR.busy=true;SPR.phase='toEdge';SPR.t0=state.t;SPR.dur=.7;SPR.from=player.pos.clone();SPR.to=new THREE.Vector3(SPR.X+p0[0],player.pos.y,SPR.Z+p0[1]);SPR.land=new THREE.Vector3(best.x,groundY(best.x,best.z),best.z);
+  const p0=SPRING.shapeAt(best.a,.55);
+  SPR.mode='swim';sprShoot(false);sprLabels();
+  SPR.busy=true;SPR.phase='toEdge';SPR.t0=state.t;SPR.dur=.9;SPR.from=player.pos.clone();SPR.to=new THREE.Vector3(SPR.X+p0[0],player.pos.y,SPR.Z+p0[1]);SPR.land=new THREE.Vector3(best.x,groundY(best.x,best.z),best.z);
   SPR.face=Math.atan2(SPR.land.x-SPR.from.x,SPR.land.z-SPR.from.z);
 }
 const _sc=new THREE.Vector3(),_sq=new THREE.Quaternion(),_sd=new THREE.Vector3(),_st=new THREE.Vector3();
@@ -4629,97 +4665,155 @@ function springTick(dt,t,playing){
   const r=sprRho(player.pos.x,player.pos.z);
   if(!SPR.in){if(r>2.1)SPR.armed=true;
     if(playing&&SPR.armed&&r<1.45&&!player.fly&&!player.sit&&!state.camMode&&!state.editOn&&player.ground){SPR.armed=false;springAsk()}
-    if(visibleNear)SPRING.update(t);
-    if(SPR.cb>0)sprCamUpdate(t);return}
+    if(visibleNear){SPRING.update(t);if(SPR.cb<=0)sprCanopy(0)}
+    if(SPR.cb>0)sprCamUpdate(t,dt);return}
   if(player.fly)setFly(false);
   const g=piyo.group;
   if(SPR.phase==='jumpIn'||SPR.phase==='jumpOut'){
     const u=Math.min(1,(t-SPR.t0)/SPR.dur),e=u<.5?2*u*u:1-2*(1-u)*(1-u),A=SPR.from,B=SPR.phase==='jumpIn'?SPR.to:SPR.land,H=SPR.phase==='jumpIn'?.85:.95;
     player.pos.set(A.x+(B.x-A.x)*u,A.y+(B.y-A.y)*e+4*H*u*(1-u),A.z+(B.z-A.z)*u);player.face=angLerp(player.face,SPR.face,Math.min(1,dt*10));
-    g.position.copy(player.pos);g.rotation.y=player.face;piyo.body.rotation.x=-.15;piyo.body.position.y=0;
+    g.position.copy(player.pos);g.rotation.y=player.face;piyo.body.rotation.set(-.15,0,0);piyo.body.position.y=0;
     if(piyo.bones)piyo.anim(dt,'air',0,player.phase,t);
     blob.visible=SPR.phase==='jumpOut'&&u>.6;
     SPRING.setBody({on:SPR.phase==='jumpIn'?u>.92:u<.15,x:player.pos.x-SPR.X,z:player.pos.z-SPR.Z,r:.7,speed:0});SPRING.update(t);
     if(u>=1){
       if(SPR.phase==='jumpIn'){SPR.phase='swim';SPR.busy=false;SPR.dipV=-1.1;SPR.rxs=-.15;SPRING.splash(SPR.to.x-SPR.X,SPR.to.z-SPR.Z,t,1,(t*1000)|0);try{AUDIO.sfx('splash')}catch(e){}}
-      else{SPR.in=false;SPR.busy=false;SPR.phase='';SPR.armed=false;player.pos.copy(SPR.land);player.ground=true;player.vy=0;player.vx=player.vz=0;player.squash=.22;sprLayers(false);blob.visible=true;SPRING.setBody(null);try{AUDIO.sfx('jump')}catch(e){}}
+      else{SPR.in=false;SPR.busy=false;SPR.phase='';SPR.armed=false;player.pos.copy(SPR.land);player.ground=true;player.vy=0;player.vx=player.vz=0;player.squash=.22;sprLayers(false);blob.visible=true;SPRING.setBody(null);sprUIState(false);try{AUDIO.sfx('jump')}catch(e){}}
     }
-    sprCamUpdate(t);return}
-  // in the water: swim (slow, smooth) / glide to the edge before jumping out
+    sprCamUpdate(t,dt);return}
+  // in the water: swim / float (slow, smooth) / glide to the edge before jumping out
+  const floating=SPR.mode==='float'&&SPR.phase==='swim';
+  SPR.fw+=((floating?1:0)-SPR.fw)*Math.min(1,dt*2.2); // pose blend swim -> float
   let ix=0,iy=0;
   if(SPR.phase==='swim'&&playing){const k=input.keys;ix=(k.KeyD||k.ArrowRight?1:0)-(k.KeyA||k.ArrowLeft?1:0)+input.jx;iy=(k.KeyW||k.ArrowUp?1:0)-(k.KeyS||k.ArrowDown?1:0)+input.jy}
   let mag=Math.hypot(ix,iy);if(mag>1){ix/=mag;iy/=mag;mag=1}
-  const my=cam.yaw,fx=-Math.sin(my),fz=-Math.cos(my),rx=Math.cos(my),rz=-Math.sin(my),SP=1.15;
-  let tx=(rx*ix+fx*iy)*SP,tz=(rz*ix+fz*iy)*SP;
+  const my=cam.yaw,fx=-Math.sin(my),fz=-Math.cos(my),rx=Math.cos(my),rz=-Math.sin(my),SP=floating?SPR_FLOAT:SPR_SWIM;
+  let tx=(rx*ix+fx*iy)*SP,tz=(rz*ix+fz*iy)*SP; // screen-relative: up on the stick = up on the screen
   if(SPR.phase==='toEdge'){const u=Math.min(1,(t-SPR.t0)/SPR.dur);const ex=SPR.to.x-player.pos.x,ez=SPR.to.z-player.pos.z,l=Math.hypot(ex,ez);tx=l>.03?ex/l*Math.min(1.1,l*3):0;tz=l>.03?ez/l*Math.min(1.1,l*3):0;
     if(u>=1){SPR.phase='jumpOut';SPR.t0=t;SPR.dur=1.05;SPR.from=player.pos.clone();SPRING.splash(player.pos.x-SPR.X,player.pos.z-SPR.Z,t,.55,(t*1000)|0);try{AUDIO.sfx('splash')}catch(e){};sprCamBlend(0,1.5)}}
-  const ka=Math.min(1,dt*(mag>.05||SPR.phase==='toEdge'?2.4:1.3));SPR.vx+=(tx-SPR.vx)*ka;SPR.vz+=(tz-SPR.vz)*ka;
+  // floating: a long, soft glide (accelerates gently, coasts to a stop when the stick is let go)
+  const ka=Math.min(1,dt*(SPR.phase==='toEdge'?2.4:floating?(mag>.05?1.4:.9):(mag>.05?2.4:1.3)));SPR.vx+=(tx-SPR.vx)*ka;SPR.vz+=(tz-SPR.vz)*ka;
+  { // stay in the deep part: slow down near the shore, then a soft wall (no bounce, no pulling back to the middle)
+    const lx=player.pos.x-SPR.X,lz=player.pos.z-SPR.Z,rr=SPRING.rhoAt(lx,lz),nl=Math.hypot(lx/SPRING.o.sx,lz)||1,ux=lx/SPRING.o.sx/nl,uz=lz/nl,vn=SPR.vx*ux+SPR.vz*uz;
+    const near=sEase((rr-(SPR.swimR-.12))/.12);if(vn>0&&near>0){SPR.vx-=vn*ux*near;SPR.vz-=vn*uz*near}
+  }
   let nx=player.pos.x+SPR.vx*dt,nz=player.pos.z+SPR.vz*dt;
-  { // stay in the deep part: soft wall
-    const lx=nx-SPR.X,lz=nz-SPR.Z,rr=SPRING.rhoAt(lx,lz);
+  { const lx=nx-SPR.X,lz=nz-SPR.Z,rr=SPRING.rhoAt(lx,lz);
     if(rr>SPR.swimR){const k=SPR.swimR/rr;nx=SPR.X+lx*k;nz=SPR.Z+lz*k;const nl=Math.hypot(lx/SPRING.o.sx,lz)||1,ux=lx/SPRING.o.sx/nl,uz=lz/nl,vn=SPR.vx*ux+SPR.vz*uz;if(vn>0){SPR.vx-=vn*ux;SPR.vz-=vn*uz}}
   }
   player.pos.x=nx;player.pos.z=nz;
   const spd=Math.hypot(SPR.vx,SPR.vz);
-  if(spd>.08)SPR.face=Math.atan2(SPR.vx,SPR.vz);
-  player.face=angLerp(player.face,SPR.face,Math.min(1,dt*3.2));
+  if(SPR.fw>.5||floating)SPR.face=cam.yaw; // floating: head toward the top of the screen, face up to the camera (no spinning around)
+  else if(spd>.08)SPR.face=Math.atan2(SPR.vx,SPR.vz);
+  player.face=angLerp(player.face,SPR.face,Math.min(1,dt*(floating?1.6:3.2)));
   // float: settle after the dive, gentle bob, follow the surface
   SPR.dipV+=(-SPR.dip*14-SPR.dipV*3.2)*dt;SPR.dip+=SPR.dipV*dt;
-  const lx=player.pos.x-SPR.X,lz=player.pos.z-SPR.Z;
-  SPRING.setBody({on:true,x:lx,z:lz,r:.75,speed:spd/SP,vx:SPR.vx,vz:SPR.vz});SPRING.update(t);
+  const lx=player.pos.x-SPR.X,lz=player.pos.z-SPR.Z,k=Math.min(1,spd/SP);
+  SPRING.setBody({on:true,x:lx,z:lz,r:.75,speed:spd/SPR_SWIM*(floating?1.6:1),vx:SPR.vx,vz:SPR.vz});SPRING.update(t);
   const sf=SPRING.surface(lx,lz);
-  player.pos.y=SPR.level-SPR.sink+sf[0]+SPR.dip+.035*Math.sin(t*1.7);
-  SPR.stroke+=dt*(1.6+4.2*Math.min(1,spd/SP));
+  player.pos.y=sprFloatY(sf,SPR.dip,t);
+  SPR.stroke+=dt*(floating?(k>.08?3.2*k+.6:0):(1.6+4.2*k));
   g.position.copy(player.pos);g.rotation.y=player.face;
-  sprPose(dt,t,Math.min(1,spd/SP),SPR.stroke,sf,Math.sin(t*1.3));
+  sprPose(dt,t,k,SPR.stroke,sf,Math.sin(t*1.3),SPR.fw,false);
   // paddle strokes touch the water: tiny ripples at the hands
-  if(spd>.25){const ph=Math.floor(SPR.stroke/PI);if(ph!==SPR.lastStroke){SPR.lastStroke=ph;const sd=ph%2?1:-1,c=Math.cos(player.face),s=Math.sin(player.face);SPRING.addRipple(lx+c*.55*sd+s*.15,lz-s*.55*sd+c*.15,.006,t)}}
-  sprCamUpdate(t);
+  if(spd>(floating?.06:.25)){const ph=Math.floor(SPR.stroke/PI);if(ph!==SPR.lastStroke){SPR.lastStroke=ph;const sd=ph%2?1:-1,c=Math.cos(player.face),s=Math.sin(player.face),hw=floating?.62:.55;
+    SPRING.addRipple(lx+c*hw*sd+s*(floating?-.1:.15),lz-s*hw*sd+c*(floating?-.1:.15),floating?.0045:.006,t)}}
+  sprCamUpdate(t,dt);
 }
-// camera: blend between the normal follow camera (already placed by update) and a top-down view over Piyo
-// paddling pose: bones only (the model itself is untouched); k = swim speed 0..1
-function sprPose(dt,t,k,stroke,sf,sway,direct){
+function sprFloatY(sf,dip,t){ // floating sits higher in the water (lying on her back), with a slow breathing bob
+  const fw=SPR.fw;return SPR.level-SPR.sink*(1-fw)-SPR_FLOAT_POSE.y*fw+sf[0]+dip+(.035-.012*fw)*Math.sin(t*1.7)+.008*fw*Math.sin(t*.9+1)}
+// pose: bones only (the model itself is untouched). k = speed 0..1, fw = float blend 0..1
+// like pBone (rest-frame axes), with a pitch (x) and a roll (z) together
+const _sE=new THREE.Euler(),_sQ=new THREE.Quaternion();
+function sprBone2(n,x,z){const o=piyo.bones[n];if(!o)return;_sQ.setFromEuler(_sE.set(x,0,z));o.b.quaternion.copy(o.pqi).multiply(_sQ).multiply(o.pq).multiply(o.q)}
+const SPR_FLOAT_POSE={lean:-1.18,head:.32,arm:1.5,leg:.18,legOpen:.22,y:.42};
+function sprPose(dt,t,k,stroke,sf,sway,fw,direct){
   piyo.body.position.y=0;piyo.body.scale.set(1,1,1);
-  const lean=-.85+.45*k; // floats on her back (face up to the overhead camera), sits up a little when paddling
-  SPR.rxs=direct||SPR.rxs===undefined?lean:SPR.rxs+(lean-SPR.rxs)*Math.min(1,dt*2.5);piyo.body.rotation.x=SPR.rxs;piyo.body.rotation.z=.05*sway-Math.atan(sf[1])*.6;
-  if(piyo.bones){piyo.anim(dt,'idle',0,player.phase,t);const s1=Math.sin(stroke),s2=Math.sin(stroke+PI),w=.35+.5*k;
-    pBone('LeftArm',2,.55+w*.55*s1);pBone('RightArm',2,-(.55+w*.55*s2));pBone('LeftUpLeg',0,.25+.35*s2*w);pBone('RightUpLeg',0,.25+.35*s1*w);
-    pBone('Hips',2,.05*s1);pBone('Head',2,-.04*s1);pBone('Spine',2,0)}
+  const FP=SPR_FLOAT_POSE,swimLean=-.85+.45*k,lean=swimLean+(FP.lean-swimLean)*fw; // on her back, face up to the overhead camera
+  SPR.rxs=direct||SPR.rxs===undefined?lean:SPR.rxs+(lean-SPR.rxs)*Math.min(1,dt*2.5);
+  piyo.body.rotation.x=SPR.rxs;piyo.body.rotation.z=(.05*sway-Math.atan(sf[1])*.6)*(1-.6*fw);
+  if(piyo.bones){piyo.anim(dt,'idle',0,player.phase,t);
+    const s1=Math.sin(stroke),s2=Math.sin(stroke+PI),w=.35+.5*k;
+    // swimming paddle
+    let la=.55+w*.55*s1,ra=-(.55+w*.55*s2),ll=.25+.35*s2*w,rl=.25+.35*s1*w,hp=.05*s1;
+    // floating: arms spread wide, tiny sculling strokes only while moving, slow breathing otherwise
+    const br=.04*Math.sin(t*1.1),sc=.22*k*Math.sin(stroke);
+    const fla=FP.arm+br+sc,fra=-(FP.arm+br-sc);
+    la+=(fla-la)*fw;ra+=(fra-ra)*fw;ll+=(FP.leg+.12*k*Math.sin(stroke*.5)-ll)*fw;rl+=(FP.leg-.12*k*Math.sin(stroke*.5)-rl)*fw;hp*=1-fw;
+    pBone('LeftArm',2,la);pBone('RightArm',2,ra);sprBone2('LeftUpLeg',ll,FP.legOpen*fw);sprBone2('RightUpLeg',rl,-FP.legOpen*fw);
+    pBone('Hips',2,hp);sprBone2('Head',FP.head*fw,-.04*s1*(1-fw));pBone('Spine',2,0)}
   blob.visible=false;
 }
-/* recording / QA only (window.__spring.demo): Piyo paddles a closed figure-eight, everything a pure function of the loop time,
-   so a clip of SPRING.L seconds loops without a seam. Not reachable from normal play. */
+/* recording / QA only (window.__spring.demo): everything a pure function of the loop time, so a clip of SPRING.L seconds
+   loops without a seam. mode 'swim': a closed figure-eight. mode 'float': floating in place at (x,z). Not reachable from normal play. */
 function springDemo(o){
-  if(!o){if(SPR.demo){SPR.demo=null;SPR.in=false;SPR.busy=false;SPR.phase='';SPRING.setLoopRipples(null);SPRING.setBody(null);sprLayers(false);blob.visible=true;SPR.cb=0;SPR.cbFrom=SPR.cbTo=0}return}
-  if(!SPR.demo){SPR.in=true;SPR.busy=true;SPR.phase='demo';sprLayers(true);SPRING.clearRipples();
+  if(!o){if(SPR.demo){SPR.demo=null;SPR.in=false;SPR.busy=false;SPR.phase='';SPR.fw=0;SPRING.setLoopRipples(null);SPRING.setBody(null);sprLayers(false);blob.visible=true;SPR.cb=0;SPR.cbFrom=SPR.cbTo=0;sprCanopy(0)}return}
+  const prev=SPR.demo;SPR.demo=Object.assign({t:0,view:'top',mode:'swim',x:0,z:0},prev||{},o);const D=SPR.demo;
+  if(!prev||prev.mode!==D.mode||prev.x!==D.x||prev.z!==D.z){SPR.in=true;SPR.busy=true;SPR.phase='demo';sprLayers(true);SPRING.clearRipples();
     const L=SPRING.L,rs=[];
-    for(let i=0;i<16;i++){const q=sprDemoAt(i*L/16);rs.push({x:q.x-q.vx*.12,z:q.z-q.vz*.12,t0:i*L/16,amp:.010+.016*q.k})}
-    for(let i=0;i<12;i++){const tt=(i+.5)*L/12,q=sprDemoAt(tt),sd=i%2?1:-1,c=Math.cos(q.face),s=Math.sin(q.face);rs.push({x:q.x+c*.55*sd+s*.15,z:q.z-s*.55*sd+c*.15,t0:tt,amp:.006})}
+    if(D.mode==='float'){ // a soft ring every 2 s from the body, tiny ones at the hands now and then
+      for(let i=0;i<4;i++)rs.push({x:D.x,z:D.z,t0:i*L/4+.3,amp:.009});
+      const c=Math.cos(sprDemoYaw()),s=Math.sin(sprDemoYaw());for(let i=0;i<4;i++){const sd=i%2?1:-1;rs.push({x:D.x+c*.62*sd-s*.1,z:D.z-s*.62*sd-c*.1,t0:(i+.5)*L/4,amp:.004})}}
+    else{
+      for(let i=0;i<16;i++){const q=sprDemoAt(i*L/16);rs.push({x:q.x-q.vx*.12,z:q.z-q.vz*.12,t0:i*L/16,amp:.010+.016*q.k})}
+      for(let i=0;i<12;i++){const tt=(i+.5)*L/12,q=sprDemoAt(tt),sd=i%2?1:-1,c=Math.cos(q.face),s=Math.sin(q.face);rs.push({x:q.x+c*.55*sd+s*.15,z:q.z-s*.55*sd+c*.15,t0:tt,amp:.006})}}
     SPRING.setLoopRipples(rs)}
-  SPR.demo=Object.assign({t:0,view:'top'},SPR.demo||{},o);
 }
-function sprDemoAt(t){const L=SPRING.L,w=PI*2/L,u=w*t,AX=1.0,AZ=.55;
+function sprDemoYaw(){if(!SPR.demo)return 0;if(SPR.demo.yaw!==undefined)return SPR.demo.yaw;
+  return SPR.demo.mode==='float'&&window.innerWidth/window.innerHeight<.8?PI/2:0} // portrait float: head toward the top of the screen
+function sprDemoAt(t){const L=SPRING.L,w=PI*2/L,u=w*t,AX=1.25,AZ=.68;
   const x=AX*Math.sin(u),z=AZ*Math.sin(2*u),vx=AX*w*Math.cos(u),vz=2*AZ*w*Math.cos(2*u),sp=Math.hypot(vx,vz);
-  return{x,z,vx,vz,face:Math.atan2(vx,vz),k:Math.min(1,sp/1.15),stroke:u*6}}
+  return{x,z,vx,vz,face:Math.atan2(vx,vz),k:Math.min(1,sp/SPR_SWIM),stroke:u*6}}
 function springDemoTick(dt){
-  const D=SPR.demo,L=SPRING.L,t=((D.t%L)+L)%L,q=sprDemoAt(t),u=PI*2*t/L;
+  const D=SPR.demo,L=SPRING.L,t=((D.t%L)+L)%L,u=PI*2*t/L,fl=D.mode==='float';
+  const q=fl?{x:D.x,z:D.z,vx:0,vz:0,face:sprDemoYaw(),k:0,stroke:0}:sprDemoAt(t);
+  SPR.fw=fl?1:0;
   SPRING.setBody({on:true,x:q.x,z:q.z,r:.75,speed:q.k,vx:q.vx,vz:q.vz,scripted:true});SPRING.update(t);
   const sf=SPRING.surface(q.x,q.z);
-  player.pos.set(SPR.X+q.x,SPR.level-SPR.sink+sf[0]+.035*Math.sin(2*u),SPR.Z+q.z);player.face=q.face;
+  player.pos.set(SPR.X+q.x,0,SPR.Z+q.z);player.pos.y=fl?SPR.level-SPR_FLOAT_POSE.y+sf[0]+.023*Math.sin(2*u)+.008*Math.sin(u+1):SPR.level-SPR.sink+sf[0]+.035*Math.sin(2*u);player.face=q.face;
   const g=piyo.group;g.position.copy(player.pos);g.rotation.y=q.face;
-  sprPose(dt,t,q.k,q.stroke,sf,Math.sin(u),true);
+  sprPose(dt,t,q.k,q.stroke,sf,Math.sin(u),SPR.fw,true);
+  if(fl&&piyo.bones){const br=.04*Math.sin(u*1),FP=SPR_FLOAT_POSE;pBone('LeftArm',2,FP.arm+br);pBone('RightArm',2,-(FP.arm+br))} // breathing on the loop period
   warm.position.set(player.pos.x,player.pos.y+2.3,player.pos.z);
   const c=_sc.set(SPR.X,SPR.level,SPR.Z),tall=window.innerWidth/window.innerHeight<.8;
-  if(D.view==='top'){const d=tall?6.6:5.4;if(tall)camera.position.set(c.x+d*.2,c.y+d,c.z);else camera.position.set(c.x,c.y+d,c.z+d*.2);camera.lookAt(c)} // portrait: the long side of the pond runs up the screen
-  else{const d=tall?8:6.4,p=.6,yw=.55;camera.position.set(c.x+Math.sin(yw)*Math.cos(p)*d,c.y+Math.sin(p)*d,c.z+Math.cos(yw)*Math.cos(p)*d);camera.lookAt(c.x,c.y+.2,c.z)}
+  if(fl){c.x+=q.x*.55;c.z+=q.z*.55;
+    // lying back puts her head a little behind player.pos: frame the middle of her body (between hips and head)
+    if(piyo.bones&&piyo.bones.Head){g.updateMatrixWorld(true);const h=piyo.bones.Head.b.getWorldPosition(_sd);q.cx=(player.pos.x+h.x)/2-SPR.X;q.cz=(player.pos.z+h.z)/2-SPR.Z;c.x+=(q.cx-q.x)*.8;c.z+=(q.cz-q.z)*.8}}
+  sprCanopy(D.view==='top'||D.view==='close'?1:0);
+  if(D.view==='top'){const d=fl?(tall?6.4:5.2):(tall?8.2:6.6);if(tall)camera.position.set(c.x+d*.2,c.y+d,c.z);else camera.position.set(c.x,c.y+d,c.z+d*.2);camera.lookAt(c)} // portrait: the long side of the pond runs up the screen
+  else if(D.view==='side'){const yw=sprDemoYaw()+PI/2;camera.position.set(SPR.X+q.x+Math.sin(yw)*2.6,c.y+.55,SPR.Z+q.z+Math.cos(yw)*2.6);camera.lookAt(SPR.X+q.x,c.y,SPR.Z+q.z)}
+  else if(D.view==='close'){const d=tall?3.4:2.8,yw=sprDemoYaw(),fx=SPR.X+(fl&&q.cx!==undefined?q.cx:q.x),fz=SPR.Z+(fl&&q.cz!==undefined?q.cz:q.z);camera.position.set(fx+Math.sin(yw)*d*.22,c.y+d,fz+Math.cos(yw)*d*.22);camera.lookAt(fx,c.y,fz)}
+  else{const d=tall?9.8:7.8,p=.6,yw=.55;camera.position.set(c.x+Math.sin(yw)*Math.cos(p)*d,c.y+Math.sin(p)*d,c.z+Math.cos(yw)*Math.cos(p)*d);camera.lookAt(c.x,c.y+.2,c.z)}
 }
-function sprCamUpdate(t){
-  const u=Math.min(1,(t-SPR.cbT0)/SPR.cbDur);SPR.cb=SPR.cbFrom+(SPR.cbTo-SPR.cbFrom)*sEase(u);
+// camera: blend between the normal follow camera (already placed by update) and a top-down view.
+// The top view aims between the pond centre and Piyo, so it follows her gently without swinging the whole pond around.
+// tree canopies next to the pond: they fade while the overhead camera is on (they would hide Piyo), and whenever the
+// game camera ends up inside one of them (e.g. right after climbing out on the tree side)
+function sprCanopy(e){
+  // (built on first use; retried a few times in case the trees are not in the scene yet)
+  if(!sprCanopy.l||(!sprCanopy.l.length&&(sprCanopy.n=(sprCanopy.n||0)+1)%90===0&&sprCanopy.n<900)){sprCanopy.l=[];const v=new THREE.Vector3(),reach=SPRING.o.R*SPRING.o.sx+1.5;
+    scene.updateMatrixWorld(true);scene.traverse(o=>{if(!o.isMesh||o.isInstancedMesh||o.isSkinnedMesh||!o.geometry||SPRING.group===o.parent||Array.isArray(o.material))return;const g=o.geometry;if(!g.boundingSphere)g.computeBoundingSphere();
+      v.copy(g.boundingSphere.center).applyMatrix4(o.matrixWorld);const r=g.boundingSphere.radius*o.matrixWorld.getMaxScaleOnAxis();
+      if(r>.8&&r<5&&v.y-SPR.level>1.6&&Math.hypot(v.x-SPR.X,v.z-SPR.Z)<reach+1.5&&o.material.isMeshLambertMaterial&&!o.material.vertexColors){
+        const m=o.material.clone();o.material=m;sprCanopy.l.push({m,c:v.clone(),r,a:1})}})}
+  const eo=sEase(e);
+  const P=camera.position,Q=player.pos;
+  for(const k of sprCanopy.l){const inside=sEase((k.r*1.1-P.distanceTo(k.c))/(k.r*.5));
+    // ... or when it stands between the camera and Piyo (distance from the canopy centre to the camera-Piyo line)
+    const dx=Q.x-P.x,dy=Q.y+.8-P.y,dz=Q.z-P.z,l2=dx*dx+dy*dy+dz*dz||1,u=Math.max(0,Math.min(1,((k.c.x-P.x)*dx+(k.c.y-P.y)*dy+(k.c.z-P.z)*dz)/l2));
+    const sd=Math.hypot(P.x+dx*u-k.c.x,P.y+dy*u-k.c.y,P.z+dz*u-k.c.z),occl=sEase((k.r*1.05-sd)/(k.r*.4));
+    const a=1-Math.max(eo,inside,occl);if(k.a===a)continue;k.a=a;
+    const m=k.m,tr=a<.999;if(m.transparent!==tr){m.transparent=tr;m.needsUpdate=true}m.opacity=a;m.depthWrite=!tr;m.visible=a>.02}
+}
+function sprCamUpdate(t,dt){
+  const u=Math.min(1,(t-SPR.cbT0)/SPR.cbDur);SPR.cb=SPR.cbFrom+(SPR.cbTo-SPR.cbFrom)*sEase(u);sprCanopy(SPR.cb);
   if(SPR.cb<=0||state.camMode)return;
-  if(!SPR.camT)SPR.camT=new THREE.Vector3(player.pos.x,SPR.level,player.pos.z);
-  SPR.camT.x+=(player.pos.x-SPR.camT.x)*.12;SPR.camT.z+=(player.pos.z-SPR.camT.z)*.12;SPR.camT.y=SPR.level;
-  if(SPR.cb<1&&SPR.cbTo===1&&u<.05)SPR.camT.set(player.pos.x,SPR.level,player.pos.z);
-  const tall=window.innerWidth/window.innerHeight<.8,d=tall?8.6:7.4,p=1.36,yaw=cam.yaw;
+  const fw=SPR.fw,pull=.62+.18*fw,ax=SPR.X+(player.pos.x-SPR.X)*pull,az=SPR.Z+(player.pos.z-SPR.Z)*pull;
+  if(!SPR.camT||(SPR.cbTo===1&&u<.02))SPR.camT=new THREE.Vector3(ax,SPR.level,az);
+  const ks=1-Math.exp(-(dt||1/60)*1.6);SPR.camT.x+=(ax-SPR.camT.x)*ks;SPR.camT.z+=(az-SPR.camT.z)*ks;SPR.camT.y=SPR.level;
+  const tall=window.innerWidth/window.innerHeight<.8;
+  SPR.camD=SPR.camD===undefined?0:SPR.camD;SPR.camD+=(fw-SPR.camD)*Math.min(1,(dt||1/60)*1.2); // floating: a little closer, so her face reads
+  const d=(tall?10.2:8.6)-(tall?1.6:1.3)*SPR.camD,p=1.36+.08*SPR.camD,yaw=cam.yaw;
   const top=_st.set(SPR.camT.x+Math.sin(yaw)*Math.cos(p)*d,SPR.camT.y+Math.sin(p)*d,SPR.camT.z+Math.cos(yaw)*Math.cos(p)*d);
   _sd.set(0,0,-1).applyQuaternion(camera.quaternion);const nt=_sc.copy(camera.position).addScaledVector(_sd,cam.cur||cam.dist);
   const e=SPR.cb;camera.position.lerp(top,e);nt.lerp(SPR.camT,e);camera.lookAt(nt);
@@ -4736,7 +4830,7 @@ function springRender(){
   if(isTouch&&SPR.cb>.9)SPRING.materials.water.uniforms.uReflOn.value=0;
   else SPRING.renderReflection(renderer,scene,camera,isTouch?.3:.42);
 }
-window.__spring={SPR,SPRING,enter:springEnter,exit:springExit,ask:springAsk,demo:springDemo};
+window.__spring={SPR,SPRING,enter:springEnter,exit:springExit,ask:springAsk,demo:springDemo,toggleFloat:sprToggleMode,shoot:sprShoot,pose:SPR_FLOAT_POSE};
 /* ===== /HEALING SPRING ===== */
 
 /* ===== CAFE INTERIOR ===== (カフェの店内: 街から離れた別エリア。入店でここへ移動し、退店でドア前に戻る)
