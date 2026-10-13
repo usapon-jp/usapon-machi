@@ -36,11 +36,11 @@ const CH={ // 主音からの半音。ぜんぶ長音階の中の音
 };
 const MODES={
   day:{
-    pool:['I','IV','vi','V','ii','iii'], keys:[0,7,0,5], // C → G → C → F …(ゆっくり巡る)
-    padLvl:.19, padCutLo:520, padCutHi:1700, bassLvl:.045, chordMin:26, chordMax:50,
-    glassRate:1/11, glassLvl:.075, epRate:1/34, epLvl:.05, sparkRate:1/17, sparkLvl:.03,
-    waterLvl:1, flowFreq:620, babble:.55, plopRate:1/19, wash:.5,
-    rev:.62, lp:6800
+    pool:['I','IV','vi','V','ii','iii'], keys:[2,9,2,7], // D → A → D → G …(明るい調をゆっくり巡る)
+    padLvl:.14, padCutLo:900, padCutHi:2600, bassLvl:.012, chordMin:28, chordMax:52,
+    glassRate:1/22, glassLvl:.04, epRate:1/60, epLvl:.024, sparkRate:1/36, sparkLvl:.013,
+    waterLvl:2.2, flowFreq:1150, babble:.62, plopRate:1/32, wash:.12,
+    rev:.5, lp:8200
   }
 };
 
@@ -57,6 +57,7 @@ function create(ctx,dest,opts){
   const stat={voices:0,maxVoices:0,created:0,events:{glass:0,ep:0,spark:0,plop:0,bloop:0,chord:0}};
   const live=[]; // {end}
   const N={}; // ノード置き場
+  const mf=k=>opts.mute&&opts.mute.indexOf(k)>=0?0:1; // 検査用: 層を個別に消す
 
   /* ゆらぎ(1/f): 用途ごとに独立 */
   const P={pad:Pink(rand,10,2.5),cut:Pink(rand,10,2.5),water:Pink(rand,10,2),tex:Pink(rand,9,1.5),dens:Pink(rand,11,2.5),wide:Pink(rand,9,3)}; // 最速の揺れでも周期 約3〜5秒
@@ -76,7 +77,7 @@ function create(ctx,dest,opts){
     for(let c=0;c<2;c++){const d=b.getChannelData(c);let lp=0;const pre=sr*.022|0;
       for(let i=pre;i<n;i++){const t=(i-pre)/sr,u=(i-pre)/(n-pre);
         const env=Math.exp(-6.9*t/(sec*.8));              // 約4秒で -60dB
-        lp+=((rr()*2-1)-lp)*(.5*(1-u)+.07*u);              // 尾に向かってだんだん暗くなる
+        lp+=((rr()*2-1)-lp)*(.8*(1-u)+.16*u);              // 尾に向かってだんだん暗くなる
         d[i]=lp*env}
       for(const [dt,g] of [[.031,.5],[.047,.4],[.071,.3],[.093,.25]]){const k=(dt*sr|0)+(c?19:0);d[k]+=g*(c?-1:1)*.6}}
     return b}
@@ -92,47 +93,47 @@ function create(ctx,dest,opts){
     N.out=gain(0);
     N.comp=ctx.createDynamicsCompressor();
     N.comp.threshold.value=-20;N.comp.knee.value=24;N.comp.ratio.value=2.5;N.comp.attack.value=.12;N.comp.release.value=.8;
-    N.hp=biq('highpass',75,.6);N.lp=biq('lowpass',cur.lp,.5);
+    N.hp=biq('highpass',110,.6);N.lp=biq('lowpass',cur.lp,.5);
     N.mix=gain(1);N.mix.connect(N.hp);N.hp.connect(N.lp);N.lp.connect(N.comp);N.comp.connect(N.out);N.out.connect(dest);
     // 残響(1個だけ共有)
-    N.rev=ctx.createConvolver();N.rev.buffer=makeIR(4.6);
+    N.rev=ctx.createConvolver();N.rev.buffer=makeIR(3.8);
     N.revIn=gain(1);N.revWet=gain(cur.rev*.5);N.revIn.connect(N.rev);N.rev.connect(N.revWet);N.revWet.connect(N.mix);
     // きらめき用のゆるいエコー(左右で長さを変える)
-    N.echoIn=gain(1);N.echoWet=gain(.55);
+    N.echoIn=gain(1);N.echoWet=gain(.4);
     {const dl=ctx.createDelay(2),dr=ctx.createDelay(2),fb=gain(.34),flp=biq('lowpass',2400,.4),mer=ctx.createChannelMerger(2);
      dl.delayTime.value=.47;dr.delayTime.value=.71;
      N.echoIn.connect(dl);dl.connect(flp);flp.connect(fb);fb.connect(dr);dr.connect(dl);
      dl.connect(mer,0,0);dr.connect(mer,0,1);mer.connect(N.echoWet);N.echoWet.connect(N.mix);N.echoWet.connect(N.revIn)}
 
     /* パッド: 声ごとに(のこぎり+三角)→パン→共通ローパス(1/fで開閉)→コーラス→ミックス */
-    N.padIn=gain(1);N.padLP=biq('lowpass',900,.45);N.padOut=gain(cur.padLvl);
+    N.padIn=gain(1);N.padLP=biq('lowpass',1100,.4);N.padOut=gain(cur.padLvl);
     N.padIn.connect(N.padLP);
     {const dry=gain(.62),ch=ctx.createDelay(.05),chG=gain(.5);ch.delayTime.value=.017;
-     lfo(.13,.0035,ch.delayTime);
+     lfo(.11,.002,ch.delayTime);
      N.padLP.connect(dry);N.padLP.connect(ch);ch.connect(chG);dry.connect(N.padOut);chG.connect(N.padOut);
      N.padOut.connect(N.mix);const s=gain(.5);N.padOut.connect(s);s.connect(N.revIn);}
 
     /* 水音 */
-    N.water=gain(cur.waterLvl);N.waterLP=biq('lowpass',3000,.4);N.water.connect(N.waterLP);N.waterLP.connect(N.mix);
+    N.water=gain(cur.waterLvl*mf('water'));N.waterLP=biq('lowpass',3400,.4);N.water.connect(N.waterLP);N.waterLP.connect(N.mix);
     {const s=gain(.16);N.waterLP.connect(s);s.connect(N.revIn)}
     const bufA=noiseBuf(7,11),bufB=noiseBuf(11,23);N.bufs=[bufA,bufB];
     // (1) 流れ: やわらかな「ふわぁ」
-    N.flowSrc=src(bufA,1,0);N.flowBP=biq('bandpass',cur.flowFreq,.7);N.flowG=gain(.17);
-    {const hp=biq('highpass',170,.5);N.flowSrc.connect(hp);hp.connect(N.flowBP);N.flowBP.connect(N.flowG);N.flowG.connect(N.water)}
+    N.flowSrc=src(bufA,1,0);N.flowBP=biq('bandpass',cur.flowFreq,2.6);N.flowG=gain(.075);
+    {const hp=biq('highpass',450,.5);N.flowSrc.connect(hp);hp.connect(N.flowBP);N.flowBP.connect(N.flowG);N.flowG.connect(N.water)}
     // (2) さざ波のあわ: 中域を、ずれた周期の揺れで細かく揺らす
-    N.babSrc=src(bufB,1.07,2.3);N.babBP=biq('bandpass',1150,1.5);N.babG=gain(.0);N.babAM=gain(.5);
+    N.babSrc=src(bufB,1.07,2.3);N.babBP=biq('bandpass',1600,2.8);N.babG=gain(.0);N.babAM=gain(.5);
     {N.babSrc.connect(N.babBP);N.babBP.connect(N.babAM);N.babAM.connect(N.babG);N.babG.connect(N.water);
      N.lfos=[lfo(3.7,.17,N.babAM.gain),lfo(5.9,.11,N.babAM.gain),lfo(.31,.2,N.babAM.gain)];
-     N.babFreqL=lfo(.21,260,N.babBP.frequency)}
+     N.babFreqL=lfo(.21,300,N.babBP.frequency)}
     // (3) 水辺のうねり(低めの ちゃぷ…ちゃぷ…)
-    N.washSrc=src(bufA,.6,3.1);N.washLP=biq('lowpass',520,.6);const washHP=biq('highpass',120,.5);N.washG=gain(0);N.washAM=gain(.6);
+    N.washSrc=src(bufA,.6,3.1);N.washLP=biq('lowpass',520,.6);const washHP=biq('highpass',220,.5);N.washG=gain(0);N.washAM=gain(.6);
     {N.washSrc.connect(washHP);washHP.connect(N.washLP);N.washLP.connect(N.washAM);N.washAM.connect(N.washG);N.washG.connect(N.water);
-     N.lfos.push(lfo(.11,.25,N.washAM.gain),lfo(.07,.15,N.washAM.gain))}
+     N.lfos.push(lfo(.11,.15,N.washAM.gain),lfo(.07,.1,N.washAM.gain))}
     // (4) 空気: ほとんど意識しない高めの空気
-    N.airSrc=src(bufB,.8,5.7);N.airLP=biq('lowpass',900,.3);N.airG=gain(.05);
+    N.airSrc=src(bufB,.8,5.7);N.airLP=biq('lowpass',900,.3);N.airG=gain(.03);
     {const hp=biq('highpass',300,.4);N.airSrc.connect(hp);hp.connect(N.airLP);N.airLP.connect(N.airG);N.airG.connect(N.water)}
     // きらめき/EP/低音の出口
-    N.glassBus=gain(1);N.glassBus.connect(N.mix);
+    N.glassBus=gain(mf('glass'));N.glassBus.connect(N.mix);
     {const s=gain(.7);N.glassBus.connect(s);s.connect(N.revIn);const e=gain(.35);N.glassBus.connect(e);e.connect(N.echoIn)}
     N.curve=new Float32Array(64);for(let i=0;i<64;i++){const x=i/63;N.curve[i]=Math.sin(x*Math.PI/2)**2}
   }
@@ -144,25 +145,25 @@ function create(ctx,dest,opts){
   function cleanup(osc,nodes){osc.onended=()=>{for(const n of nodes){try{n.disconnect()}catch(e){}}}}
 
   /* ---------- 楽器 ---------- */
-  const SLOT_LO=[50,57,62,66],SLOT_HI=[62,69,74,78],SLOT_PAN=[-.45,-.15,.15,.45];
+  const SLOT_LO=[55,60,64,67],SLOT_HI=[67,72,76,79],SLOT_PAN=[-.45,-.15,.15,.45];
   function padVoice(t,midi,slot,atk){
     const f=hz(midi),g=gain(0),p=pan(SLOT_PAN[slot]);
-    const o1=ctx.createOscillator(),o2=ctx.createOscillator(),g1=gain(.2),g2=gain(.5);
+    const o1=ctx.createOscillator(),o2=ctx.createOscillator(),g1=gain(.14),g2=gain(.46),o3=ctx.createOscillator(),g3=gain(.2);o3.type='sine';o3.frequency.value=f*2;o3.detune.value=R()*4-2;o3.connect(g3);g3.connect(g);
     o1.type='sawtooth';o1.frequency.value=f;o1.detune.value=-6+R()*2;
     o2.type='triangle';o2.frequency.value=f;o2.detune.value=6-R()*2;
     o1.connect(g1);o2.connect(g2);g1.connect(g);g2.connect(g);g.connect(p);p.connect(N.padIn);
     g.gain.setValueCurveAtTime(N.curve.map(x=>x*.25),t,atk);
-    o1.start(t);o2.start(t);reg(1e9);const rec=live[live.length-1];
-    return {g,o:[o1,o2],nodes:[g,g1,g2,p],rec,midi,atk,t,
+    o1.start(t);o2.start(t);o3.start(t);reg(1e9);const rec=live[live.length-1];
+    return {g,o:[o1,o2,o3],nodes:[g,g1,g2,p],rec,midi,atk,t,
       release(tr,rel){try{g.gain.setTargetAtTime(0,tr,rel/4)}catch(e){}
-        o1.stop(tr+rel*1.15);o2.stop(tr+rel*1.15);cleanup(o1,[o1,o2,g1,g2,g,p]);rec.end=tr+rel*1.15}}}
+        o1.stop(tr+rel*1.15);o2.stop(tr+rel*1.15);o3.stop(tr+rel*1.15);cleanup(o1,[o1,o2,o3,g1,g2,g3,g,p]);rec.end=tr+rel*1.15}}}
   function bassVoice(t,midi,atk){
     const g=gain(0),o=ctx.createOscillator();o.type='sine';o.frequency.value=hz(midi);o.connect(g);g.connect(N.padIn);
     g.gain.setValueCurveAtTime(N.curve.map(x=>x*cur.bassLvl*2.2),t,atk);o.start(t);reg(1e9);const rec=live[live.length-1];
     return {g,midi,rec,release(tr,rel){try{g.gain.setTargetAtTime(0,tr,rel/4)}catch(e){}o.stop(tr+rel*1.15);cleanup(o,[o,g]);rec.end=tr+rel*1.15}}}
   /* ガラス: 倍音(1, 2, 3.01, 4.2)にゆっくり立ち上がり→長い余韻 */
   function glass(t,midi,lvl,panv){
-    const f=hz(midi),atk=.28+R()*.5,dec=2.2+R()*2.2,tail=atk+dec*5;
+    const f=hz(midi),atk=.6+R()*.7,dec=2.6+R()*2.2,tail=atk+dec*5;
     const g=gain(0),p=pan(panv);g.connect(p);p.connect(N.glassBus);
     const parts=[[1,1,1],[2.0,.3,.55],[3.01,.09,.3],[4.2,.04,.2]];let last=null;
     g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(lvl,t+atk);g.gain.setTargetAtTime(0,t+atk,dec);
@@ -186,8 +187,8 @@ function create(ctx,dest,opts){
     o.connect(g);g.connect(p);p.connect(N.water);o.start(t);o.stop(t+dur+.02);cleanup(o,[o,g,p]);reg(t+dur+.05)}
   function plop(t){ // 小さく広がる波紋: ぽちゃん + 少し遅れて小さな輪
     const pn=R()*1.4-.7,base=330+R()*170;
-    bloop(t,base*.8,.05,pn,.16+R()*.08);
-    const n=1+(R()*3|0);for(let i=0;i<n;i++)bloop(t+.17+i*(.15+R()*.1),base*(1+i*.07),.018/(i+1),pn*(1+i*.2),.11);
+    bloop(t,base*.8,.016,pn,.3+R()*.12);
+    const n=1+(R()*3|0);for(let i=0;i<n;i++)bloop(t+.26+i*(.2+R()*.12),base*(1+i*.07),.007/(i+1),pn*(1+i*.2),.2);
     L(t,'plop');stat.events.plop++}
 
   /* ---------- 和音 ---------- */
@@ -205,7 +206,7 @@ function create(ctx,dest,opts){
         if(bad)continue;if(s[3]-s[0]<9)cost+=6;
         cost+=R()*2.6;if(cost<bc){bc=cost;best=notes}}}
     return best||prev}
-  const CS={voices:[null,null,null,null],bass:null,prev:[55,62,69,74],chord:null,key:0,keyIdx:0,nchord:0,hist:[],nextKeyAt:16,nextChord:0};
+  const CS={voices:[null,null,null,null],bass:null,prev:[59,64,71,76],chord:null,key:target.keys[0],keyIdx:0,nchord:0,hist:[],nextKeyAt:16,nextChord:0};
   function pickChord(){
     const pool=target.pool,lastDeg=CS.chord?CS.chord.deg:null,ban=CS.hist.slice(-2);
     const curPcs=CS.chord?CS.chord.pcs:[];let tot=0;const w=pool.map(d=>{
@@ -245,15 +246,15 @@ function create(ctx,dest,opts){
   function schedule(until){
     while(CS.nextChord<until)changeChord(CS.nextChord,false);
     while(EV.glass<until){const t=EV.glass;
-      if(t>=t0){const m=pickGlassMidi(72,91);glass(t,m,cur.glassLvl*(.7+R()*.6),R()*1.4-.7);stat.events.glass++;L(t,'glass',{m})}
-      EV.glass=t+poisson(cur.glassRate*dens(),2.5)}
+      if(t>=t0){const m=pickGlassMidi(67,84);glass(t,m,cur.glassLvl*(.7+R()*.6),R()*1.4-.7);stat.events.glass++;L(t,'glass',{m})}
+      EV.glass=t+poisson(cur.glassRate*dens(),7)}
     while(EV.spark<until){const t=EV.spark;
       if(t>=t0){const n=1+(R()*2.4|0);let tt=t;const pent=[0,2,4,7,9].map(x=>(x+CS.key)%12);
-        for(let i=0;i<n;i++){glass(tt,pickGlassMidi(84,100,pent),cur.sparkLvl*(.6+R()*.6),R()*1.8-.9);stat.events.spark++;tt+=.35+R()*.9}L(t,'spark',{n})}
-      EV.spark=t+poisson(cur.sparkRate*dens(),4)}
+        for(let i=0;i<n;i++){glass(tt,pickGlassMidi(79,91,pent),cur.sparkLvl*(.6+R()*.6),R()*1.8-.9);stat.events.spark++;tt+=.35+R()*.9}L(t,'spark',{n})}
+      EV.spark=t+poisson(cur.sparkRate*dens(),12)}
     while(EV.ep<until){const t=EV.ep;
       if(t>=t0){ep(t,pickGlassMidi(60,76),cur.epLvl*(.7+R()*.5),R()*1.0-.5);stat.events.ep++;L(t,'ep')}
-      EV.ep=t+poisson(cur.epRate*dens(),9)}
+      EV.ep=t+poisson(cur.epRate*dens(),22)}
     while(EV.plop<until){const t=EV.plop;
       if(t>=t0)plop(t);
       EV.plop=t+poisson(cur.plopRate*Math.exp(.6*P.water.v),4)}
@@ -269,14 +270,14 @@ function create(ctx,dest,opts){
     for(const k in target)if(typeof target[k]==='number')cur[k]+=(target[k]-cur[k])*.04;
     const pad=P.pad.step(CTL),cut=P.cut.step(CTL),wat=P.water.step(CTL),tex=P.tex.step(CTL);P.dens.step(CTL);const wide=P.wide.step(CTL);
     const tau=.5;
-    setp(N.padOut.gain,cur.padLvl*(1+.2*pad),t,tau);                                       // ① パッド音量の微細な強弱
+    setp(N.padOut.gain,mf('pad')*cur.padLvl*(1+.09*pad),t,tau);                                       // ① パッド音量の微細な強弱
     const cutoff=Math.exp(lerp(Math.log(cur.padCutLo),Math.log(cur.padCutHi),.5+.5*cut)); // ② フィルター周波数(対数でゆらぐ)
     setp(N.padLP.frequency,cutoff,t,tau);
-    setp(N.flowG.gain,.17*(1+.3*wat),t,tau);                                               // ③ 水音の強弱
-    setp(N.flowBP.frequency,cur.flowFreq*Math.exp(.28*tex),t,tau);                         //    と質感
-    setp(N.babG.gain,.085*cur.babble*(1+.35*wat+.25*tex),t,tau);
-    setp(N.washG.gain,.16*cur.wash*(1+.5*Math.max(wat,-.6)),t,tau*2);
-    setp(N.airG.gain,.05*(1+.4*tex),t,tau*2);
+    setp(N.flowG.gain,.075*(1+.15*wat),t,tau);                                               // ③ 水音の強弱
+    setp(N.flowBP.frequency,cur.flowFreq*Math.exp(.2*tex),t,tau);                         //    と質感
+    setp(N.babG.gain,.1*cur.babble*(1+.2*wat+.12*tex),t,tau);
+    setp(N.washG.gain,.16*cur.wash*(1+.25*Math.max(wat,-.6)),t,tau*2);
+    setp(N.airG.gain,.03*(1+.25*tex),t,tau*2);
     setp(N.revWet.gain,cur.rev*.5*(1+.28*wide),t,tau*2);                                   // ⑤ 空間の広がり(残響量)
     setp(N.lp.frequency,cur.lp,t,.5);
     N.pv={pad,cut,wat,tex,dens:P.dens.v,wide,cutoff};
@@ -313,7 +314,7 @@ function create(ctx,dest,opts){
     if(disposed||!built)return;if(running)return;
     for(const k of ['flowSrc','babSrc','washSrc','airSrc'])try{N[k].stop()}catch(e){}
     for(const o of (N.lfos||[]).concat([N.babFreqL]))try{o.stop()}catch(e){}
-    for(const v of CS.voices)if(v)try{v.o[0].stop();v.o[1].stop()}catch(e){}
+    for(const v of CS.voices)if(v)try{v.o[0].stop();v.o[1].stop();v.o[2].stop()}catch(e){}
     if(CS.bass)try{CS.bass.release(ctx.currentTime,.1)}catch(e){}
     try{N.out.disconnect()}catch(e){}
     built=false;disposed=false;for(const k in N)delete N[k];live.length=0;CS.voices=[null,null,null,null];CS.bass=null;CS.chord=null;
