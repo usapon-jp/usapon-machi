@@ -4598,7 +4598,6 @@ function sprRho(x,z){return SPRING.rhoAt(x-SPR.X,z-SPR.Z)}
   st.textContent='#sprUI{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));top:50%;transform:translateY(-50%);display:none;flex-direction:column;gap:8px;z-index:12;pointer-events:auto}'
    +'body.inSpring #sprUI{display:flex}#sprUI button{font:inherit;font-size:13px;font-weight:800;color:#fff;padding:8px 13px;border-radius:999px;border:1.5px solid rgba(255,255,255,.6);background:rgba(40,26,70,.5);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);cursor:pointer;-webkit-tap-highlight-color:transparent}'
    +'#sprUI button kbd{font-size:10px;opacity:.75;margin-left:5px;font-family:inherit}body.touch #sprUI #sprModeBtn{display:none}body.touch #sprUI button kbd{display:none}'
-   +'body.inSpring.touch #tbDash .mk-ic{display:none}body.inSpring.touch #tbDash span{display:block;position:static;margin:0;font-size:14px;font-weight:900;color:#fff;letter-spacing:.02em}'
    +'body.sprShoot #hud>*:not(#joy):not(#tbtns):not(#sprShowUI){visibility:hidden!important}body.sprShoot #joy,body.sprShoot #tbtns,body.sprShoot #tbtns *{opacity:0!important}'
    +'#sprShowUI{display:none;position:absolute;right:calc(12px + env(safe-area-inset-right,0px));top:calc(10px + env(safe-area-inset-top,0px));z-index:13;pointer-events:auto;font:inherit;font-size:12px;font-weight:800;color:#fff;padding:6px 11px;border-radius:999px;border:1px solid rgba(255,255,255,.45);background:rgba(40,26,70,.28);opacity:.55;cursor:pointer}'
    +'body.sprShoot #sprShowUI{display:block}';
@@ -4606,6 +4605,11 @@ function sprRho(x,z){return SPRING.rhoAt(x-SPR.X,z-SPR.Z)}
   const hud=$('hud')||document.body,box=document.createElement('div');box.id='sprUI';
   box.innerHTML='<button id="sprModeBtn" type="button"><span id="sprModeTxt">浮かぶ</span><kbd>Shift</kbd></button><button id="sprShootBtn" type="button">UIをかくす<kbd>U</kbd></button>';
   hud.appendChild(box);
+  // swim / float marks in the same style as the game's own marks (the dash button keeps its place; only the mark inside changes)
+  const dashSym=document.getElementById('mk-dash');
+  if(dashSym&&dashSym.parentNode)dashSym.parentNode.insertAdjacentHTML('beforeend',
+    '<symbol id="mk-float" viewBox="0 0 48 48"><g transform="translate(-4.8 -5.2) scale(1.2)"><path class="mk-k" d="M5 35c3.2-2.4 6.3-2.4 9.5 0s6.3 2.4 9.5 0 6.3-2.4 9.5 0 6.3 2.4 9.5 0"/><path class="mk-k" d="M18.5 26.5h17.5l4-3.5M24 26.5l5-7"/><circle class="mk-k mk-fa" cx="12.5" cy="22.5" r="5.2"/></g></symbol>'
+   +'<symbol id="mk-swim" viewBox="0 0 48 48"><g transform="translate(-4.8 -5.2) scale(1.2)"><path class="mk-k" d="M5 35c3.2-2.4 6.3-2.4 9.5 0s6.3 2.4 9.5 0 6.3-2.4 9.5 0 6.3 2.4 9.5 0"/><path class="mk-k" d="M21.5 28.5c2.5-8 10-12.5 18-10"/><circle class="mk-k mk-fa" cx="15" cy="24" r="5.5"/></g></symbol>');
   const show=document.createElement('button');show.id='sprShowUI';show.type='button';show.textContent='UIを表示';hud.appendChild(show);
   $('sprModeBtn').addEventListener('click',e=>{e.preventDefault();sprToggleMode()});
   $('sprShootBtn').addEventListener('click',e=>{e.preventDefault();sprShoot(true)});
@@ -4617,7 +4621,7 @@ function sprRho(x,z){return SPRING.rhoAt(x-SPR.X,z-SPR.Z)}
     else if(e.code==='KeyU'&&!e.repeat)sprShoot(!SPR.shoot);
     else if(e.code==='Escape'&&SPR.shoot){sprShoot(false);e.stopImmediatePropagation()}},true);
 })();
-function sprLabels(){const f=SPR.mode==='float',t=f?'泳ぐ':'浮かぶ';const d=$('tbDash');if(d){const sp=d.querySelector('span');if(sp)sp.textContent=SPR.in?t:'ダッシュ'}const m=$('sprModeTxt');if(m)m.textContent=t}
+function sprLabels(){const f=SPR.mode==='float',t=f?'泳ぐ':'浮かぶ';const d=$('tbDash');if(d){const sp=d.querySelector('span');if(sp)sp.textContent=SPR.in?t:'ダッシュ';const u=d.querySelector('use');if(u)u.setAttribute('href',SPR.in?(f?'#mk-swim':'#mk-float'):'#mk-dash');if(SPR.in)d.setAttribute('aria-label',t);else d.removeAttribute('aria-label')}const m=$('sprModeTxt');if(m)m.textContent=t}
 function sprToggleMode(){if(!SPR.in||SPR.busy||SPR.phase!=='swim')return;SPR.mode=SPR.mode==='float'?'swim':'float';sprLabels()}
 function sprShoot(on){SPR.shoot=!!on&&SPR.in;document.body.classList.toggle('sprShoot',SPR.shoot)}
 function sprUIState(on){document.body.classList.toggle('inSpring',!!on);if(!on){SPR.mode='swim';sprShoot(false)}sprLabels()}
