@@ -893,11 +893,11 @@ body.dressing #quest,body.dressing #mini,body.dressing #joy{visibility:hidden} /
 /* dur=秒, trim=dB(曲ごとの聴感ラウドネスをそろえる), entry=曲が静かな導入から本編に入る時刻(秒)
    LUFS(元音源): clearing -11.5 / midnight -11.5 / garden -11.3 / water -11.5 / surface -10.5 */
 const TRACKS={
-  clearing:{file:'clearing-at-first-light.mp3',title:'Clearing at First Light',dur:170.63,trim:0,   entry:15.3},
-  midnight:{file:'midnight-mirror.mp3',        title:'Midnight Mirror',        dur:175.91,trim:0,   entry:17.0},
-  garden:  {file:'the-gardens-first-breath.mp3',title:"The Garden's First Breath",dur:155.32,trim:-0.2,entry:14.0},
-  water:   {file:'where-water-meets-stone.mp3', title:'Where Water Meets Stone', dur:156.55,trim:0,   entry:12.5},
-  surface: {file:'where-the-surface-rests.mp3', title:'Where the Surface Rests', dur:169.46,trim:-1.0,entry:23.3}
+  clearing:{file:'clearing-at-first-light.mp3',title:'Clearing at First Light',dur:170.63,trim:0,   skip:4.0,entry:15.3},
+  midnight:{file:'midnight-mirror.mp3',        title:'Midnight Mirror',        dur:175.91,trim:0,   skip:3.0,entry:17.0},
+  garden:  {file:'the-gardens-first-breath.mp3',title:"The Garden's First Breath",dur:155.32,trim:-0.2,skip:13.5,entry:14.0},
+  water:   {file:'where-water-meets-stone.mp3', title:'Where Water Meets Stone', dur:156.55,trim:0,   skip:0,entry:12.5},
+  surface: {file:'where-the-surface-rests.mp3', title:'Where the Surface Rests', dur:169.46,trim:-1.0,skip:3.0,entry:23.3}
 };
 /* 「前の曲 → 次の曲」で、次の曲を前の曲の終わりの何秒前から鳴らすか(秒)。冒頭と終盤の音量を解析して決めた(/tmp 解析: seam3)。
    次の曲の本編(entry)は、前の曲の余韻が十分小さくなってから入るようにしてある */
@@ -1013,7 +1013,7 @@ function create(ctx,dest,opts){
       prime();
       cur=0;const id=first&&ids.indexOf(first)>=0?first:pick();
       if(first&&queue.indexOf(first)>=0)queue.splice(queue.indexOf(first),1);
-      load(slots[0],id);lastId=id;play(slots[0],pos||0);
+      load(slots[0],id);lastId=id;play(slots[0],pos==null?(tracks[id].skip||0):pos);
       log({type:'start',id,pos:pos||0});
       if(!timer)timer=setInterval(tick,250);
       return true;
@@ -1343,7 +1343,7 @@ const AUDIO=(function(){
   function switched(was){
     const now=eff();if(now===was||!ctx)return;
     if(now!=='town'){nextC=ctx.currentTime+.05;barC=0}else nextT=ctx.currentTime+.25;
-    gains(now==='spring'||was==='spring'?1.2:.12);
+    gains(now==='spring'?.7:was==='spring'?1.2:.12);
   }
   function startMusic(){
     if(!init())return;
