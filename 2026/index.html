@@ -877,9 +877,178 @@ body.dressing #quest,body.dressing #mini,body.dressing #joy{visibility:hidden} /
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 // ===== BGM / SFX (WebAudio, no files) =====
+/* ===== SPRING TRACKS (癒しの泉のBGM) — source: audio/spring-tracks.js ===== */
+/* ===== SpringTracks (癒しの泉) — Gemini で作った曲を、つなぎ目なく流し続けるプレーヤー =====
+   - 曲のデータは加工しない。音量は曲ごとの固定トリム(dB)だけ、つなぎ目は「次の曲を、前の曲が終わる L 秒前に頭から鳴らす」だけ。
+     フェードの曲線は掛けない(各曲が持っている自然なフェードアウトと静かな導入を、そのまま重ねる)。
+   - 重なり時間 L は曲の組ごとに、冒頭と終盤の音量を解析して決めた表 OVERLAP を使う。
+   - 再生は <audio> 2本(ストリーミング)を Web Audio に接続。曲まるごとをメモリに展開しない(スマホのメモリ対策)。
+     次の曲は、いまの曲の途中(30秒以降)になってから読み込み始める。
+   使い方: const T = SpringTracks.create(ctx, destNode, {base:'audio/spring/'});
+          T.start(['clearing','garden','water']);  // ユーザーのタップの中で呼ぶ(iOS対策)
+          T.pause(); T.resume(); T.stop(); */
+(function(root){
+'use strict';
+
+/* dur=秒, trim=dB(曲ごとの聴感ラウドネスをそろえる), entry=曲が静かな導入から本編に入る時刻(秒)
+   LUFS(元音源): clearing -11.5 / midnight -11.5 / garden -11.3 / water -11.5 / surface -10.5 */
+const TRACKS={
+  clearing:{file:'clearing-at-first-light.mp3',title:'Clearing at First Light',dur:170.63,trim:0,   entry:15.3},
+  midnight:{file:'midnight-mirror.mp3',        title:'Midnight Mirror',        dur:175.91,trim:0,   entry:17.0},
+  garden:  {file:'the-gardens-first-breath.mp3',title:"The Garden's First Breath",dur:155.32,trim:-0.2,entry:14.0},
+  water:   {file:'where-water-meets-stone.mp3', title:'Where Water Meets Stone', dur:156.55,trim:0,   entry:12.5},
+  surface: {file:'where-the-surface-rests.mp3', title:'Where the Surface Rests', dur:169.46,trim:-1.0,entry:23.3}
+};
+/* 「前の曲 → 次の曲」で、次の曲を前の曲の終わりの何秒前から鳴らすか(秒)。冒頭と終盤の音量を解析して決めた(/tmp 解析: seam3)。
+   次の曲の本編(entry)は、前の曲の余韻が十分小さくなってから入るようにしてある */
+const OVERLAP={
+  'clearing|midnight':10,'clearing|garden':22,'clearing|water':8, 'clearing|surface':9,
+  'midnight|clearing':10,'midnight|garden':20,'midnight|water':6, 'midnight|surface':8,
+  'garden|clearing':13,  'garden|midnight':13, 'garden|water':12, 'garden|surface':12,
+  'water|clearing':12,   'water|midnight':12,  'water|garden':22, 'water|surface':12,
+  'surface|clearing':8,  'surface|midnight':5, 'surface|garden':19,'surface|water':5
+};
+const DEFAULT_OVERLAP=10;
+
+const dB=x=>Math.pow(10,x/20);
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;const t=a[i];a[i]=a[j];a[j]=t}return a}
+// 無音の短い wav(iOS で <audio> を「ユーザー操作のなかで」使えるようにしておくため)
+function silentWav(){
+  const n=800,b=new Uint8Array(44+n);const dv=new DataView(b.buffer);
+  const s=(o,t)=>{for(let i=0;i<t.length;i++)b[o+i]=t.charCodeAt(i)};
+  s(0,'RIFF');dv.setUint32(4,36+n,true);s(8,'WAVEfmt ');dv.setUint32(16,16,true);dv.setUint16(20,1,true);dv.setUint16(22,1,true);
+  dv.setUint32(24,8000,true);dv.setUint32(28,8000,true);dv.setUint16(32,1,true);dv.setUint16(34,8,true);s(36,'data');dv.setUint32(40,n,true);
+  for(let i=0;i<n;i++)b[44+i]=128;
+  let str='';for(let i=0;i<b.length;i++)str+=String.fromCharCode(b[i]);
+  return 'data:audio/wav;base64,'+btoa(str);
+}
+
+function create(ctx,dest,opts){
+  opts=opts||{};
+  const base=opts.base||'audio/spring/';
+  const log=opts.onEvent||function(){};
+  const tracks=opts.tracks||TRACKS, overlaps=opts.overlap||OVERLAP;
+  const direct=!!opts.direct;      // true: Web Audio を通さず <audio>.volume で音量を決める(音源が別オリジン扱いで無音になる環境用。試聴ページが自動で切り替える)
+  let busLevel=1;
+  let slots=null,cur=0,ids=[],queue=[],lastId=null,nextPlan=null,timer=null,running=false,paused=false,primed=false;
+  const SIL=silentWav();
+
+  function mkSlot(){
+    const el=new Audio();el.preload='auto';el.setAttribute('playsinline','');el.setAttribute('webkit-playsinline','');
+    const slot={el,id:null,started:false,loaded:null,startedAt:0,lv:1,rt:0};
+    el.addEventListener('error',()=>log({type:'error',id:slot.id,code:el.error&&el.error.code}));
+    if(direct){
+      slot.level=v=>{clearInterval(slot.rt);slot.lv=v;el.volume=Math.max(0,Math.min(1,v*busLevel))};
+      slot.ramp=(to,sec)=>{clearInterval(slot.rt);const from=slot.lv,t0=Date.now();slot.rt=setInterval(()=>{const k=Math.min(1,(Date.now()-t0)/(sec*1000));slot.lv=from+(to-from)*k;el.volume=Math.max(0,Math.min(1,slot.lv*busLevel));if(k>=1)clearInterval(slot.rt)},80)};
+    }else{
+      const src=ctx.createMediaElementSource(el),g=ctx.createGain();g.gain.value=1;src.connect(g);g.connect(dest);slot.src=src;slot.g=g;
+      slot.level=v=>{g.gain.cancelScheduledValues(ctx.currentTime);g.gain.value=v;slot.lv=v};
+      slot.ramp=(to,sec)=>{const t=ctx.currentTime;g.gain.cancelScheduledValues(t);g.gain.setValueAtTime(g.gain.value,t);g.gain.linearRampToValueAtTime(to,t+sec)};
+    }
+    return slot;
+  }
+  function url(id){return base+tracks[id].file}
+  function overlapFor(a,b){const v=overlaps[a+'|'+b];return v==null?DEFAULT_OVERLAP:v}
+  function pick(){ // 次に流す曲: 全曲を一巡してから並べ替え、直前の曲は繰り返さない
+    if(!ids.length)return null;
+    if(!queue.length){queue=shuffle(ids);if(ids.length>1&&queue[0]===lastId){const k=1+(Math.random()*(queue.length-1)|0);const t=queue[0];queue[0]=queue[k];queue[k]=t}}
+    return queue.shift();
+  }
+  function load(slot,id){ // 読み込みだけ(再生はしない)
+    if(slot.loaded===id)return;
+    slot.id=id;slot.loaded=id;slot.started=false;
+    slot.el.src=url(id);slot.el.load();
+    slot.level(dB(tracks[id].trim));
+  }
+  function play(slot,pos){
+    const p=slot.el;
+    try{if(pos>0)p.currentTime=pos}catch(e){}
+    slot.started=true;slot.startedAt=ctx.currentTime;
+    const pr=p.play();if(pr&&pr.catch)pr.catch(err=>{log({type:'play-blocked',id:slot.id,err:String(err&&err.name||err)});slot.started=false});
+  }
+  function retire(slot){
+    try{slot.el.pause()}catch(e){}
+    slot.started=false;slot.loaded=null;slot.id=null;
+  }
+  function planNext(){
+    const A=slots[cur];
+    if(nextPlan&&nextPlan.after===A.id)return;
+    const nid=pick();if(!nid)return;
+    nextPlan={after:A.id,id:nid,overlap:overlapFor(A.id,nid)};
+    log({type:'plan',after:A.id,next:nid,overlap:nextPlan.overlap});
+  }
+  function tick(){
+    if(!running||paused||!slots)return;
+    const A=slots[cur],B=slots[1-cur];
+    if(!A.id)return;
+    const meta=tracks[A.id],pos=A.el.currentTime,dur=(isFinite(A.el.duration)&&A.el.duration>10?A.el.duration:meta.dur);
+    if(!nextPlan)planNext();
+    // 次の曲を読み込み始める(いまの曲の30秒以降。曲が短くても終わりの40秒前までには)
+    if(nextPlan&&B.loaded!==nextPlan.id&&!B.started&&(pos>30||dur-pos<nextPlan.overlap+40))load(B,nextPlan.id);
+    const remaining=dur-pos;
+    if(nextPlan&&!B.started&&remaining<=nextPlan.overlap){
+      if(B.loaded!==nextPlan.id)load(B,nextPlan.id);
+      play(B,0);lastId=nextPlan.id;log({type:'start-next',from:A.id,id:B.id,overlap:+remaining.toFixed(2),pos:+pos.toFixed(2)});
+    }
+    if(A.el.ended||remaining<=0.03){ // いまの曲が終わった
+      const nextStarted=B.started;
+      retire(A);
+      if(nextStarted){cur=1-cur;nextPlan=null;log({type:'handover',now:slots[cur].id})}
+      else if(nextPlan){ // 次の曲がまだ始まっていない(読み込みが遅れたなど): すぐ頭から流す
+        load(B,nextPlan.id);play(B,0);lastId=nextPlan.id;cur=1-cur;log({type:'late-start',id:B.id});nextPlan=null}
+    }
+  }
+  function prime(){ // タップの中で呼ぶ: 2本目の<audio>も「再生してよい」状態にしておく(iOS Safari)。1本目は本物の曲をそのまま再生する
+    if(primed)return;primed=true;
+    const s=slots[1];try{s.el.src=SIL;const p=s.el.play();if(p&&p.then)p.then(()=>{if(!s.started)try{s.el.pause()}catch(e){}}).catch(()=>{})}catch(e){}
+  }
+  return {
+    TRACKS:tracks,OVERLAP:overlaps,
+    /* 再生を始める。ids=流す曲の並び(順不同。一巡ごとに並べ替える)。first=最初の曲(省略可)、pos=最初の曲の開始位置(秒) */
+    start(list,first,pos){
+      if(!slots)slots=[mkSlot(),mkSlot()];
+      ids=list.filter(i=>tracks[i]);if(!ids.length)return false;
+      running=true;paused=false;queue=[];nextPlan=null;
+      for(const s of slots)retire(s);
+      prime();
+      cur=0;const id=first&&ids.indexOf(first)>=0?first:pick();
+      if(first&&queue.indexOf(first)>=0)queue.splice(queue.indexOf(first),1);
+      load(slots[0],id);lastId=id;play(slots[0],pos||0);
+      log({type:'start',id,pos:pos||0});
+      if(!timer)timer=setInterval(tick,250);
+      return true;
+    },
+    setBus(v){busLevel=v;if(direct)for(const s of slots||[])s.el.volume=Math.max(0,Math.min(1,s.lv*busLevel))},
+    get direct(){return direct},
+    pause(){if(!running||paused)return;paused=true;for(const s of slots||[])if(s.started)try{s.el.pause()}catch(e){}},
+    resume(){if(!running||!paused)return;paused=false;for(const s of slots||[])if(s.started){const p=s.el.play();if(p&&p.catch)p.catch(()=>{})}},
+    stop(){running=false;paused=false;if(timer){clearInterval(timer);timer=null}for(const s of slots||[])retire(s);nextPlan=null},
+    setPlaylist(list){ids=list.filter(i=>tracks[i]);queue=queue.filter(i=>ids.indexOf(i)>=0);if(nextPlan&&ids.indexOf(nextPlan.id)<0&&!slots[1-cur].started)nextPlan=null},
+    /* 試聴用: いまの曲を、つなぎ目の手前 sec 秒に移動する */
+    seekToSeam(sec){if(!running||!slots)return;const A=slots[cur];if(!A.id)return;if(!nextPlan)planNext();
+      const t=Math.max(0,tracks[A.id].dur-(nextPlan?nextPlan.overlap:DEFAULT_OVERLAP)-(sec==null?10:sec));try{A.el.currentTime=t}catch(e){}},
+    /* 試聴用: いますぐ次の曲へ(いまの曲は rel 秒かけて小さくする) */
+    skip(rel){if(!running||!slots)return;const A=slots[cur],B=slots[1-cur];if(!A.id||B.started)return;
+      if(!nextPlan)planNext();load(B,nextPlan.id);play(B,0);lastId=nextPlan.id;
+      const r=rel==null?5:rel;A.ramp(0,r);
+      const old=A;setTimeout(()=>{if(slots[cur]===old){retire(old);cur=1-cur;nextPlan=null}},r*1000+80);log({type:'skip',id:B.id})},
+    state(){
+      if(!slots||!running)return {running:false};
+      const A=slots[cur],B=slots[1-cur];
+      return {running:true,paused,id:A.id,pos:A.el.currentTime||0,dur:A.id?tracks[A.id].dur:0,next:nextPlan?nextPlan.id:null,overlap:nextPlan?nextPlan.overlap:null,
+        nextPlaying:B.started,nextPos:B.started?B.el.currentTime:0,
+        ready:A.el.readyState,blocked:!A.started};
+    },
+    get running(){return running},get paused(){return paused},_slots:()=>slots
+  };
+}
+root.SpringTracks={create,TRACKS,OVERLAP};
+})(typeof window!=='undefined'?window:globalThis);
+
+/* ===== /SPRING TRACKS ===== */
 const AUDIO=(function(){
   let ctx=null,master=null,musicG=null,sfxG=null,echo=null,timer=null,started=false,nextT=0,step=0,bar=0;
-  let on=true,vol=.5,OUT=null,scene='town',nextC=0,barC=0,cafeG=null,echoC=null,cafeM=null,flowerM=null,flyM=null,flying=false;
+  let on=true,vol=.5,OUT=null,scene='town',nextC=0,barC=0,cafeG=null,echoC=null,cafeM=null,flowerM=null,flyM=null,flying=false,springG=null,SPT=null,sptTimer=0;
   /* 1/fゆらぎ(ピンクノイズ, Voss-McCartney法): -1〜1 くらいの値が、ゆっくり大きく・すこし細かく揺れる。
      テンポ・音の出るタイミング・強さにかけて、機械的にそろいすぎないようにする */
   function pink(){const R=new Array(8).fill(0).map(()=>Math.random()*2-1);let n=0;
@@ -915,9 +1084,11 @@ const AUDIO=(function(){
     const d=ctx.createDelay(1);d.delayTime.value=EIGHTH*1.5;const fb=ctx.createGain();fb.gain.value=.3;const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=2600;
     d.connect(lp);lp.connect(fb);fb.connect(d);const wet=ctx.createGain();wet.gain.value=.35;lp.connect(wet);wet.connect(musicG);echo=d;
     // カフェ用の別バス(店内専用BGM)
-    cafeG=ctx.createGain();cafeG.gain.value=on&&eff()!=='town'?vol*1.7:0;cafeG.connect(master);
+    cafeG=ctx.createGain();cafeG.gain.value=on&&eff()!=='town'&&eff()!=='spring'?vol*1.7:0;cafeG.connect(master);
+    springG=ctx.createGain();springG.gain.value=0;springG.connect(master); // 癒しの泉のBGM(Geminiの曲)専用バス
     {const dc=ctx.createDelay(1);dc.delayTime.value=.54;const fc=ctx.createGain();fc.gain.value=.28;const lc=ctx.createBiquadFilter();lc.type='lowpass';lc.frequency.value=2400;
      dc.connect(lc);lc.connect(fc);fc.connect(dc);const wc=ctx.createGain();wc.gain.value=.3;lc.connect(wc);wc.connect(cafeG);echoC=dc;cafeM=buildCafe(ctx,cafeG,echoC);flowerM=buildFlower(ctx,cafeG,echoC);flyM=buildFly(ctx,cafeG,echoC)}
+    if(eff()==='spring')springSync(ctx.currentTime,.1);
     return true;
   }
   function tone(t,f,dur,type,peak,dest,send){
@@ -1146,12 +1317,25 @@ const AUDIO=(function(){
 
   function tick(){
     if(!ctx||ctx.state!=='running')return;
-    const s=eff();if(s!=='town'){const M=s==='flower'?flowerM:s==='fly'?flyM:cafeM;while(nextC<ctx.currentTime+.35){M.bar(nextC,barC);nextC+=M.len*(1+.018*pTempo());barC++}return}
+    const s=eff();if(s==='spring')return;if(s!=='town'){const M=s==='flower'?flowerM:s==='fly'?flyM:cafeM;while(nextC<ctx.currentTime+.35){M.bar(nextC,barC);nextC+=M.len*(1+.018*pTempo());barC++}return}
     while(nextT<ctx.currentTime+.35){scheduleBar(nextT,bar);nextT+=EIGHTH*6*(1+.012*pTempo());bar=(bar+1)%128}
   }
-  function gains(tc){if(!ctx)return;const t=ctx.currentTime;
+  /* 癒しの泉の曲: 音量は元音源(約-11.5 LUFS)を、音量つまみ50%で再生時 約-22 LUFS(マスター .55 込み)に合わせた係数 1.1。
+     曲の再生は SpringTracks(下のブロック)。泉を出る/BGMオフでは、バスを約4秒でフェードアウトしてから一時停止する */
+  const SPRING_DAY=['clearing','garden','water'];
+  function springSync(t,tc){
+    const want=on&&eff()==='spring';
+    springG.gain.cancelScheduledValues(t);springG.gain.setTargetAtTime(want?vol*1.1:0,t,tc);
+    clearTimeout(sptTimer);
+    if(want){
+      if(!SPT){try{SPT=SpringTracks.create(ctx,springG,{base:'audio/spring/'})}catch(e){SPT=null;return}}
+      if(!SPT.running)SPT.start(SPRING_DAY);else if(SPT.paused)SPT.resume();
+    }else if(SPT&&SPT.running)sptTimer=setTimeout(()=>{if(!(on&&eff()==='spring')&&SPT)SPT.pause()},tc>.5?5400:700);
+  }
+  function gains(tc){if(!ctx)return;const t=ctx.currentTime,sp=eff()==='spring';
     musicG.gain.cancelScheduledValues(t);musicG.gain.setTargetAtTime(on&&eff()==='town'?vol:0,t,tc);
-    cafeG.gain.cancelScheduledValues(t);cafeG.gain.setTargetAtTime(on&&eff()!=='town'?vol*1.7:0,t,tc)}
+    cafeG.gain.cancelScheduledValues(t);cafeG.gain.setTargetAtTime(on&&eff()!=='town'&&!sp?vol*1.7:0,t,tc);
+    springSync(t,tc)}
   function setScene(s){ // 'town' | 'cafe' | 'flower': 店内に入る/出るときにBGMを切り替える
     const was=eff();scene=s;switched(was);
   }
@@ -1159,7 +1343,7 @@ const AUDIO=(function(){
   function switched(was){
     const now=eff();if(now===was||!ctx)return;
     if(now!=='town'){nextC=ctx.currentTime+.05;barC=0}else nextT=ctx.currentTime+.25;
-    gains(.12);
+    gains(now==='spring'||was==='spring'?1.2:.12);
   }
   function startMusic(){
     if(!init())return;
@@ -1184,7 +1368,7 @@ const AUDIO=(function(){
       g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.09,t+.01);g.gain.exponentialRampToValueAtTime(.0008,t+.14);o.connect(g);g.connect(sfxG);o.start(t);o.stop(t+.16)}
     else if(kind==='fanfare'){[72,76,79,84,79,84,88,91,96].forEach((m,i)=>bell(t+i*.11,m,.7,.3,sfxG,.4))}
   }
-  document.addEventListener('visibilitychange',()=>{if(!ctx)return;if(document.hidden)ctx.suspend().catch(()=>{});else if(started&&on)ctx.resume().catch(()=>{})});
+  document.addEventListener('visibilitychange',()=>{if(SPT){if(document.hidden)SPT.pause();else if(on&&eff()==='spring')SPT.resume()}if(!ctx)return;if(document.hidden)ctx.suspend().catch(()=>{});else if(started&&on)ctx.resume().catch(()=>{})});
   // UI
   const btn=document.getElementById('btnBgm'),rng=document.getElementById('bgmVol'),row=document.getElementById('bgmRow');
   function ui(){if(btn){btn.setAttribute('aria-pressed',on?'true':'false');btn.classList.toggle('muted',!on);btn.style.opacity=on?1:.6}if(row)row.style.display=on?'flex':'none';if(rng)rng.value=Math.round(vol*100)}
@@ -1193,7 +1377,7 @@ const AUDIO=(function(){
   ['pointerdown','keydown','touchstart'].forEach(ev=>window.addEventListener(ev,function once(){window.removeEventListener(ev,once,true);firstGesture()},true));
   if(btn)btn.addEventListener('click',()=>{on=!on;ui();if(!init()){return}if(on){if(!started)startMusic();else if(ctx.state==='suspended')ctx.resume().catch(()=>{})}apply()});
   if(rng){rng.addEventListener('input',()=>{vol=rng.value/100;apply();if(!started&&on)startMusic()});rng.addEventListener('change',()=>rng.blur())}
-  return {sfx,setScene,setFly};
+  return {sfx,setScene,setFly,springState:()=>SPT?Object.assign({bus:springG?springG.gain.value:0},SPT.state()):null};
 })();
 (function(){
 'use strict';
@@ -4644,7 +4828,7 @@ function springEnter(){
   SPR.face=Math.atan2(SPR.to.x-SPR.from.x,SPR.to.z-SPR.from.z);player.face=SPR.face;
   player.vx=player.vz=0;player.vy=0;SPR.vx=SPR.vz=0;SPR.dip=0;SPR.dipV=0;
   input.dash=false;input.dashLatch=false;const db=$('tbDash');if(db)db.classList.remove('hold');
-  sprLayers(true);sprCamBlend(1,1.7);sprUIState(true);try{AUDIO.sfx('jump')}catch(e){}
+  sprLayers(true);sprCamBlend(1,1.7);sprUIState(true);try{AUDIO.sfx('jump')}catch(e){}try{AUDIO.setScene('spring')}catch(e){}
 }
 function springExit(){
   if(!SPR.in||SPR.busy)return;
@@ -4703,7 +4887,7 @@ function springTick(dt,t,playing){
     SPRING.setBody({on:SPR.phase==='jumpIn'?u>.92:u<.15,x:player.pos.x-SPR.X,z:player.pos.z-SPR.Z,r:.7,speed:0});SPRING.update(t);
     if(u>=1){
       if(SPR.phase==='jumpIn'){SPR.phase='swim';SPR.busy=false;SPR.dipV=-1.1;SPR.rxs=-.15;SPRING.splash(SPR.to.x-SPR.X,SPR.to.z-SPR.Z,t,1,(t*1000)|0);try{AUDIO.sfx('splash')}catch(e){}}
-      else{SPR.in=false;SPR.busy=false;SPR.phase='';SPR.armed=false;player.pos.copy(SPR.land);player.ground=true;player.vy=0;player.vx=player.vz=0;player.squash=.22;sprLayers(false);blob.visible=true;SPRING.setBody(null);sprUIState(false);try{AUDIO.sfx('jump')}catch(e){}}
+      else{try{AUDIO.setScene('town')}catch(e){}SPR.in=false;SPR.busy=false;SPR.phase='';SPR.armed=false;player.pos.copy(SPR.land);player.ground=true;player.vy=0;player.vx=player.vz=0;player.squash=.22;sprLayers(false);blob.visible=true;SPRING.setBody(null);sprUIState(false);try{AUDIO.sfx('jump')}catch(e){}}
     }
     sprCamUpdate(t,dt);return}
   // in the water: swim / float (slow, smooth) / glide to the edge before jumping out
@@ -4773,7 +4957,7 @@ function sprPose(dt,t,k,stroke,sf,sway,fw,direct){
 /* recording / QA only (window.__spring.demo): everything a pure function of the loop time, so a clip of SPRING.L seconds
    loops without a seam. mode 'swim': a closed figure-eight. mode 'float': floating in place at (x,z). Not reachable from normal play. */
 function springDemo(o){
-  if(!o){if(SPR.demo){SPR.demo=null;SPR.in=false;SPR.busy=false;SPR.phase='';SPR.fw=0;SPRING.setLoopRipples(null);SPRING.setBody(null);sprLayers(false);blob.visible=true;SPR.cb=0;SPR.cbFrom=SPR.cbTo=0;sprCanopy(0)}return}
+  if(!o){if(SPR.demo){SPR.demo=null;try{AUDIO.setScene('town')}catch(e){}SPR.in=false;SPR.busy=false;SPR.phase='';SPR.fw=0;SPRING.setLoopRipples(null);SPRING.setBody(null);sprLayers(false);blob.visible=true;SPR.cb=0;SPR.cbFrom=SPR.cbTo=0;sprCanopy(0)}return}
   const prev=SPR.demo;SPR.demo=Object.assign({t:0,view:'top',mode:'swim',x:0,z:0},prev||{},o);const D=SPR.demo;
   if(!prev||prev.mode!==D.mode||prev.x!==D.x||prev.z!==D.z){SPR.in=true;SPR.busy=true;SPR.phase='demo';sprLayers(true);SPRING.clearRipples();
     const L=SPRING.L,rs=[];
