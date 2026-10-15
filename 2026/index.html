@@ -4768,6 +4768,120 @@ SPRING.setLeaves([{x:-1.4,z:-.6,ax:.32,az:.15,p:0,s:.33,tex:0},{x:1.75,z:.55,ax:
 SPR.level=SPRING.group.position.y; // water surface height (world)
 // rim colliders: Piyo stops at the stones (swimming ignores them)
 for(let i=0;i<34;i++){const a=i/34*PI*2,p=SPRING.shapeAt(a,1.04);addCircle(SPR.X+p[0],SPR.Z+p[1],.42,SPR.level+.6)}
+/* ---- shore dressing (built on first use, once the trees are in the scene): sparse small white flowers and thin grass,
+   fallen leaves in drifts (thicker under the orange trees and against the stones, a few caught at the water's edge),
+   soft dappled light under the trees (komorebi) and a faint low haze over the water.
+   Everything sits inside SPRING.group, so Piyo's shore/plant check ignores it (it is all low and outside the water). */
+const SPR_DECO={g:null};
+const sprRng=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+function sprDeco(t){
+  if(SPR_DECO.off)return;
+  if(!SPR_DECO.g)try{sprDecoBuild()}catch(e){SPR_DECO.off=true;if(SPR_DECO.g)SPR_DECO.g.visible=false;console.error('spring deco',e.message);return} // decoration only: never break the game
+  const D=SPR_DECO;D.k.uT.value=t;for(const h of D.h){h.uT.value=t;h.uCam.value.copy(camera.position);h.uPl.value.set(player.pos.x-SPR.X,player.pos.z-SPR.Z)}
+}
+function sprDecoBuild(){
+  {
+    const D=SPR_DECO,g=D.g=new THREE.Group();SPRING.group.add(g);
+    const rnd=sprRng(4417),R=SPRING.o.R,SX=SPRING.o.sx,lv=SPRING.group.position.y;
+    const gy=(x,z)=>groundY(SPR.X+x,SPR.Z+z)-lv; // local ground height
+    // keep clear of houses, fences and tree trunks (the pond's own rim circles are left out)
+    const blocked=(x,z,r)=>{const wx=SPR.X+x,wz=SPR.Z+z,y=groundY(wx,wz);
+      for(const b of cols){if(y>=b.top-.15)continue;const dx=wx-b.x,dz=wz-b.z,lx=dx*b.c-dz*b.s,lz=dx*b.s+dz*b.c;if(Math.abs(lx)<b.hw+r&&Math.abs(lz)<b.hd+r)return true}
+      for(const c of circs){if(c.top===SPR.level+.6||y>=c.top-.15)continue;const dx=wx-c.x,dz=wz-c.z;if(dx*dx+dz*dz<(c.r+r)*(c.r+r))return true}return false};
+    // the orange trees by the pond (their canopies), as local points: leaves pile up under them, the light is dappled there
+    sprCanopy(0);const trees=(sprCanopy.l||[]).map(k=>[k.c.x-SPR.X,k.c.z-SPR.Z,k.r]);
+    const near=(x,z)=>{let s=0;for(const q of trees){const d2=(x-q[0])**2+(z-q[1])**2;s+=Math.exp(-d2/(2*q[2]*q[2]*.8))}return Math.min(1,s)};
+    const at=(a,rho)=>SPRING.shapeAt(a,rho);
+    const cvs2=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c};
+    // --- small white flowers and thin grass: crossed cards ---
+    const cross=(()=>{const a=new THREE.PlaneGeometry(1,1),b=new THREE.PlaneGeometry(1,1);a.translate(0,.5,0);b.translate(0,.5,0);b.rotateY(PI/2);
+      const p=new Float32Array(a.attributes.position.count*6),u=new Float32Array(a.attributes.uv.count*4),ix=[];
+      p.set(a.attributes.position.array,0);p.set(b.attributes.position.array,a.attributes.position.count*3);u.set(a.attributes.uv.array,0);u.set(b.attributes.uv.array,a.attributes.uv.count*2);
+      const ia=Array.from(a.index.array);ix.push(...ia,...ia.map(i=>i+a.attributes.position.count));
+      const g2=new THREE.BufferGeometry();g2.setAttribute('position',new THREE.BufferAttribute(p,3));g2.setAttribute('uv',new THREE.BufferAttribute(u,2));g2.setIndex(ix);return g2})();
+    const flowerTex=(()=>{const c=cvs2(128,128),x=c.getContext('2d'),r2=sprRng(77);
+      const heads=[[40,44],[70,30],[92,56]];x.lineCap='round';
+      for(const [hx,hy] of heads){x.strokeStyle='#5f8a3a';x.lineWidth=3;x.beginPath();x.moveTo(64+(hx-64)*.3,128);x.quadraticCurveTo(hx+(r2()-.5)*10,(hy+128)/2,hx,hy);x.stroke();
+        x.fillStyle='#6f9a44';x.beginPath();x.ellipse((hx+64)/2+4,(hy+128)/2+10,7,3,.6,0,PI*2);x.fill()}
+      for(const [hx,hy] of heads){const rr=9+r2()*3;for(let i=0;i<5;i++){const a=i/5*PI*2+r2()*.3;x.fillStyle='#fbfaf4';x.beginPath();x.ellipse(hx+Math.cos(a)*rr*.62,hy+Math.sin(a)*rr*.62,rr*.55,rr*.36,a,0,PI*2);x.fill()}
+        x.fillStyle='#f1c84a';x.beginPath();x.arc(hx,hy,rr*.32,0,PI*2);x.fill()}
+      const t2=new THREE.CanvasTexture(c);t2.anisotropy=4;return t2})();
+    const grassTex=(()=>{const c=cvs2(128,128),x=c.getContext('2d'),r2=sprRng(91);x.lineCap='round';
+      for(let i=0;i<16;i++){const bx=34+r2()*60,lean=(r2()-.5)*46,h=60+r2()*62,cols2=['#a7a24e','#b9ae5a','#8f9444','#c4b866','#9c9a4a'];
+        x.strokeStyle=cols2[i%5];x.lineWidth=2+r2()*1.6;x.beginPath();x.moveTo(bx,128);x.quadraticCurveTo(bx+lean*.3,128-h*.6,bx+lean,128-h);x.stroke()}
+      const t2=new THREE.CanvasTexture(c);t2.anisotropy=4;return t2})();
+    const cards=(tex,list,col)=>{const m=new THREE.MeshBasicMaterial({map:tex,alphaTest:.5,side:THREE.DoubleSide,color:col});
+      const im=new THREE.InstancedMesh(cross,m,list.length),M=new THREE.Matrix4(),Q=new THREE.Quaternion(),E=new THREE.Euler(),V=new THREE.Vector3(),Sc=new THREE.Vector3();
+      list.forEach((q,i)=>{E.set((rnd()-.5)*.12,rnd()*PI,(rnd()-.5)*.12);Q.setFromEuler(E);V.set(q[0],q[1],q[2]);Sc.set(q[3],q[4],q[3]);M.compose(V,Q,Sc);im.setMatrixAt(i,M)});
+      im.frustumCulled=false;g.add(im);return im};
+    const scatter=(n,r0,r1,minD,clump,fn)=>{const out=[];let tries=0;
+      while(out.length<n&&tries++<n*60){const a=rnd()*PI*2,rho=r0+(r1-r0)*Math.pow(rnd(),1.4),p=at(a,rho);
+        if(blocked(p[0],p[1],.25)||out.some(q=>(q[0]-p[0])**2+(q[2]-p[1])**2<minD*minD))continue;
+        out.push([p[0],0,p[1]]);for(let k=1;k<clump&&rnd()<.6;k++){const x=p[0]+(rnd()-.5)*.5,z=p[1]+(rnd()-.5)*.5;if(SPRING.rhoAt(x,z)>r0&&!blocked(x,z,.2))out.push([x,0,z])}}
+      return out.map(q=>{q[1]=gy(q[0],q[2])-.02;return fn(q)})};
+    scatter(22,1.16,1.95,.8,3,q=>[q[0],q[1],q[2],.25+rnd()*.07,.24+rnd()*.08]).forEach((q,i,a)=>{if(!i)cards(flowerTex,a,0xf2efe6)});
+    scatter(30,1.1,2.1,.55,2,q=>[q[0],q[1],q[2],.26+rnd()*.12,.3+rnd()*.16]).forEach((q,i,a)=>{if(!i)cards(grassTex,a,0xf0ead8)});
+    // --- fallen leaves: density varies (under the trees, in drifts along the stones), red / orange / yellow ---
+    const leafG=(()=>{const g2=new THREE.PlaneGeometry(1,1,4,4);g2.rotateX(-PI/2);const p=g2.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i);p.setY(i,.06*x*x*2+.03*Math.max(0,-z))}return g2})();
+    const LT=SPRING.leafTex,byTex=[[],[],[],[]],tint=[[1,.86,.84],[1,.95,.9],[1,1,.9],[1,.97,.82]];
+    const drift=(a)=>.5+.5*Math.sin(a*3+1.1)*Math.sin(a*5+.4); // patchy along the shore
+    let n=0,tries=0;
+    while(n<170&&tries++<9000){const a=rnd()*PI*2,rho=1.07+Math.pow(rnd(),1.8)*1.6,p=at(a,rho);
+      const eu=(rho-1.12)/.06,edge=Math.exp(-eu*eu),dens=.08+.7*near(p[0],p[1])+.55*edge*drift(a)+.18*drift(a+2);
+      if(rnd()>dens||blocked(p[0],p[1],.12))continue;
+      const k=near(p[0],p[1])>.4?(rnd()<.55?0:rnd()<.5?1:3):(rnd()<.3?0:rnd()<.45?2:rnd()<.6?1:3);
+      byTex[k].push([p[0],gy(p[0],p[1])+.012+n*.00006,p[1],.21+rnd()*.13]);n++}
+    byTex.forEach((l,k)=>{if(!l.length)return;const m=new THREE.MeshBasicMaterial({map:LT[k],alphaTest:.45,side:THREE.DoubleSide,color:new THREE.Color(tint[k][0],tint[k][1],tint[k][2]),polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+      const im=new THREE.InstancedMesh(leafG,m,l.length),M=new THREE.Matrix4(),Q=new THREE.Quaternion(),E=new THREE.Euler();
+      l.forEach((q,i)=>{E.set((rnd()-.5)*.2,rnd()*PI*2,(rnd()-.5)*.2,'YXZ');Q.setFromEuler(E);M.compose(new THREE.Vector3(q[0],q[1],q[2]),Q,new THREE.Vector3(q[3],q[3],q[3]));im.setMatrixAt(i,M)});
+      im.frustumCulled=false;g.add(im)});
+    // a few more leaves afloat, caught at the water's edge (they bob in place against the stones)
+    SPRING.setLeaves(SPRING.leaves.map(l=>({x:l.x,z:l.z,ax:l.ax,az:l.az,p:l.p,s:l.s,tex:l.tex})).concat(
+      [[.6,.86,0,.26],[2.3,.84,2,.24],[3.9,.87,1,.25],[5.2,.85,3,.23]].map(([a,r,tx,s],i)=>{const p=at(a,r);return {x:p[0],z:p[1],ax:.04,az:.03,p:1.3+i*1.7,s,tex:tx}})));
+    // --- soft dappled light (komorebi) on the ground and the stones under the trees, plus a broad soft glow ---
+    const spotTex=(()=>{const N=256,c=cvs2(N,N),x=c.getContext('2d'),r2=sprRng(5);x.fillStyle='#000';x.fillRect(0,0,N,N);
+      for(let i=0;i<70;i++){const px=r2()*N,py=r2()*N,rr=6+r2()*20,sq=.55+r2()*.4,an=r2()*PI;
+        for(const ox of[-N,0,N])for(const oy of[-N,0,N]){x.save();x.translate(px+ox,py+oy);x.rotate(an);x.scale(1,sq);const q=x.createRadialGradient(0,0,0,0,0,rr);
+          q.addColorStop(0,'rgba(255,255,255,.95)');q.addColorStop(.55,'rgba(255,255,255,.55)');q.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=q;x.beginPath();x.arc(0,0,rr,0,PI*2);x.fill();x.restore()}}
+      const t2=new THREE.CanvasTexture(c);t2.wrapS=t2.wrapT=THREE.RepeatWrapping;return t2})();
+    const ext=R*SX*2.2,kg=new THREE.PlaneGeometry(ext*2,ext*2,48,48);kg.rotateX(-PI/2);
+    {const p=kg.attributes.position,on=new Float32Array(p.count);for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i);p.setY(i,gy(x,z)+.06);on[i]=blocked(x,z,.3)?0:1}kg.setAttribute('aOn',new THREE.BufferAttribute(on,1))} // none by walls, fences and steps
+    const tw=trees.length?trees:[[0,-4,3]];
+    const kU={uT:{value:0},tSpot:{value:spotTex},uTree:{value:tw.slice(0,2).map(q=>new THREE.Vector3(q[0],q[1],q[2]))},uR:{value:R},uSX:{value:SX},uA:{value:1}};
+    while(kU.uTree.value.length<2)kU.uTree.value.push(kU.uTree.value[0].clone());
+    const km=new THREE.ShaderMaterial({uniforms:kU,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4,
+      vertexShader:'attribute float aOn;varying vec2 vP;varying float vOn;void main(){vP=position.xz;vOn=aOn;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+      fragmentShader:`uniform float uT,uR,uSX,uA;uniform sampler2D tSpot;uniform vec3 uTree[2];varying vec2 vP;varying float vOn;
+        void main(){vec2 q=vec2(vP.x/uSX,vP.y);float a=atan(q.y,q.x),r=uR*(1.+.09*sin(2.*a+.5)+.055*sin(3.*a+1.7)+.025*sin(5.*a+2.9)),rho=length(q)/r;
+          float wet=smoothstep(.96,1.12,rho);
+          float tr=0.;for(int i=0;i<2;i++){vec2 d=vP-(uTree[i].xy+vec2(-.6,.9));tr=max(tr,1.-smoothstep(uTree[i].z*.35,uTree[i].z*1.25,length(d)));}
+          vec2 s1=vec2(.010*sin(uT*.45),.008*cos(uT*.37)),s2=vec2(-.007*cos(uT*.31+1.),.009*sin(uT*.52));
+          float sp=texture2D(tSpot,vP*.105+s1).r*texture2D(tSpot,vP*.083+vec2(.37,.11)+s2).r;
+          float dap=smoothstep(.12,.7,sp)*(.85+.15*sin(uT*.9+vP.x*.7));
+          float glow=1.-smoothstep(0.,uR*uSX*2.,length(vP-vec2(-1.2,1.4)));
+          float outer=1.-smoothstep(uR*uSX*1.6,uR*uSX*2.1,length(vP));
+          vec3 c=vec3(1.,.86,.62)*(dap*tr*.26+glow*.05)*wet*outer*uA*smoothstep(.6,1.,vOn);gl_FragColor=vec4(c,1.);}`});
+    const km2=new THREE.Mesh(kg,km);km2.renderOrder=2;km2.frustumCulled=false;g.add(km2);D.k=kU;
+    // --- faint low haze over the water and the near shore (drifts slowly; thinner when looking straight down) ---
+    const hazeTex=(()=>{const N=128,c=cvs2(N,N),x=c.getContext('2d'),r2=sprRng(12);x.fillStyle='#000';x.fillRect(0,0,N,N);
+      for(let i=0;i<40;i++){const px=r2()*N,py=r2()*N,rr=12+r2()*30;for(const ox of[-N,0,N])for(const oy of[-N,0,N]){const q=x.createRadialGradient(px+ox,py+oy,0,px+ox,py+oy,rr);q.addColorStop(0,'rgba(255,255,255,.35)');q.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=q;x.fillRect(px+ox-rr,py+oy-rr,2*rr,2*rr)}}
+      const t2=new THREE.CanvasTexture(c);t2.wrapS=t2.wrapT=THREE.RepeatWrapping;return t2})();
+    D.h=[];
+    for(const [y,al,sc] of [[.32,.09,1],[.75,.05,1.25]]){const hu={uT:{value:0},tH:{value:hazeTex},uA:{value:al},uE:{value:R*SX*1.9*sc},uCam:{value:new THREE.Vector3()},uPl:{value:new THREE.Vector2(99,99)}};
+      const hg=new THREE.PlaneGeometry(R*SX*3.8*sc,R*3.8*sc*1.2,1,1);hg.rotateX(-PI/2);
+      const hm=new THREE.ShaderMaterial({uniforms:Object.assign(hu,{uR:{value:R},uSX:{value:SX}}),transparent:true,depthWrite:false,side:THREE.DoubleSide,
+        vertexShader:'varying vec3 vW;varying vec2 vP;void main(){vP=position.xz;vec4 w=modelMatrix*vec4(position,1.);vW=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}',
+        fragmentShader:`uniform float uT,uA,uE,uR,uSX;uniform sampler2D tH;uniform vec3 uCam;uniform vec2 uPl;varying vec3 vW;varying vec2 vP;
+          void main(){float n=texture2D(tH,vP*.07+vec2(uT*.006,uT*.004)).r+texture2D(tH,vP*.11+vec2(-uT*.005,uT*.007)+.3).r;
+            vec3 V=normalize(uCam-vW);float graze=1.-abs(V.y);
+            float edge=1.-smoothstep(uE*.45,uE,length(vP*vec2(1.,1.15)));
+            vec2 q=vec2(vP.x/uSX,vP.y);float an=atan(q.y,q.x),rho=length(q)/(uR*(1.+.09*sin(2.*an+.5)+.055*sin(3.*an+1.7)+.025*sin(5.*an+2.9)));
+            edge*=.25+.75*smoothstep(.45,1.,rho); // thinnest over the middle of the water, so the water keeps its colour
+            float nearC=smoothstep(1.2,3.,length(uCam-vW))*smoothstep(.5,1.4,length(vP-uPl)); // never across Piyo herself
+            float a=uA*(.35+.65*n)*edge*nearC*mix(.12,1.5,graze*graze);gl_FragColor=vec4(.97,.94,1.,clamp(a,0.,.28));}`});
+      const hz=new THREE.Mesh(hg,hm);hz.position.y=y;hz.renderOrder=3;hz.frustumCulled=false;g.add(hz);D.h.push(hu)}
+  }
+}
 // the ground has a hole where the pond is (terrain shader discards inside the shore line)
 W.MAT.ground.onBeforeCompile=sh=>{
   sh.uniforms.uSprC={value:new THREE.Vector2(SPR.X,SPR.Z)};
@@ -4871,6 +4985,7 @@ function sprFootprint(px,pz,face,fw){ // returns the push that keeps every point
     if(!mx&&!mz)break;ox+=mx;oz+=mz}
   return [ox,oz,near]}
 function springTick(dt,t,playing){
+  if(Math.hypot(camera.position.x-SPR.X,camera.position.z-SPR.Z)<70)sprDeco(t);
   if(SPR.demo){springDemoTick(dt);return}
   const visibleNear=Math.hypot(camera.position.x-SPR.X,camera.position.z-SPR.Z)<70;
   // ask once when walking up to the pond
@@ -5010,11 +5125,13 @@ function sprCanopy(e){
       if(r>.8&&r<5&&v.y-SPR.level>1.6&&Math.hypot(v.x-SPR.X,v.z-SPR.Z)<reach+1.5&&o.material.isMeshLambertMaterial&&!o.material.vertexColors){
         const m=o.material.clone();o.material=m;sprCanopy.l.push({m,c:v.clone(),r,a:1})}})}
   const eo=sEase(e);
-  const P=camera.position,Q=player.pos;
+  const P=camera.position,Q=player.pos,now=performance.now(),dtc=Math.min(.2,Math.max(0,(now-(sprCanopy.t||now))/1000))/.3;sprCanopy.t=now;
   for(const k of sprCanopy.l){const inside=sEase((k.r*1.1-P.distanceTo(k.c))/(k.r*.5));
     // ... or when it stands between the camera and Piyo (distance from the canopy centre to the camera-Piyo line)
     const dx=Q.x-P.x,dy=Q.y+.8-P.y,dz=Q.z-P.z,l2=dx*dx+dy*dy+dz*dz||1,u=Math.max(0,Math.min(1,((k.c.x-P.x)*dx+(k.c.y-P.y)*dy+(k.c.z-P.z)*dz)/l2));
-    const sd=Math.hypot(P.x+dx*u-k.c.x,P.y+dy*u-k.c.y,P.z+dz*u-k.c.z),occl=sEase((k.r*1.3-sd)/(k.r*.35));
+    const sd=Math.hypot(P.x+dx*u-k.c.x,P.y+dy*u-k.c.y,P.z+dz*u-k.c.z);
+    // it fades all the way out (or back in) over about 0.3 s, so a tree is never left half see-through beside her
+    k.o=k.o||0;k.o+=Math.max(-dtc,Math.min(dtc,(sd<k.r*1.1?1:0)-k.o));const occl=sEase(k.o);
     const a=1-Math.max(eo,inside,occl);if(k.a===a)continue;k.a=a;
     const m=k.m,tr=a<.999;if(m.transparent!==tr){m.transparent=tr;m.needsUpdate=true}m.opacity=a;m.depthWrite=!tr;m.visible=a>.02}
 }
