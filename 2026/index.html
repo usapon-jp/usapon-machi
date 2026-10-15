@@ -4945,6 +4945,7 @@ function springEnter(){
   player.vx=player.vz=0;player.vy=0;SPR.vx=SPR.vz=0;SPR.dip=0;SPR.dipV=0;
   input.dash=false;input.dashLatch=false;const db=$('tbDash');if(db)db.classList.remove('hold');
   SPR.pitch0=cam.pitch;cam.pitch=SPR_PN;SPR.camP=SPR.camPT=SPR_PTOP;SPR.selfieWas=false;
+  SPR.dist0=cam.dist;cam.dist=SPR_DN;SPR.zoom=SPR.zoomT=1;
   sprLayers(true);sprCamBlend(1,1.7);sprUIState(true);try{AUDIO.sfx('jump')}catch(e){}try{AUDIO.setScene('spring')}catch(e){}
 }
 function springExit(){
@@ -5017,7 +5018,7 @@ function springTick(dt,t,playing){
   const my=cam.yaw,fx=-Math.sin(my),fz=-Math.cos(my),rx=Math.cos(my),rz=-Math.sin(my),SP=floating?SPR_FLOAT:SPR_SWIM;
   let tx=(rx*ix+fx*iy)*SP,tz=(rz*ix+fz*iy)*SP; // screen-relative: up on the stick = up on the screen
   if(SPR.phase==='toEdge'){const u=Math.min(1,(t-SPR.t0)/SPR.dur);const ex=SPR.to.x-player.pos.x,ez=SPR.to.z-player.pos.z,l=Math.hypot(ex,ez);tx=l>.03?ex/l*Math.min(1.1,l*3):0;tz=l>.03?ez/l*Math.min(1.1,l*3):0;
-    if(u>=1){if(SPR.pitch0!==undefined){cam.pitch=SPR.pitch0;SPR.pitch0=undefined}SPR.phase='jumpOut';SPR.t0=t;SPR.dur=1.05;SPR.from=player.pos.clone();SPRING.splash(player.pos.x-SPR.X,player.pos.z-SPR.Z,t,.55,(t*1000)|0);try{AUDIO.sfx('splash')}catch(e){};sprCamBlend(0,1.5)}}
+    if(u>=1){if(SPR.pitch0!==undefined){cam.pitch=SPR.pitch0;SPR.pitch0=undefined}if(SPR.dist0!==undefined){cam.dist=SPR.dist0;SPR.dist0=undefined}SPR.phase='jumpOut';SPR.t0=t;SPR.dur=1.05;SPR.from=player.pos.clone();SPRING.splash(player.pos.x-SPR.X,player.pos.z-SPR.Z,t,.55,(t*1000)|0);try{AUDIO.sfx('splash')}catch(e){};sprCamBlend(0,1.5)}}
   // floating: a long, soft glide (accelerates gently, coasts to a stop when the stick is let go)
   const ka=Math.min(1,dt*(SPR.phase==='toEdge'?2.4:floating?(mag>.05?1.4:.9):(mag>.05?2.4:1.3)));SPR.vx+=(tx-SPR.vx)*ka;SPR.vz+=(tz-SPR.vz)*ka;
   { // stay in the deep part: slow down near the shore, then a soft wall (no bounce, no pulling back to the middle)
@@ -5137,24 +5138,39 @@ function sprCanopy(e){
 }
 // spring camera: straight down by default; drag up/down tilts it between overhead and a low oblique view (drag left/right turns as usual)
 const SPR_PTOP=1.36,SPR_PLOW=.5,SPR_PN=.7; // pitch range; SPR_PN = neutral game pitch while in the water (its drag delta is read each frame)
+// zoom in the water: a factor on the camera distance (Piyo keeps her size). Pinch moves the game's cam.dist, whose change is read
+// each frame like the pitch (SPR_DN = neutral distance while in the water; the land distance comes back on the way out).
+// The wheel (mouse, trackpad scroll, trackpad pinch = wheel+Ctrl) and Safari's trackpad pinch are handled here directly.
+const SPR_DN=8,SPR_ZMIN=.4,SPR_ZMAX=1.4;
+const sprZoomOn=()=>SPR.in&&SPR.phase==='swim'&&SPR.pitch0!==undefined&&!state.camMode&&state.mode==='play';
+const sprZoomBy=f=>{SPR.zoomT=Math.max(SPR_ZMIN,Math.min(SPR_ZMAX,(SPR.zoomT||1)*f))};
+window.addEventListener('wheel',e=>{if(!sprZoomOn()||e.target!==renderer.domElement)return;e.preventDefault();e.stopPropagation();
+  const px=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?400:1);sprZoomBy(Math.exp(Math.max(-60,Math.min(60,px))*(e.ctrlKey?.006:.0012)))},{capture:true,passive:false});
+let sprGS=1;
+window.addEventListener('gesturestart',e=>{if(isTouch||!sprZoomOn())return;e.preventDefault();sprGS=e.scale||1},{passive:false});
+window.addEventListener('gesturechange',e=>{if(isTouch||!sprZoomOn())return;e.preventDefault();const sc=e.scale||1;sprZoomBy(sprGS/sc);sprGS=sc},{passive:false});
 function sprCamUpdate(t,dt){
   const u=Math.min(1,(t-SPR.cbT0)/SPR.cbDur);SPR.cb=SPR.cbFrom+(SPR.cbTo-SPR.cbFrom)*sEase(u);sprCanopy(SPR.cb);
-  if(SPR.in&&SPR.phase!=='jumpOut'&&SPR.pitch0!==undefined){const dp=cam.pitch-SPR_PN;if(dp){SPR.camPT=Math.max(SPR_PLOW,Math.min(SPR_PTOP,(SPR.camPT||SPR_PTOP)+dp));cam.pitch=SPR_PN}}
+  if(SPR.in&&SPR.phase!=='jumpOut'&&SPR.pitch0!==undefined){const dp=cam.pitch-SPR_PN;if(dp){SPR.camPT=Math.max(SPR_PLOW,Math.min(SPR_PTOP,(SPR.camPT||SPR_PTOP)+dp));cam.pitch=SPR_PN}
+    const dd=cam.dist-SPR_DN;if(dd&&SPR.dist0!==undefined){if(!state.camMode)sprZoomBy(Math.exp(dd*.12));cam.dist=SPR_DN}} // pinch
+  SPR.zoomT=SPR.zoomT||1;SPR.zoom=SPR.zoom||1;SPR.zoom*=Math.exp(Math.log(SPR.zoomT/SPR.zoom)*Math.min(1,(dt||1/60)*8)); // eases, so the wheel's steps glide
   SPR.camP=SPR.camP===undefined?SPR_PTOP:SPR.camP;SPR.camP+=((SPR.camPT||SPR_PTOP)-SPR.camP)*Math.min(1,(dt||1/60)*7);
   if(state.camMode){if(state.selfie&&SPR.in&&SPR.cb>.5)sprSelfieCam();else SPR.selfieWas=false;return}
   if(SPR.cb<=0)return;
   const k=(SPR_PTOP-SPR.camP)/(SPR_PTOP-SPR_PLOW); // 0 = overhead, 1 = lowest oblique
-  const fw=SPR.fw,pull=.62+.18*fw+(1-.62-.18*fw)*k*.85,ax=SPR.X+(player.pos.x-SPR.X)*pull,az=SPR.Z+(player.pos.z-SPR.Z)*pull;
+  const zin=Math.max(0,Math.min(1,(1-SPR.zoom)/(1-SPR_ZMIN))); // zoomed in: centre on Piyo herself
+  const fw=SPR.fw,pull0=.62+.18*fw+(1-.62-.18*fw)*k*.85,pull=pull0+(1-pull0)*zin,ax=SPR.X+(player.pos.x-SPR.X)*pull,az=SPR.Z+(player.pos.z-SPR.Z)*pull;
   if(!SPR.camT||(SPR.cbTo===1&&u<.02))SPR.camT=new THREE.Vector3(ax,SPR.level,az);
-  const ks=1-Math.exp(-(dt||1/60)*1.6);SPR.camT.x+=(ax-SPR.camT.x)*ks;SPR.camT.z+=(az-SPR.camT.z)*ks;SPR.camT.y=SPR.level+.25*k;
+  const ks=1-Math.exp(-(dt||1/60)*(1.6+4*zin));SPR.camT.x+=(ax-SPR.camT.x)*ks;SPR.camT.z+=(az-SPR.camT.z)*ks;SPR.camT.y=SPR.level+.25*k;
   const tall=window.innerWidth/window.innerHeight<.8;
   SPR.camD=SPR.camD===undefined?0:SPR.camD;SPR.camD+=(fw-SPR.camD)*Math.min(1,(dt||1/60)*1.2); // floating: a little closer, so her face reads
-  const zoom=Math.max(.65,Math.min(1.35,(cam.dist||7.6)/(isTouch?8.4:7.6))); // pinch / wheel zoom
+  const zoom=SPR.zoom;
   if(SPR.camY===undefined||SPR.cb<.05)SPR.camY=cam.yaw;{let dy=cam.yaw-SPR.camY;dy=Math.atan2(Math.sin(dy),Math.cos(dy));SPR.camY+=dy*Math.min(1,(dt||1/60)*9)} // turn smoothly
   let d=((tall?10.2:8.6)-(tall?1.6:1.3)*SPR.camD)*(1-.32*k)*zoom;const p=SPR.camP+.08*SPR.camD*(1-k),yaw=SPR.camY;
   // low views: do not put the camera inside the house or a tree, nor under the lawn
   let cx,cy,cz;for(;;d-=.3){cx=SPR.camT.x+Math.sin(yaw)*Math.cos(p)*d;cy=SPR.camT.y+Math.sin(p)*d;cz=SPR.camT.z+Math.cos(yaw)*Math.cos(p)*d;if(d<3||!collidesAt(cx,cz,.4,cy-.3))break}
   cy=Math.max(cy,groundY(cx,cz)+.6);
+  {const P=player.pos,hx=cx-P.x,hy=cy-(SPR.level+.3),hz=cz-P.z,hl=Math.hypot(hx,hy,hz);if(hl<1.7){const f=1.7/hl;cx=P.x+hx*f;cy=SPR.level+.3+hy*f;cz=P.z+hz*f}} // never into Piyo
   const top=_st.set(cx,cy,cz);
   _sd.set(0,0,-1).applyQuaternion(camera.quaternion);const nt=_sc.copy(camera.position).addScaledVector(_sd,cam.cur||cam.dist);
   const e=SPR.cb;camera.position.lerp(top,e);nt.lerp(SPR.camT,e);camera.lookAt(nt);
