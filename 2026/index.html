@@ -3899,7 +3899,7 @@ canvas.addEventListener('pointermove',e=>{
   const p=ptrs.get(e.pointerId);if(!p||state.mode!=='play')return;
   const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
   if(ptrs.size>=2){const a=[...ptrs.values()],d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);if(pinch0){if(state.selfie)cam.sd=clamp((cam.sd||3.3)-(d-pinch0)*.012,1.2,6.5);else if(state.camMode)cam.zoom=clamp((cam.zoom||1)-(d-pinch0)*.004,.3,1.25);else cam.dist=clamp(cam.dist-(d-pinch0)*.03,3.6,13)}pinch0=d;return}
-  if(state.selfie){if(ptrs.size<2){cam.sAng-=dx*.0068;cam.sp=clamp(cam.sp+dy*.003,-.12,.45)}return}
+  if(state.selfie){if(ptrs.size<2){cam.sAng-=dx*.0068;cam.sp=clamp(cam.sp+dy*.003,-.12,(window.__spring&&window.__spring.SPR.in)?1:.45)}return}
   if(state.camMode){const zf=Math.max(.4,cam.zoom||1);cam.yaw-=dx*.0068*zf;cam.fp=clamp((cam.fp||0)+dy*.0052*zf,-1.1,1.25);return}
   const sk=1; // お店の中も外と同じ(ピヨちゃんのまわりを くるくる)
   cam.yaw-=dx*.0068*sk;cam.pitch=clamp(cam.pitch+dy*.0052*sk,(ZAK.in||FLW.in)?-.6:.04,1.45); // お店の中(ふつうの視点)は 見上げられるように 下限を -0.6 に
@@ -4448,13 +4448,15 @@ function createSpring(THREE,opt){
           // light entering at surface point s travels along uD to p
           vec2 s=p.xz-uD.xz*(p.y/uD.y);
           vec3 wv=waveOnly(s);
-          vec2 q=s+wv.yz*2.2*clamp(dep,0.,1.);
+          // big, soft, slow light (no thin stretched lines): larger cells, blurred lookup, little warp
+          vec2 q=s+wv.yz*.9*clamp(dep,0.,1.);
           float ph=uTime/uL;
-          vec2 o1=vec2(.045*sin(TAU*ph),.045*cos(TAU*ph)),o2=vec2(.035*sin(TAU*ph+2.),-.035*cos(TAU*ph+2.));
-          float c1=texture2D(tCaus,q*.26+o1+vec2(.04*sin(q.y*.9+TAU*ph),0.)).r;
-          float c2=texture2D(tCaus,mat2(.8,.6,-.6,.8)*q*.33+vec2(.31,.17)+o2+vec2(0.,.04*sin(q.x*.8-TAU*ph))).r;
-          float cm=min(c1,c2);
-          float c=cm*cm*(3.-2.*cm)*.85+.10*(c1+c2);
+          vec2 o1=vec2(.028*sin(TAU*ph),.028*cos(TAU*ph)),o2=vec2(.022*sin(TAU*ph+2.),-.022*cos(TAU*ph+2.));
+          float c1=texture2D(tCaus,q*.15+o1+vec2(.012*sin(q.y*.6+TAU*ph),0.),1.5).r;
+          float c2=texture2D(tCaus,mat2(.8,.6,-.6,.8)*q*.19+vec2(.31,.17)+o2+vec2(0.,.012*sin(q.x*.5-TAU*ph)),1.5).r;
+          float cm=.5*(min(c1,c2)+.5*(c1+c2));
+          float bl=.5+.5*sin(q.x*.85+TAU*ph)*sin(q.y*.7-TAU*ph+1.3); // broad swell of light
+          float c=smoothstep(.12,.9,cm)*.62+.30*bl;
           float cf=smoothstep(.0,.35,dep)*(1.-smoothstep(.9,2.2,dep)*.45);
           // soft shadows of floating things (projected along the light)
           float sh=0.;
@@ -4462,7 +4464,7 @@ function createSpring(THREE,opt){
             vec2 cp=C.xy-uD.xz*((p.y-0.)/uD.y);  // caster sits at the surface, shadow slides with depth
             float d=length(p.xz-cp);float soft=C.z*(1.+dep*.6);
             sh=max(sh,C.w*(1.-smoothstep(soft*.35,soft,d)));}
-          float lit=1.+under*cf*c*.42*(1.-sh);
+          float lit=1.+under*cf*c*.36*(1.-sh);
           col*=lit*(1.-sh*.55*under);
           // damp band just above the water line
           float above=1.-under;
@@ -4828,6 +4830,7 @@ function springEnter(){
   SPR.face=Math.atan2(SPR.to.x-SPR.from.x,SPR.to.z-SPR.from.z);player.face=SPR.face;
   player.vx=player.vz=0;player.vy=0;SPR.vx=SPR.vz=0;SPR.dip=0;SPR.dipV=0;
   input.dash=false;input.dashLatch=false;const db=$('tbDash');if(db)db.classList.remove('hold');
+  SPR.pitch0=cam.pitch;cam.pitch=SPR_PN;SPR.camP=SPR.camPT=SPR_PTOP;SPR.selfieWas=false;
   sprLayers(true);sprCamBlend(1,1.7);sprUIState(true);try{AUDIO.sfx('jump')}catch(e){}try{AUDIO.setScene('spring')}catch(e){}
 }
 function springExit(){
@@ -4899,7 +4902,7 @@ function springTick(dt,t,playing){
   const my=cam.yaw,fx=-Math.sin(my),fz=-Math.cos(my),rx=Math.cos(my),rz=-Math.sin(my),SP=floating?SPR_FLOAT:SPR_SWIM;
   let tx=(rx*ix+fx*iy)*SP,tz=(rz*ix+fz*iy)*SP; // screen-relative: up on the stick = up on the screen
   if(SPR.phase==='toEdge'){const u=Math.min(1,(t-SPR.t0)/SPR.dur);const ex=SPR.to.x-player.pos.x,ez=SPR.to.z-player.pos.z,l=Math.hypot(ex,ez);tx=l>.03?ex/l*Math.min(1.1,l*3):0;tz=l>.03?ez/l*Math.min(1.1,l*3):0;
-    if(u>=1){SPR.phase='jumpOut';SPR.t0=t;SPR.dur=1.05;SPR.from=player.pos.clone();SPRING.splash(player.pos.x-SPR.X,player.pos.z-SPR.Z,t,.55,(t*1000)|0);try{AUDIO.sfx('splash')}catch(e){};sprCamBlend(0,1.5)}}
+    if(u>=1){if(SPR.pitch0!==undefined){cam.pitch=SPR.pitch0;SPR.pitch0=undefined}SPR.phase='jumpOut';SPR.t0=t;SPR.dur=1.05;SPR.from=player.pos.clone();SPRING.splash(player.pos.x-SPR.X,player.pos.z-SPR.Z,t,.55,(t*1000)|0);try{AUDIO.sfx('splash')}catch(e){};sprCamBlend(0,1.5)}}
   // floating: a long, soft glide (accelerates gently, coasts to a stop when the stick is let go)
   const ka=Math.min(1,dt*(SPR.phase==='toEdge'?2.4:floating?(mag>.05?1.4:.9):(mag>.05?2.4:1.3)));SPR.vx+=(tx-SPR.vx)*ka;SPR.vz+=(tz-SPR.vz)*ka;
   { // stay in the deep part: slow down near the shore, then a soft wall (no bounce, no pulling back to the middle)
@@ -4936,7 +4939,7 @@ function sprFloatY(sf,dip,t){ // floating sits higher in the water (lying on her
 // like pBone (rest-frame axes), with a pitch (x) and a roll (z) together
 const _sE=new THREE.Euler(),_sQ=new THREE.Quaternion();
 function sprBone2(n,x,z){const o=piyo.bones[n];if(!o)return;_sQ.setFromEuler(_sE.set(x,0,z));o.b.quaternion.copy(o.pqi).multiply(_sQ).multiply(o.pq).multiply(o.q)}
-const SPR_FLOAT_POSE={lean:-1.5,head:-.2,arm:1.6,armF:0,leg:.4,legOpen:.4,y:.18,yawOff:.22}; // flat on her back, hat resting on the water behind her head, lying a little diagonally
+const SPR_FLOAT_POSE={lean:-1.5,head:-.2,arm:.7,armF:.3,leg:.4,legOpen:.4,y:.18,yawOff:.22}; // flat on her back, hat resting on the water behind her head, lying a little diagonally
 function sprPose(dt,t,k,stroke,sf,sway,fw,direct){
   piyo.body.position.y=0;piyo.body.scale.set(1,1,1);
   const FP=SPR_FLOAT_POSE,swimLean=-.85+.45*k,lean=swimLean+(FP.lean-swimLean)*fw; // on her back, face up to the overhead camera
@@ -5011,22 +5014,40 @@ function sprCanopy(e){
   for(const k of sprCanopy.l){const inside=sEase((k.r*1.1-P.distanceTo(k.c))/(k.r*.5));
     // ... or when it stands between the camera and Piyo (distance from the canopy centre to the camera-Piyo line)
     const dx=Q.x-P.x,dy=Q.y+.8-P.y,dz=Q.z-P.z,l2=dx*dx+dy*dy+dz*dz||1,u=Math.max(0,Math.min(1,((k.c.x-P.x)*dx+(k.c.y-P.y)*dy+(k.c.z-P.z)*dz)/l2));
-    const sd=Math.hypot(P.x+dx*u-k.c.x,P.y+dy*u-k.c.y,P.z+dz*u-k.c.z),occl=sEase((k.r*1.05-sd)/(k.r*.4));
+    const sd=Math.hypot(P.x+dx*u-k.c.x,P.y+dy*u-k.c.y,P.z+dz*u-k.c.z),occl=sEase((k.r*1.3-sd)/(k.r*.35));
     const a=1-Math.max(eo,inside,occl);if(k.a===a)continue;k.a=a;
     const m=k.m,tr=a<.999;if(m.transparent!==tr){m.transparent=tr;m.needsUpdate=true}m.opacity=a;m.depthWrite=!tr;m.visible=a>.02}
 }
+// spring camera: straight down by default; drag up/down tilts it between overhead and a low oblique view (drag left/right turns as usual)
+const SPR_PTOP=1.36,SPR_PLOW=.5,SPR_PN=.7; // pitch range; SPR_PN = neutral game pitch while in the water (its drag delta is read each frame)
 function sprCamUpdate(t,dt){
   const u=Math.min(1,(t-SPR.cbT0)/SPR.cbDur);SPR.cb=SPR.cbFrom+(SPR.cbTo-SPR.cbFrom)*sEase(u);sprCanopy(SPR.cb);
-  if(SPR.cb<=0||state.camMode)return;
-  const fw=SPR.fw,pull=.62+.18*fw,ax=SPR.X+(player.pos.x-SPR.X)*pull,az=SPR.Z+(player.pos.z-SPR.Z)*pull;
+  if(SPR.in&&SPR.phase!=='jumpOut'&&SPR.pitch0!==undefined){const dp=cam.pitch-SPR_PN;if(dp){SPR.camPT=Math.max(SPR_PLOW,Math.min(SPR_PTOP,(SPR.camPT||SPR_PTOP)+dp));cam.pitch=SPR_PN}}
+  SPR.camP=SPR.camP===undefined?SPR_PTOP:SPR.camP;SPR.camP+=((SPR.camPT||SPR_PTOP)-SPR.camP)*Math.min(1,(dt||1/60)*7);
+  if(state.camMode){if(state.selfie&&SPR.in&&SPR.cb>.5)sprSelfieCam();else SPR.selfieWas=false;return}
+  if(SPR.cb<=0)return;
+  const k=(SPR_PTOP-SPR.camP)/(SPR_PTOP-SPR_PLOW); // 0 = overhead, 1 = lowest oblique
+  const fw=SPR.fw,pull=.62+.18*fw+(1-.62-.18*fw)*k*.85,ax=SPR.X+(player.pos.x-SPR.X)*pull,az=SPR.Z+(player.pos.z-SPR.Z)*pull;
   if(!SPR.camT||(SPR.cbTo===1&&u<.02))SPR.camT=new THREE.Vector3(ax,SPR.level,az);
-  const ks=1-Math.exp(-(dt||1/60)*1.6);SPR.camT.x+=(ax-SPR.camT.x)*ks;SPR.camT.z+=(az-SPR.camT.z)*ks;SPR.camT.y=SPR.level;
+  const ks=1-Math.exp(-(dt||1/60)*1.6);SPR.camT.x+=(ax-SPR.camT.x)*ks;SPR.camT.z+=(az-SPR.camT.z)*ks;SPR.camT.y=SPR.level+.25*k;
   const tall=window.innerWidth/window.innerHeight<.8;
   SPR.camD=SPR.camD===undefined?0:SPR.camD;SPR.camD+=(fw-SPR.camD)*Math.min(1,(dt||1/60)*1.2); // floating: a little closer, so her face reads
-  const d=(tall?10.2:8.6)-(tall?1.6:1.3)*SPR.camD,p=1.36+.08*SPR.camD,yaw=cam.yaw;
-  const top=_st.set(SPR.camT.x+Math.sin(yaw)*Math.cos(p)*d,SPR.camT.y+Math.sin(p)*d,SPR.camT.z+Math.cos(yaw)*Math.cos(p)*d);
+  const zoom=Math.max(.65,Math.min(1.35,(cam.dist||7.6)/(isTouch?8.4:7.6))); // pinch / wheel zoom
+  if(SPR.camY===undefined||SPR.cb<.05)SPR.camY=cam.yaw;{let dy=cam.yaw-SPR.camY;dy=Math.atan2(Math.sin(dy),Math.cos(dy));SPR.camY+=dy*Math.min(1,(dt||1/60)*9)} // turn smoothly
+  let d=((tall?10.2:8.6)-(tall?1.6:1.3)*SPR.camD)*(1-.32*k)*zoom;const p=SPR.camP+.08*SPR.camD*(1-k),yaw=SPR.camY;
+  // low views: do not put the camera inside the house or a tree, nor under the lawn
+  let cx,cy,cz;for(;;d-=.3){cx=SPR.camT.x+Math.sin(yaw)*Math.cos(p)*d;cy=SPR.camT.y+Math.sin(p)*d;cz=SPR.camT.z+Math.cos(yaw)*Math.cos(p)*d;if(d<3||!collidesAt(cx,cz,.4,cy-.3))break}
+  cy=Math.max(cy,groundY(cx,cz)+.6);
+  const top=_st.set(cx,cy,cz);
   _sd.set(0,0,-1).applyQuaternion(camera.quaternion);const nt=_sc.copy(camera.position).addScaledVector(_sd,cam.cur||cam.dist);
   const e=SPR.cb;camera.position.lerp(top,e);nt.lerp(SPR.camT,e);camera.lookAt(nt);
+}
+// selfie in the water: the camera orbits Piyo and can rise right above her (drag up/down = height, left/right = around)
+function sprSelfieCam(){
+  if(!SPR.selfieWas){SPR.selfieWas=true;cam.sp=.62} // start well above her
+  const el=.25+(Math.max(-.12,Math.min(1,cam.sp))+.12)/1.12*1.2,a=cam.sAng,sd=(cam.sd||3.3)*.7,P=player.pos,ty=SPR.level+.2;
+  camera.position.set(P.x+Math.sin(a)*Math.cos(el)*sd,ty+Math.sin(el)*sd,P.z+Math.cos(a)*Math.cos(el)*sd);
+  camera.lookAt(P.x,ty,P.z);
 }
 function springRender(){
   if(INTERIOR.on||CAFE.in)return;
@@ -5037,10 +5058,10 @@ function springRender(){
   if(!fr.intersectsSphere(springRender.sph||(springRender.sph=new THREE.Sphere(_sc.clone(),SPRING.o.R*SPRING.o.sx+1))))return;
   SPRING.renderRefraction(renderer,scene,camera);
   // phones: looking almost straight down while swimming, the mirror image is barely visible (low fresnel), so that pass is skipped
-  if(isTouch&&SPR.cb>.9)SPRING.materials.water.uniforms.uReflOn.value=0;
+  if(isTouch&&SPR.cb>.9&&SPR.camP>1.2&&!state.camMode)SPRING.materials.water.uniforms.uReflOn.value=0;
   else SPRING.renderReflection(renderer,scene,camera,isTouch?.3:.42);
 }
-window.__spring={SPR,SPRING,plants:sprPlants,foot:sprFootprint,enter:springEnter,exit:springExit,ask:springAsk,demo:springDemo,toggleFloat:sprToggleMode,shoot:sprShoot,pose:SPR_FLOAT_POSE};
+window.__spring={SPR,SPRING,canopy:()=>(sprCanopy.l||[]).map(k=>({a:+k.a.toFixed(2),r:+k.r.toFixed(2),c:[k.c.x,k.c.y,k.c.z].map(v=>+v.toFixed(1))})),plants:sprPlants,foot:sprFootprint,enter:springEnter,exit:springExit,ask:springAsk,demo:springDemo,toggleFloat:sprToggleMode,shoot:sprShoot,pose:SPR_FLOAT_POSE};
 /* ===== /HEALING SPRING ===== */
 
 /* ===== CAFE INTERIOR ===== (カフェの店内: 街から離れた別エリア。入店でここへ移動し、退店でドア前に戻る)
