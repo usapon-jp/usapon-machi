@@ -1,6 +1,7 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1a1033"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="うさぽん街"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><link rel="icon" href="icons/icon-192.png"><link rel="apple-touch-icon" href="icons/apple-touch-icon.png"><script>if("serviceWorker" in navigator&&/^https:/.test(location.protocol)&&/github\.io$/.test(location.hostname)){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}</script><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
-<title>うさぽん村のハロウィン ピヨちゃんのパネル探し</title>
-<meta name="description" content="ピヨちゃんになって、うさぽん村を歩こう。かくれたうさぎのパネルを見つけて、写真をとるハロウィンのゲームです。ブラウザですぐ遊べます（無料）。"><meta property="og:type" content="website"><meta property="og:site_name" content="うさぽん"><meta property="og:title" content="うさぽん村のハロウィン ピヨちゃんのパネル探し"><meta property="og:description" content="ピヨちゃんになって、うさぽん村を歩こう。かくれたうさぎのパネルを見つけて、写真をとるハロウィンのゲームです。ブラウザですぐ遊べます（無料）。"><meta property="og:url" content="https://usapon-jp.github.io/usapon-machi/2026/"><meta property="og:image" content="https://usapon-jp.github.io/usapon-machi/ogp.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image">
+<!-- パネル収集イベント再開時は、title と og:title を「うさぽん村のハロウィン ピヨちゃんのパネル探し」、description を「かくれたうさぎのパネルを見つけて、写真をとる…」に戻す（下の EVENT.panels も true に） -->
+<title>うさぽん村のハロウィン ピヨちゃんのおばけ探し</title>
+<meta name="description" content="ピヨちゃんになって、うさぽん村を歩こう。かくれおばけちゃんを見つけて、おかしを集めるハロウィンのゲームです。ブラウザですぐ遊べます（無料）。"><meta property="og:type" content="website"><meta property="og:site_name" content="うさぽん"><meta property="og:title" content="うさぽん村のハロウィン ピヨちゃんのおばけ探し"><meta property="og:description" content="ピヨちゃんになって、うさぽん村を歩こう。かくれおばけちゃんを見つけて、おかしを集めるハロウィンのゲームです。ブラウザですぐ遊べます（無料）。"><meta property="og:url" content="https://usapon-jp.github.io/usapon-machi/2026/"><meta property="og:image" content="https://usapon-jp.github.io/usapon-machi/ogp.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
@@ -186,6 +187,7 @@ body.touch #actBtn kbd{display:none}
 .rbtns .chip{width:38px;height:38px;padding:0;justify-content:center;border-radius:50%}
 .rbtns .chip svg{width:19px;height:19px}
 #qTitle,#qTeaser{display:none!important}
+html:not(.ev-panels) .evp-on{display:none!important}html.ev-panels .evp-off{display:none!important} /* evp-on = パネル公開中だけ / evp-off = パネルおやすみ中だけ */
 #mBook .sheet{position:relative}
 .xbtn{position:absolute;right:10px;top:10px;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.1);color:var(--paper);font-size:22px;line-height:1;padding:0;display:flex;align-items:center;justify-content:center}
 #mBook .bookhead{padding-right:40px}
@@ -570,8 +572,8 @@ body.dressing #quest,body.dressing #mini,body.dressing #joy{visibility:hidden} /
 
 <div class="modal on" id="mIntro">
   <div class="sheet">
-    <h1 id="introTitle"><small>うさぽん村のハロウィン</small>ピヨちゃんの<wbr>パネル探し</h1>
-    <p class="lead"><span class="nb">小さな街を歩いて、</span><span class="nb">ハロウィンを楽しもう。</span><br>パネルを見つけたら、写真を撮ってね。</p>
+    <h1 id="introTitle"><small>うさぽん村のハロウィン</small>ピヨちゃんの<wbr><span class="evp-on">パネル探し</span><span class="evp-off">おばけ探し</span></h1>
+    <p class="lead"><span class="nb">小さな街を歩いて、</span><span class="nb">ハロウィンを楽しもう。</span><br><span class="evp-on">パネルを見つけたら、写真を撮ってね。</span><span class="evp-off">かくれおばけちゃんを見つけて、おかしを集めよう。</span></p>
     <span id="introMission" hidden></span><span id="introTeaser" hidden></span>
     <div id="inAppWarn" hidden><b>LINEやインスタのアプリ内で開いていませんか？</b><br>この画面だと、写真の保存がうまくいかないことがあります。あとでブラウザ（Safari・Chrome）で開き直すと、進み具合も引きつがれません。<br><b>はじめからブラウザで開いてあそんでね。</b><br><button class="btn sub" id="btnCopyUrl" type="button">URLをコピー</button></div>
     <div class="actions"><button class="btn" id="btnStart" type="button">街へ出かける</button></div>
@@ -581,7 +583,7 @@ body.dressing #quest,body.dressing #mini,body.dressing #joy{visibility:hidden} /
 <div class="modal" id="mHelp">
   <div class="sheet" id="helpSheet">
     <h2>あそびかた・チュートリアル</h2>
-    <p class="helpIntro">パネルや かくれおばけちゃんを さがそう。<br>パネルは 見つけたら 写真を とってね。<br>ぜんぶ 見つけると、いいこと あるかも…</p>
+    <p class="helpIntro evp-on">パネルや かくれおばけちゃんを さがそう。<br>パネルは 見つけたら 写真を とってね。<br>ぜんぶ 見つけると、いいこと あるかも…</p><p class="helpIntro evp-off">かくれおばけちゃんを ぜんぶ さがそう。<br>みつけると、おかし集めが はじまるよ。<br>おかしを ぜんぶ あつめると、いいこと あるかも…</p>
     <div class="setrow">
       <button type="button" class="acc" data-body="opBody" aria-expanded="false"><span>そうさ方法</span><i></i></button>
       <div id="opBody" hidden>
@@ -593,14 +595,14 @@ body.dressing #quest,body.dressing #mini,body.dressing #joy{visibility:hidden} /
       <div class="r"><span><kbd>Space</kbd></span><em>ジャンプ</em></div>
       <div class="r"><span>ドラッグ</span><em>視点をまわす</em></div>
       <div class="r"><span>ホイール</span><em>ズーム</em></div>
-      <div class="r"><span><kbd>F</kbd></span><em>パネルの前で写真</em></div>
+      <div class="r"><span><kbd>F</kbd></span><em class="evp-on">パネルの前で写真</em><em class="evp-off">写真をとる</em></div>
       <div class="r"><span><kbd>E</kbd></span><em>いすにすわる・お店に入る</em></div>
     </div>
     <div class="rows hp" id="hp-sp">
       <div class="r"><span>左のスティック</span><em>丸の中＝ゆっくり<br>丸の外まで＝スタスタ</em></div>
       <div class="r"><span>右下のボタン</span><em>ダッシュ（1回おすと、スティックから手をはなすまで）・ジャンプ</em></div>
       <div class="r"><span>画面をなぞる</span><em>視点をまわす</em></div>
-      <div class="r"><span>カメラボタン</span><em>パネルの近くで写真</em></div>
+      <div class="r"><span>カメラボタン</span><em class="evp-on">パネルの近くで写真</em><em class="evp-off">写真をとる</em></div>
     </div>
     <div class="rows hp" id="hp-br">
       <div class="r"><span><kbd>Q</kbd> / ほうきボタン</span><em>のる・おりる</em></div>
@@ -627,7 +629,7 @@ body.dressing #quest,body.dressing #mini,body.dressing #joy{visibility:hidden} /
           <button type="button" data-f="0"><div class="fs plain"><b></b></div><span>つけない</span></button>
           <button type="button" data-f="1"><div class="fs framed"><b></b><u>うさぽん村のハロウィン</u><s>2026.10.8</s></div><span>つける</span></button>
         </div>
-        <div class="sethint" style="color:var(--mist)">※パネルの写真には、いつも わくがつきます。</div>
+        <div class="sethint evp-on" style="color:var(--mist)">※パネルの写真には、いつも わくがつきます。</div>
       </div>
     </div>
     <div class="actions"><button class="btn sub" id="btnTourReplay" type="button">カメラモードの チュートリアルを みる</button></div>
@@ -670,8 +672,8 @@ body.dressing #quest,body.dressing #mini,body.dressing #joy{visibility:hidden} /
 <div class="modal" id="mBook">
   <div class="sheet">
     <button class="xbtn" id="btnBookX" type="button" aria-label="とじる">×</button>
-    <div class="bookhead"><h2>うさぎずかん</h2><span id="bookCount"></span></div>
-    <div id="bookTabs"><button type="button" class="on" data-tab="zukan">ずかん</button><button type="button" data-tab="album">アルバム</button><button type="button" data-tab="obake">おばけ</button></div>
+    <div class="bookhead"><h2><span class="evp-on">うさぎずかん</span><span class="evp-off">ずかん</span></h2><span id="bookCount"></span></div>
+    <div id="bookTabs"><button type="button" class="on evp-on" data-tab="zukan">ずかん</button><button type="button" data-tab="album">アルバム</button><button type="button" data-tab="obake">おばけ</button></div>
     <div id="bookBody">
     <div id="tab_zukan"><div id="grid"></div>
     <div class="teaserbox" id="bookTeaser"></div></div>
@@ -698,7 +700,7 @@ body.dressing #quest,body.dressing #mini,body.dressing #joy{visibility:hidden} /
 <div class="modal" id="mReset">
   <div class="sheet" style="width:min(400px,100%)">
     <h2>見つけた記録を消しますか？</h2>
-    <p>見つけたうさぎと撮影回数がすべてリセットされます。元には戻せません。（アルバムの写真は消えません）</p>
+    <p><span class="evp-on">見つけたうさぎと撮影回数がすべてリセットされます。</span><span class="evp-off">見つけたおばけちゃんと おかしが すべてリセットされます。</span>元には戻せません。（アルバムの写真は消えません）</p>
     <div class="actions"><button class="btn sub" id="btnResetNo" type="button">やめる</button><button class="btn warn" id="btnResetYes" type="button">リセットする</button></div>
   </div>
 </div>
@@ -2989,6 +2991,19 @@ const {$,isTouch,rand,R,pick,clamp,lerp,angLerp,rr,cv,canvasTex,textTex}=util;
 const PI=Math.PI;
 const SAVE_KEY='usapon-halloween-machi-v1';
 
+/* ---------- event rules: 2026 の すすみかたは ここで まとめて きめる ----------
+   1. かくれおばけちゃん ぜんぶ → おかし集め  2. おかし ぜんぶ → 花屋の 色かえポーション  3. パネル ぜんぶ → まほうのほうき
+   EVENT.panels=false: パネル収集は おやすみ(パネル・ずかん・ヒント・ほうきを かくす。パネルのデータと 保存データは そのまま)。
+   パネルを 公開する日は true にするだけ(あとは <title>/og のコメントどおり 文言を もどす) */
+const EVENT={panels:false};
+document.documentElement.classList.toggle('ev-panels',EVENT.panels);
+const RULE_GHOSTS=6,RULE_CANDY=6;
+function ghostsDone(){return ghostChans.length>=RULE_GHOSTS&&save.ghosts.length>=ghostChans.length}
+function candyOpen(){return ghostsDone()} // 1. おばけちゃん → おかし
+function candyDone(){return save.cand.length>=RULE_CANDY}
+function dressUnlocked(){return candyDone()} // 2. おかし → 色かえポーション
+function broomOn(){return EVENT.panels&&!!save.broom} // 3. パネル → ほうき(パネル おやすみ中は つかえない。save.broom は けさない)
+
 /* ---------- save data (per browser) ---------- */
 let save={found:[],photos:{},done:false,broom:false,wand:false,ghosts:[],cand:[],gift:0,dress:[0,0,0,0]};
 try{const s=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');if(s&&Array.isArray(s.found)){save={found:s.found,photos:s.photos||{},done:!!s.done,broom:s.broom!==undefined?!!s.broom:!!s.done,wand:!!s.wand,ghosts:Array.isArray(s.ghosts)?s.ghosts:[],cand:Array.isArray(s.cand)?s.cand.filter(v=>v>=0&&v<6):[],gift:s.gift?1:0,dress:(Array.isArray(s.dress)&&s.dress.length===4)?s.dress.map(v=>Math.max(0,Math.min(5,v|0))):[0,0,0,0]}}}catch(e){}
@@ -3380,8 +3395,8 @@ function buildPanels(){
     add(sg,box,postM,0,.3,.6,1.6,.5,.06).rotation.x=-.5;plateS.position.z+=.04;plateS.position.y+=.0;
     const spark=new THREE.Sprite(sparkMat.clone());spark.scale.set(1.6,1.6,1);spark.position.set(0,3.9,0);g.add(spark);
     scene.add(g);
-    addGlow(x+Math.sin(rot)*.9*sc,y0+2.1,z+Math.cos(rot)*.9*sc,4.2,'#ffc27a');
-    addBoxCol(x,z,1.05*sc,.35*sc,rot,999);
+    if(EVENT.panels){addGlow(x+Math.sin(rot)*.9*sc,y0+2.1,z+Math.cos(rot)*.9*sc,4.2,'#ffc27a');addBoxCol(x,z,1.05*sc,.35*sc,rot,999)}
+    else g.visible=false; // パネル おやすみ中: つくるけど 見せない・ぶつからない
     const pe=W.edEnd(ptk);
     const p={base1,base2,def,id:def.id,x,z,rot,sc,y0,group:g,faceE,faceS,plateE,plateS,standG:sg,easelG:eg,spark,found:save.found.includes(def.id),type:def.type&&def.type!=='auto'?def.type:'standee',typeFixed:!!(def.type&&def.type!=='auto'),
       etex:null,stex:null,easpect:1,saspect:.8,thumb:null,pop:0,idx:i,n:new THREE.Vector3(Math.sin(rot),0,Math.cos(rot))};
@@ -3488,6 +3503,9 @@ const SPARK=['#ffd27a','#ff9a3a','#fff1d8','#bba8ff','#ff7aa8'];
 function quickPop(){let seen=0;try{seen=localStorage.getItem('usapon-quick-seen')}catch(e){}if(seen)return;try{localStorage.setItem('usapon-quick-seen','1')}catch(e){}const q=$('quick');setTimeout(()=>q.classList.add('on'),400);const hide=()=>q.classList.remove('on');setTimeout(hide,5000);['pointerdown','keydown'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(hide,1200),{once:true}))}
 function toast(msg,ms){const t=$('toast');t.textContent=msg;t.classList.add('on');clearTimeout(state.toastT);state.toastT=setTimeout(()=>t.classList.remove('on'),ms||2600)}
 function refreshHUD(){
+  if(!EVENT.panels){const g=ghostsDone(),n=g?RULE_CANDY:RULE_GHOSTS,f=Math.min(n,g?save.cand.length:save.ghosts.length);
+    $('qCount').innerHTML='<small class="ql">'+(g?'あつめた おかし':'見つけた おばけちゃん')+'</small>'+f+'<small>/ '+n+'</small>';
+    $('dots').innerHTML=Array.from({length:n},(_,i)=>'<i class="'+(i<f?'on':'')+'"></i>').join('');return}
   const n=panels.length,f=panels.filter(p=>p.found).length;
   $('qCount').innerHTML='<small class="ql">見つけたパネル</small>'+f+'<small>/ '+n+'</small>';
   $('dots').innerHTML=panels.map(p=>'<i class="'+(p.found?'on':'')+'"></i>').join('');
@@ -3500,7 +3518,7 @@ function fixHelpHeight(){const sh=$('helpSheet'),m=$('mHelp'),bs=['opBody','oriB
 window.addEventListener('resize',()=>{if($('mHelp').classList.contains('on'))fixHelpHeight()});
 function photoGuide(){const n=$('photoNote');if(!n||n.dataset.inapp)return;let first=true;try{first=localStorage.getItem('usapon-photo-guide')!=='1';localStorage.setItem('usapon-photo-guide','1')}catch(e){}n.classList.toggle('first',first)}
 function closeModal(id){$(id).classList.remove('on');if(id==='mDress'){const pp=$('paper');if(pp)pp.style.visibility='';document.body.classList.remove('dressing')}if(!document.querySelector('.modal.on'))state.mode='play'}
-let bookTab='zukan',albumFilter='all';
+let bookTab=EVENT.panels?'zukan':'obake',albumFilter='all';
 const SIL={};
 function panelSil(p){ // dark silhouette of a found-but-not-yet-photographed panel (same look as unfound ghost-chan)
   if(SIL[p.id]!==undefined)return SIL[p.id];SIL[p.id]='';
@@ -3569,7 +3587,7 @@ function albumVisible(){
 }
 function albumPutMeta(m){if(!ALBUM.ok)return;try{ALBUM.db.transaction('meta','readwrite').objectStore('meta').put(m)}catch(e){}}
 function renderAlbum(){
-  const chips=[['all','ぜんぶ'],['panel','パネル撮影'],['free','自由撮影'],['fav','★ お気に入り']];
+  const chips=[['all','ぜんぶ'],['panel','パネル撮影'],['free','自由撮影'],['fav','★ お気に入り']].filter(c=>EVENT.panels||c[0]!=='panel');
   if(!chips.some(c=>c[0]===albumFilter)){const p=panels.find(q=>q.id===albumFilter);if(p)chips.push([albumFilter,p.def.name]);else albumFilter='all'}
   const ac=$('albumChips');ac.innerHTML=chips.map(c=>'<button type="button" class="ach'+(c[0]===albumFilter?' on':'')+'" data-f="'+c[0]+'"></button>').join('');
   ac.querySelectorAll('.ach').forEach((b,i)=>{b.textContent=chips[i][1]});
@@ -3635,7 +3653,7 @@ function renderGhostBook(){
 function showComplete(){AUDIO.sfx('fanfare');
   const c=DATA.completion||{};$('doneTitle').textContent=c.title||'ぜんぶ見つけたよ！';$('doneBody').textContent=c.body||'';
   const lw=$('doneLinkWrap');if(c.link&&c.link.url){$('doneLink').href=c.link.url;$('doneLink').textContent=c.link.label||'ひらく';lw.hidden=false}else lw.hidden=true;
-  const db=$('doneBroom');db.hidden=!save.broom;
+  const db=$('doneBroom');db.hidden=!broomOn();
   db.textContent='ごほうび：まほうのほうき を手に入れた！\n'+(isTouch?'右下の ほうきボタンで のってみよう':'Q キー（または 右下のほうきボタン）で のってみよう');
   openModal('mDone');
 }
@@ -3663,6 +3681,7 @@ const GHOST_DEF=[ // soft colour variants of the same hand-drawn ghost
   {name:'メロンおばけ',c:0xc4f0cc},{name:'みずおばけ',c:0xbfe3ff},{name:'ぶどうおばけ',c:0xdac8ff}];
 let GC_IM=null;
 const ghostChans=[];
+function nearWhere(x,z){const NM={flower:'おはなやさん',zakka:'ざっかやさん',cupcake:'カフェ'};let b=null,bd=16;shopsOut.forEach(q=>{const d=Math.hypot(q.house.x-x,q.house.z-z);if(NM[q.shop]&&d<bd){bd=d;b=q}});return b?NM[b.shop]+'の ちかく':'街の ものかげ'}
 (function ghostChanInit(){
   const load=src=>new Promise(r=>{const im=new Image();im.onload=()=>r(im);im.onerror=()=>r(null);im.src=src});
   Promise.all([load(GC_IMG.f),load(GC_IMG.s)]).then(arr=>{
@@ -3679,8 +3698,8 @@ const ghostChans=[];
       for(let rad=0;rad<=5&&!found;rad+=.5){for(let k=0;k<8;k++){const a=k*PI/4,x=bx+Math.cos(a)*rad,z=bz+Math.sin(a)*rad;if(!collidesAt(x,z,.7,groundY(x,z)+.1)){bx=x;bz=z;found=true;break}}}
       const g=new THREE.Group(),cc=GHOST_DEF[i%GHOST_DEF.length].c,sF=mkS(tF,1.5,GC_ASP.f,cc),sS=mkS(tS,1.35,GC_ASP.s,cc),sSF=mkS(tSF,1.35,GC_ASP.s,cc);
       g.add(sF);g.add(sS);g.add(sSF);scene.add(g);
-      ghostChans.push({where:sp.pi!==undefined?panels[sp.pi%panels.length].def.name+' の うしろ':(sp.x<10&&sp.z>0?'噴水の かげ':'お城の門の まえ'),g,sF,sS,sSF,bx,bz,x:bx,z:bz,ph:i*2.1+.7,pop:0,found:save.ghosts.indexOf(i)>=0,i});
-    });
+      ghostChans.push({where:sp.pi!==undefined?(EVENT.panels?panels[sp.pi%panels.length].def.name+' の うしろ':nearWhere(bx,bz)):(sp.x<10&&sp.z>0?'噴水の かげ':'お城の門の まえ'),g,sF,sS,sSF,bx,bz,x:bx,z:bz,ph:i*2.1+.7,pop:0,found:save.ghosts.indexOf(i)>=0,i});
+    });refreshHUD();
     };start();
   });
 })();
@@ -3696,7 +3715,7 @@ function ghostChanTick(dt,t){
     o.g.position.set(nx,y,nz);o.g.scale.setScalar(1+Math.sin(o.pop*PI)*.3);
     if(!o.found&&dd<11&&dd>=3.4&&Math.random()<dt*1.3)burst(nx+(Math.random()-.5)*.8,y+.5,nz+(Math.random()-.5)*.8,3,SPARK,1.2,0); // twinkle hint
     if(!o.found&&dd<3.4&&Math.abs(player.pos.y-gy)<2.5&&state.mode==='play'){
-      o.found=true;o.pop=1;if(save.ghosts.indexOf(o.i)<0)save.ghosts.push(o.i);persist();
+      o.found=true;o.pop=1;if(save.ghosts.indexOf(o.i)<0)save.ghosts.push(o.i);persist();refreshHUD();
       burst(nx,y,nz,40,SPARK,3.5,2);AUDIO.sfx('found');
       toast(save.ghosts.length>=ghostChans.length?'かくれお化けちゃん\nぜんぶ見つけた！':'かくれお化けちゃんを\n見つけた！（'+save.ghosts.length+' / '+ghostChans.length+'）',2600);
     }
@@ -3849,7 +3868,7 @@ function doAct(){
   if(a.type==='flowerEnter'){flowerEnter();return}
   if(a.type==='flowerExit'){flowerExit();return}
   if(a.type==='flowerTalk'){flowerTalk();return}
-  if(a.type==='cafeTalk'){$('spotTitle').textContent='カフェの てんいんさん';$('spotCap').textContent=['いらっしゃいませ！\nゆっくり していってね','きょうの おすすめは かぼちゃの ラテだよ。\nまどの そとも ながめてみてね','パネルは みつかった？\nまちの あちこちに かくれているよ'][(CAFE.talkN=(CAFE.talkN||0)+1)%3];$('spotLink').hidden=true;$('spotNone').hidden=true;openModal('mSpot');return}
+  if(a.type==='cafeTalk'){$('spotTitle').textContent='カフェの てんいんさん';$('spotCap').textContent=['いらっしゃいませ！\nゆっくり していってね','きょうの おすすめは かぼちゃの ラテだよ。\nまどの そとも ながめてみてね',(EVENT.panels?'パネルは みつかった？\nまちの あちこちに かくれているよ':'かくれおばけちゃんは みつかった？\nまちの あちこちに かくれているよ')][(CAFE.talkN=(CAFE.talkN||0)+1)%3];$('spotLink').hidden=true;$('spotNone').hidden=true;openModal('mSpot');return}
   if(a.type==='zakkaEnter'){zakkaEnter();return}
   if(a.type==='zakkaExit'){zakkaExit();return}
   if(a.type==='zakkaMenu'){zakMenuOpen();return}
@@ -3880,7 +3899,7 @@ window.addEventListener('keydown',e=>{
   if(e.code==='KeyH'&&!e.repeat)showHint();
   if(e.code==='KeyQ'&&!e.repeat)setFly(!player.fly);
   if(e.code==='KeyC'&&!e.repeat)input.down=true;
-  if(e.code==='KeyB'&&!e.repeat){refreshBook();openModal('mBook')}
+  if(e.code==='KeyB'&&!e.repeat){if(!EVENT.panels&&bookTab==='zukan')bookTab='obake';setBookTab(bookTab);openModal('mBook')}
   if(e.code==='BracketLeft')cam.yaw+=.3;if(e.code==='BracketRight')cam.yaw-=.3;
 });
 window.addEventListener('keyup',e=>{input.keys[e.code]=false});
@@ -3976,7 +3995,7 @@ $('btnAlbumFav').addEventListener('click',()=>{
 });
 $('grid').addEventListener('click',e=>{const c=e.target.closest('.pc[data-pid]');if(c){albumFilter=c.dataset.pid;setBookTab('album')}});
 $('actBtn').addEventListener('click',doAct);
-$('btnBook').addEventListener('click',()=>{refreshBook();openModal('mBook')});
+$('btnBook').addEventListener('click',()=>{if(!EVENT.panels&&bookTab==='zukan')bookTab='obake';setBookTab(bookTab);openModal('mBook')});
 $('btnBookClose').addEventListener('click',()=>closeModal('mBook'));
 $('btnBookX').addEventListener('click',()=>closeModal('mBook'));
 $('btnHint').addEventListener('click',()=>showHint());
@@ -4039,7 +4058,7 @@ $('btnResetYes').addEventListener('click',()=>{
 $('btnPhotoClose').addEventListener('click',()=>{closeModal('mPhoto');if(state.pendingDone){state.pendingDone=false;setTimeout(showComplete,500)}});
 $('btnRetake').addEventListener('click',()=>{closeModal('mPhoto');if(lastShot.free){if(state.pendingDone){state.pendingDone=false;setTimeout(showComplete,500)}return}setTimeout(()=>takePhoto(lastShot.p,lastShot.k+1),30)});
 $('broomBtn').addEventListener('click',()=>{if(state.mode==='play'){$('broomBtn').classList.remove('pulse');setFly(!player.fly)}});
-$('btnDoneClose').addEventListener('click',()=>{closeModal('mDone');if(save.broom&&!player.fly){const b=$('broomBtn');b.classList.remove('pulse');void b.offsetWidth;b.classList.add('pulse')}});
+$('btnDoneClose').addEventListener('click',()=>{closeModal('mDone');if(broomOn()&&!player.fly){const b=$('broomBtn');b.classList.remove('pulse');void b.offsetWidth;b.classList.add('pulse')}});
 $('btnSpotClose').addEventListener('click',()=>closeModal('mSpot'));
 $('editCopy').addEventListener('click',()=>{
   const s=$('editTxt').textContent,done=()=>toast('配置データをコピーしました');
@@ -4049,22 +4068,27 @@ $('editCopy').addEventListener('click',()=>{
 /* ---------- hint ---------- */
 function nearestUnfound(){
   let best=null,bd=1e9;
+  if(!EVENT.panels){const near=(x,z,k)=>{const d=Math.hypot(x-player.pos.x,z-player.pos.z);if(d<bd){bd=d;best={p:{x,z},d,k}}};
+    if(!ghostsDone())ghostChans.forEach(o=>{if(!o.found)near(o.x,o.z,'ghost')});
+    else if(!candyDone()){if(gReveal)G.forEach(g=>{if(save.cand.indexOf(g.i)<0){const q=gp(g);near(q.x,q.z,'gift')}})}
+    else if(POT.grp){const q=POT.e?edPos(POT.e):{x:POT.x,z:POT.z};near(q.x,q.z,'potion')}
+    return best}
   panels.forEach(p=>{if(p.found)return;const d=Math.hypot(p.x-player.pos.x,p.z-player.pos.z);if(d<bd){bd=d;best=p}});
   return best?{p:best,d:bd}:null;
 }
 function showHint(){
-  if(!nearestUnfound()){if(save.broom&&!save.wand&&PRESENT){state.hintUntil=state.t+8;$('hintBox').classList.add('on');return}toast('もうぜんぶ見つけているよ！');return}
+  if(!nearestUnfound()){if(broomOn()&&!save.wand&&PRESENT){state.hintUntil=state.t+8;$('hintBox').classList.add('on');return}toast(EVENT.panels?'もうぜんぶ見つけているよ！':'プレゼントが でてくるのを まってね');return}
   state.hintUntil=state.t+8;$('hintBox').classList.add('on');
 }
 function updateHint(){
   const box=$('hintBox');
   if(state.t>state.hintUntil){box.classList.remove('on');return}
-  let nu=nearestUnfound();if(!nu&&save.broom&&!save.wand&&PRESENT){const w=presentPos();nu={p:{x:w.x,z:w.z},d:Math.hypot(w.x-player.pos.x,w.z-player.pos.z),gift:true}}
+  let nu=nearestUnfound();if(!nu&&broomOn()&&!save.wand&&PRESENT){const w=presentPos();nu={p:{x:w.x,z:w.z},d:Math.hypot(w.x-player.pos.x,w.z-player.pos.z),gift:true}}
   if(!nu){box.classList.remove('on');return}
   const dx=nu.p.x-player.pos.x,dz=nu.p.z-player.pos.z,fx=-Math.sin(cam.yaw),fz=-Math.cos(cam.yaw),rx=Math.cos(cam.yaw),rz=-Math.sin(cam.yaw);
   const a=Math.atan2(dx*rx+dz*rz,dx*fx+dz*fz);
   $('hintArrow').style.transform='rotate('+a+'rad)';
-  $('hintTxt').textContent=nu.gift?'たかいところの プレゼントを\nほうきで とりにいこう':nu.d<14?'すぐそば！ まわりをよく見てみよう':(nu.d<30?'もうすこし先にいそう':'まだ遠いところにいるよ');
+  $('hintTxt').textContent=nu.k==='potion'?'おはなやさんの ふしぎな びんへ いこう':nu.gift?'たかいところの プレゼントを\nほうきで とりにいこう':nu.d<14?'すぐそば！ まわりをよく見てみよう':(nu.d<30?'もうすこし先にいそう':'まだ遠いところにいるよ');
 }
 
 /* ---------- minimap: the map fills in where you have walked ---------- */
@@ -4089,7 +4113,7 @@ function drawMini(){
     fg.fillStyle=gr;fg.beginPath();fg.arc(a[0],a[1],16*MSC,0,6.3);fg.fill();fg.globalCompositeOperation='source-over';
   }
   mg.drawImage(mapBase,0,0);mg.globalAlpha=.9;mg.drawImage(fogC,0,0);mg.globalAlpha=1;
-  panels.forEach(p=>{if(!p.found)return;const a=toM(p.x,p.z);
+  if(EVENT.panels)panels.forEach(p=>{if(!p.found)return;const a=toM(p.x,p.z);
     if((save.photos[p.id]||0)>0){mg.fillStyle='#fff';mg.beginPath();mg.arc(a[0],a[1],8,0,6.3);mg.fill();mg.fillStyle='#ff8fb8';mg.beginPath();mg.arc(a[0],a[1],5.2,0,6.3);mg.fill();mg.strokeStyle='#1a1033';mg.lineWidth=2;mg.stroke()}
     else{mg.fillStyle='#ffc95e';mg.beginPath();mg.arc(a[0],a[1],5,0,6.3);mg.fill();mg.strokeStyle='#1a1033';mg.lineWidth=2;mg.stroke()}});
   ghostChans.forEach((o,i)=>{if(!o.found)return;const q=toM(o.bx,o.bz),x=q[0],y=q[1];
@@ -4097,7 +4121,7 @@ function drawMini(){
     mg.beginPath();mg.moveTo(x-6,y+6);mg.lineTo(x-6,y-1);mg.arc(x,y-1,6,PI,0);mg.lineTo(x+6,y+6);mg.lineTo(x+3,y+3.5);mg.lineTo(x,y+6);mg.lineTo(x-3,y+3.5);mg.closePath();mg.fill();mg.stroke();
     mg.fillStyle='#1a1033';mg.fillRect(x-3,y-3,2,2.4);mg.fillRect(x+1,y-3,2,2.4)});
   candyDrawMini();
-  if(PRESENT&&save.broom&&!save.wand){const w=presentPos(),q=toM(w.x,w.z);mg.fillStyle='#ff7aa8';mg.strokeStyle='#1a1033';mg.lineWidth=2;mg.fillRect(q[0]-5,q[1]-5,10,10);mg.strokeRect(q[0]-5,q[1]-5,10,10)}
+  if(PRESENT&&broomOn()&&!save.wand){const w=presentPos(),q=toM(w.x,w.z);mg.fillStyle='#ff7aa8';mg.strokeStyle='#1a1033';mg.lineWidth=2;mg.fillRect(q[0]-5,q[1]-5,10,10);mg.strokeRect(q[0]-5,q[1]-5,10,10)}
   const a=toM(player.pos.x,player.pos.z);
   mg.save();mg.translate(a[0],a[1]);mg.rotate(PI-player.face);mg.fillStyle='#fff1d8';mg.strokeStyle='#1a1033';mg.lineWidth=2.5;
   mg.beginPath();mg.moveTo(0,-9);mg.lineTo(7,7);mg.lineTo(0,3);mg.lineTo(-7,7);mg.closePath();mg.fill();mg.stroke();mg.restore();
@@ -4241,7 +4265,7 @@ function update(dt){
   warm.position.set(player.pos.x,player.pos.y+2.3,player.pos.z);
   // panels
   let near=null,nd=1e9;
-  for(const p of panels){
+  if(EVENT.panels)for(const p of panels){
     const dx=player.pos.x-p.x,dz=player.pos.z-p.z,dd=Math.hypot(dx,dz);
     if(dd<nd){nd=dd;near=p}
     const sprA=p.found?0:clamp((20-dd)/10,0,1)*(.55+.25*Math.sin(t*3+p.idx));
@@ -4276,7 +4300,7 @@ function update(dt){
     if(Math.random()<dt*2.4){const a=Math.random()*6.28,r=Math.random()*14;burst(player.pos.x+Math.cos(a)*r,player.pos.y+10+Math.random()*6,player.pos.z+Math.sin(a)*r,60,SPARK,7,0)}
     if(Math.random()<dt*6)burst(player.pos.x+(Math.random()-.5)*10,player.pos.y+.5,player.pos.z+(Math.random()-.5)*10,6,SPARK,2,5);
   }
-  const partyOn=save.done;
+  const partyOn=save.done&&EVENT.panels;
   glowMat.uniforms.gain.value=(.74+.06*Math.sin(t*7.3)+.03*Math.sin(t*17))*(partyOn?1.15:1);
   state.kira=Math.max(0,(state.kira||0)-dt*.9);hemi.intensity=.98+(partyOn?.1:0)+state.kira*.6;
   stepParticles(dt);updateHint();presentTick(dt,t,playing);
@@ -5859,7 +5883,7 @@ function askYN(title,q,onYes){ // 店員さんの「はい / いいえ」(RPGの
 function flowerTalk(){
   if(typeof dressUnlocked==='function'&&dressUnlocked()){askYN('まほうの おはなやさん','まほうの ポーションで\nおきがえ する？',openDress);return} // ぜんぶ集めたら、店員さんからも おきがえ
   $('spotTitle').textContent='まほうの おはなやさん';
-  $('spotCap').textContent='まほうの ポーションで おきがえが できるよ。\nパネルと かくれおばけちゃんを ぜんぶ みつけたら つかえるよ。\nいまは '+dressProgress();
+  $('spotCap').textContent='まほうの ポーションで おきがえが できるよ。\nかくれおばけちゃんを ぜんぶ みつけると、おかし集めが はじまるよ。\nおかしを ぜんぶ あつめたら つかえるよ。\nいまは '+dressProgress();
   $('spotLink').hidden=true;$('spotNone').hidden=true;openModal('mSpot');
 }
 function flowerTick(dt,t){
@@ -6031,7 +6055,7 @@ function layoutInit(){
   edLoad(base,'配置データ',true);cordsLoad(cb,'配置データ',true);
   if(state.editOn)edUI();
   const bm=$('btnEditMode');
-  if(!/github\.io$/.test(location.hostname)){const td=$('btnTestDress');td.hidden=false;td.addEventListener('click',()=>{closeModal('mHelp');openDress()});const tg=$('btnTestGift');tg.hidden=false;tg.addEventListener('click',()=>{ghostChans.forEach(o=>{o.found=true;if(save.ghosts.indexOf(o.i)<0)save.ghosts.push(o.i)});save.gift=0;persist();closeModal('mHelp');toast('テスト用：おばけを全員見つけたことにしました\nしばらく待つと プレゼントが出ます',3600)});const tb=$('btnTestBroom');tb.hidden=false;tb.addEventListener('click',()=>{save.broom=true;save.wand=false;persist();presentReset();flyUI();closeModal('mHelp');toast('テスト用：ほうきが使えるようになりました\n時計塔のプレゼントを とりにいこう',3600)});
+  if(!/github\.io$/.test(location.hostname)){const td=$('btnTestDress');td.hidden=false;td.addEventListener('click',()=>{closeModal('mHelp');openDress()});const tg=$('btnTestGift');tg.hidden=false;tg.addEventListener('click',()=>{ghostChans.forEach(o=>{o.found=true;if(save.ghosts.indexOf(o.i)<0)save.ghosts.push(o.i)});save.gift=0;persist();closeModal('mHelp');toast('テスト用：おばけを全員見つけたことにしました\nしばらく待つと プレゼントが出ます',3600)});const tb=$('btnTestBroom');tb.hidden=!EVENT.panels;tb.addEventListener('click',()=>{save.broom=true;save.wand=false;persist();presentReset();flyUI();closeModal('mHelp');toast('テスト用：ほうきが使えるようになりました\n時計塔のプレゼントを とりにいこう',3600)});
     bm.hidden=false;bm.addEventListener('click',()=>{closeModal('mHelp');if(!state.editOn){state.editOn=true;edUI()}})}
 }
 function edUI(){
@@ -6211,11 +6235,11 @@ function presentTick(dt,t,playing){
   if(!P.opened){
     P.pg.rotation.y+=dt*.7;P.pg.position.y=P.baseY+Math.sin(t*2)*.05;
     P.spark.position.y=1.0+Math.sin(t*2.4)*.12;P.spark.material.opacity=.55+.3*Math.sin(t*3.1);
-    P.halo.material.opacity=save.broom?.85:.6;
+    P.halo.material.opacity=broomOn()?.85:.6;
     const w=presentPos(),dh=Math.hypot(w.x-player.pos.x,w.z-player.pos.z),dv=w.y-(player.pos.y+.7);
-    if(playing&&save.broom&&player.fly&&dh<2.1&&Math.abs(dv)<1.8){openPresent();return}
+    if(playing&&broomOn()&&player.fly&&dh<2.1&&Math.abs(dv)<1.8){openPresent();return}
     if(playing&&!player.fly&&dh<9&&dv>2.5){
-      if(!P.told){P.told=true;toast(save.broom?'ほうきに のれば とどきそう！\n（ほうきボタンで のってみよう）':'あんな たかいところに プレゼントが…\nいまは とどかないみたい',3600)}
+      if(!P.told){P.told=true;toast(broomOn()?'ほうきに のれば とどきそう！\n（ほうきボタンで のってみよう）':'あんな たかいところに プレゼントが…\nいまは とどかないみたい',3600)}
     }else if(dh>16)P.told=false;
     return;
   }
@@ -6229,7 +6253,7 @@ function presentTick(dt,t,playing){
   if(P.t>=3){P.wand.visible=false;P.wand.scale.setScalar(1)}
 }
 function setFly(on){
-  if(on&&!save.broom)return;
+  if(on&&!broomOn())return;
   if(on&&window.__spring&&window.__spring.SPR.in)return; // no broom while swimming
   if(on&&player.sit)standUp();
   player.fly=!!on;player.lv=on?1:0;
@@ -6243,9 +6267,9 @@ function setFly(on){
 }
 let tbDashHTML=null,tbJumpHTML=null;
 function flyUI(){
-  const b=$('broomBtn');b.hidden=!save.broom;b.classList.toggle('on',!!player.fly);b.setAttribute('aria-label',player.fly?'ほうきからおりる':'ほうきにのる');
+  const b=$('broomBtn');b.hidden=!broomOn();b.classList.toggle('on',!!player.fly);b.setAttribute('aria-label',player.fly?'ほうきからおりる':'ほうきにのる');
   $('broomTxt').textContent=player.fly?'おりる':'ほうき';
-  document.querySelectorAll('.needBroom').forEach(el=>{el.hidden=!save.broom});
+  document.querySelectorAll('.needBroom').forEach(el=>{el.hidden=!broomOn()});
   const d=$('tbDash'),j=$('tbJump');
   if(tbDashHTML===null){tbDashHTML=d.innerHTML;tbJumpHTML=j.innerHTML}
   d.innerHTML=player.fly?'<svg viewBox="0 0 24 24" fill="none" stroke="#fff1d8" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v13M6 13l6 6 6-6"/></svg><span>したへ</span>':tbDashHTML;
@@ -6335,7 +6359,7 @@ function resetGifts(){gReveal=false;gAnnT=-1;G.forEach(g=>{gDrop(g);g.phase=0;g.
 function openGift(g){
   g.phase=1;g.t0=state.t;
   const first=save.cand.length===0;g.first=first;
-  if(save.cand.indexOf(g.i)<0){save.cand.push(g.i);const q=gp(g);save.candPos[g.i]=[q.x,q.z];persist()}
+  if(save.cand.indexOf(g.i)<0){save.cand.push(g.i);const q=gp(g);save.candPos[g.i]=[q.x,q.z];persist();refreshHUD()}
   const gc=ghostChans[g.i],p=gp(g),gy=groundY(p.x,p.z);
   if(gc&&gc.sF&&gc.sF.material.map){g.gs=new THREE.Sprite(new THREE.SpriteMaterial({map:gc.sF.material.map,transparent:true,depthWrite:false,color:GHOST_DEF[g.i].c}));g.gs.scale.set(.01,.01,1);scene.add(g.gs)}
   g.cs=new THREE.Sprite(new THREE.SpriteMaterial({map:candyTex(g.i),transparent:true,depthWrite:false}));g.cs.scale.set(.01,.01,1);scene.add(g.cs);
@@ -6348,7 +6372,7 @@ function candyGuide(){ // はじめて おかしを もらったときの つか
 function giftTick(dt,t,playing){
   if(!G.length)return;
   const want=save.cand.length?'auto':'none';if(mini.style.pointerEvents!==want){mini.style.pointerEvents=want;mini.classList.toggle('tap',!!save.cand.length)}
-  const all=ghostChans.length>=6&&save.ghosts.length>=ghostChans.length;
+  const all=candyOpen();
   if(!gReveal&&all){
     if(save.gift)gReveal=true;
     else if(gAnnT<0)gAnnT=state.t+3.4;
@@ -6375,7 +6399,7 @@ function giftTick(dt,t,playing){
       if(g.cs){if(el>.35){const k=Math.min((el-.35)/.45,1),b=1-Math.pow(1-k,3),fade=el<1.9?1:Math.max(0,1-(el-1.9)/.5);
         g.cs.material.opacity=fade;g.cs.scale.setScalar(1.05*b+.01);g.cs.position.set(p.x+.55,gy+1.0+b*1.1+Math.sin(el*5)*.05,p.z)}}
       if(el>2.5){gDrop(g);g.phase=2;g.grp.visible=state.editOn;candySync();if(g.first){g.first=false;candyGuide()}
-        if(save.cand.length>=6)toast('おかしが ぜんぶ そろったよ！\n地図をタッチすると ワープできるよ',3400)}
+        if(candyDone()){AUDIO.sfx('fanfare');showMsg('おかし コンプリート！','おかしが ぜんぶ そろったよ！\nおはなやさんの ふしぎな びんで、色かえポーションが つかえるように なったよ🧪\n地図を タッチすると、おかしの ばしょへ ワープできるよ')}}
     }
   });
 }
@@ -6490,8 +6514,7 @@ const piyoDress=(()=>{
   function init(){apply(save.dress)}
   return{init,apply};
 })();
-function dressProgress(){return'パネル '+Math.min(save.found.length,panels.length)+' / '+panels.length+'　おばけちゃん '+Math.min(save.ghosts.length,ghostChans.length)+' / '+ghostChans.length} // いまの あつまりぐあい(なぜ まだ使えないかが わかるように)
-function dressUnlocked(){return panels.length>0&&save.found.length>=panels.length&&ghostChans.length>0&&save.ghosts.length>=ghostChans.length}
+function dressProgress(){return ghostsDone()?'おかし '+Math.min(save.cand.length,RULE_CANDY)+' / '+RULE_CANDY:'おばけちゃん '+Math.min(save.ghosts.length,ghostChans.length)+' / '+(ghostChans.length||RULE_GHOSTS)} // いまの あつまりぐあい(なぜ まだ使えないかが わかるように)
 let dressPrevYaw=null;
 const dressPrev={rot:0,spin:false,drag:false,pc:null,lx:0};
 function openDress(){
@@ -6568,7 +6591,7 @@ function potionTick(dt,t,playing){
   if(playing&&!state.editOn&&POT.armed&&dd<2.1&&Math.abs(player.pos.y-gy)<2.5){
     POT.armed=false;
     if(un)openDress();
-    else toast('ふしぎな びん…\nパネルと かくれおばけちゃんを ぜんぶ みつけたら つかえるよ\n'+dressProgress(),4200);
+    else toast('ふしぎな びん…\nおかしを ぜんぶ あつめたら つかえるよ\n'+dressProgress(),4200);
   }
 }
 
