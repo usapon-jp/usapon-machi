@@ -1,5 +1,5 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1a1033"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="うさぽん街"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><link rel="icon" href="icons/icon-192.png"><link rel="apple-touch-icon" href="icons/apple-touch-icon.png"><script>if("serviceWorker" in navigator&&/^https:/.test(location.protocol)&&/github\.io$/.test(location.hostname)){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}</script><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
-<!-- パネル収集イベント再開時は、title と og:title を「うさぽん村のハロウィン ピヨちゃんのパネル探し」、description を「かくれたうさぎのパネルを見つけて、写真をとる…」に戻す（下の EVENT.panels も true に） -->
+<!-- パネル収集イベント再開時は、title と og:title を「うさぽん村のハロウィン ピヨちゃんのパネル探し」、description を「かくれたうさぎのパネルを見つけて、写真をとる…」に戻す（スクリプトの const EVENT={panels:false} も true に） -->
 <title>うさぽん村のハロウィン ピヨちゃんのおばけ探し</title>
 <meta name="description" content="ピヨちゃんになって、うさぽん村を歩こう。かくれおばけちゃんを見つけて、おかしを集めるハロウィンのゲームです。ブラウザですぐ遊べます（無料）。"><meta property="og:type" content="website"><meta property="og:site_name" content="うさぽん"><meta property="og:title" content="うさぽん村のハロウィン ピヨちゃんのおばけ探し"><meta property="og:description" content="ピヨちゃんになって、うさぽん村を歩こう。かくれおばけちゃんを見つけて、おかしを集めるハロウィンのゲームです。ブラウザですぐ遊べます（無料）。"><meta property="og:url" content="https://usapon-jp.github.io/usapon-machi/2026/"><meta property="og:image" content="https://usapon-jp.github.io/usapon-machi/ogp.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2898,7 +2898,9 @@ function signpost(x,z,rot,lines){
   });
   scene.add(g);addCircle(x,z,.4);addGlow(x,y0+2.6,z+.7,5,'#ffb868');B.pool.add(x,y0+.12,z+.8,5.5,1,5.5,0,'#7a4a1a');edEnd(tk);
 }
-signpost(SIGN_X,SIGN_Z,SIGN_ROT,['うさぽんハロウィン','うさぎさんたちを探して','写真をとろう']);
+/* パネル収集を公開するか(このスイッチ ひとつで パネル・入口の看板・ずかん・ほうきが もどる。すすみかたは 下の event rules) */
+const EVENT={panels:false};
+if(EVENT.panels)signpost(SIGN_X,SIGN_Z,SIGN_ROT,['うさぽんハロウィン','うさぎさんたちを探して','写真をとろう']); // パネル おやすみ中は 入口の看板も かくす
 const ghosts=[];
 (function ghostsInit(){
   const prof=[[0,1.1],[.28,1.06],[.46,.88],[.5,.55],[.55,.15],[.5,-.05],[.38,.02],[.28,-.12],[.16,.0],[.0,-.1]].map(a=>new THREE.Vector2(a[0],a[1]));
@@ -2979,7 +2981,7 @@ function buildGlow(){
   const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(p,3));geo.setAttribute('col',new THREE.BufferAttribute(c,3));geo.setAttribute('size',new THREE.BufferAttribute(s,1));
   glowGeo=geo;const pts=new THREE.Points(geo,glowMat);pts.frustumCulled=false;pts.renderOrder=5;scene.add(pts);
 }
-window.__W={INTERIOR,THREE,scene,camera,renderer,canvas,hemi,moon,warm,glowMat,buildGlow,ghosts,houses,lamps,
+window.__W={EVENT,INTERIOR,THREE,scene,camera,renderer,canvas,hemi,moon,warm,glowMat,buildGlow,ghosts,houses,lamps,
   util:{$,isTouch,rand,R,pick,clamp,lerp,angLerp,rr,cv,canvasTex,mulberry32,textTex},WORLD,MAT,glowTex,addGlow,sky,
   groundY,baseY,collidesAt,cols,circs,camSph,camBox,resolveXZ,addCircle,addBoxCol,STAIRS,seats,slots,shopsOut,MAPROADS,PLAZAS,warnings,roadClear,fountainPos:[2,6],ivys:IVYS,crates:CRATES,trees:TREES,firs:FIRS,shrubs:SHRUBS,ED,edBegin,edEnd,glowRefresh,cordsTouch,cordApply,GARL,cordEndKey,pumps:PUMPS};
 })();
@@ -2993,9 +2995,9 @@ const SAVE_KEY='usapon-halloween-machi-v1';
 
 /* ---------- event rules: 2026 の すすみかたは ここで まとめて きめる ----------
    1. かくれおばけちゃん ぜんぶ → おかし集め  2. おかし ぜんぶ → 花屋の 色かえポーション  3. パネル ぜんぶ → まほうのほうき
-   EVENT.panels=false: パネル収集は おやすみ(パネル・ずかん・ヒント・ほうきを かくす。パネルのデータと 保存データは そのまま)。
-   パネルを 公開する日は true にするだけ(あとは <title>/og のコメントどおり 文言を もどす) */
-const EVENT={panels:false};
+   EVENT.panels=false: パネル収集は おやすみ(パネル・入口の看板・ずかん・ヒント・ほうきを かくす。パネルのデータと 保存データは そのまま)。
+   パネルを 公開する日は 街の スクリプトの const EVENT={panels:false} を true にするだけ(あとは <title>/og のコメントどおり 文言を もどす) */
+const EVENT=W.EVENT;
 document.documentElement.classList.toggle('ev-panels',EVENT.panels);
 const RULE_GHOSTS=6,RULE_CANDY=6;
 function ghostsDone(){return ghostChans.length>=RULE_GHOSTS&&save.ghosts.length>=ghostChans.length}
