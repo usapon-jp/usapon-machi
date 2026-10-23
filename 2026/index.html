@@ -3815,7 +3815,6 @@ function shopSelfieAng(a){ // 雑貨屋さん・お花屋さん(絵の部屋)の
   a=((a+PI)%(PI*2)+PI*2)%(PI*2)-PI;return clamp(a,-SHOP_SELFIE,SHOP_SELFIE)}
 const SHOP_SELFIE=.4;
 function setSelfie(on){
-  if(on&&player.fly){toast('空をとんでいる間は\n自撮りできないよ');return}
   if(!on&&state.selfie){cam.yaw=player.face+Math.PI;cam.cur=undefined}
   state.selfie=on;document.body.classList.toggle('selfie',on);
   if(on){cam.sAng=(ZAK.in||FLW.in)?0:player.face;cam.sp=.14;input.jx=input.jy=0;input.dash=false}
@@ -4195,9 +4194,9 @@ function update(dt){
     const fl=player.ground?(speed>.4?Math.sin(player.phase*2)*.25:0):-1.1;
     piyo.wings[0].rotation.z=-.15+(player.ground?fl*.4:fl);piyo.wings[1].rotation.z=.15-(player.ground?fl*.4:fl);
   }
-  if(state.selfie&&!player.fly&&speed<.4){
+  if(state.selfie&&speed<.4){ // 自撮り: とまっている間は カメラの方を むく(ほうきの上でも)
     player.face=angLerp(player.face,cam.sAng,Math.min(1,dt*10));g.rotation.y=player.face;
-    if(!player.sit){piyo.wings[1].rotation.z=1.9-Math.sin(t*9)*.08;piyo.feet[0].rotation.x=piyo.feet[1].rotation.x=0}
+    if(!player.sit&&!player.fly){piyo.wings[1].rotation.z=1.9-Math.sin(t*9)*.08;piyo.feet[0].rotation.x=piyo.feet[1].rotation.x=0}
   }
   blob.position.set(player.pos.x,gy+.12,player.pos.z);const bs=1-Math.min(.5,(player.pos.y-gy)*.25);blob.scale.set(bs,1,bs);
   // camera
