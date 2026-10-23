@@ -3851,6 +3851,7 @@ function takeFreePhoto(){
 }
 
 /* ---------- actions: sit, open spot ---------- */
+const SIT_Y=.5,SIT_F=.25; // cafe chair: seat height above the ground (seat top is at .455), and how far forward of the backrest Piyo sits
 function standUp(){
   if(!player.sit)return;const f=player.face;
   player.pos.x-=Math.sin(f)*.9;player.pos.z-=Math.cos(f)*.9;player.sit=null;
@@ -3871,7 +3872,7 @@ function doAct(){
   if(a.type==='cafeEnter'){cafeEnter(a.via);return}
   if(a.type==='cafeExit'){cafeExit(a.via);return}
   if(a.type==='stand'){standUp();return}
-  if(a.type==='sit'){const s=a.obj;player.sit=s;player.pos.set(s.x,s.y+.05,s.z);player.vx=player.vz=0;player.face=s.face;player.ground=true;toast('すわったよ\n動くと立ち上がるよ');return}
+  if(a.type==='sit'){const s=a.obj;player.sit=s;player.pos.set(s.x+Math.sin(s.face)*SIT_F,s.y+SIT_Y,s.z+Math.cos(s.face)*SIT_F);player.vx=player.vz=0;player.face=s.face;player.ground=true;toast('すわったよ\n動くと立ち上がるよ');return}
   if(a.type==='spot'){
     const sp=a.obj.sp;$('spotTitle').textContent=sp.title||'';$('spotCap').textContent=sp.caption||'';
     const l=$('spotLink');if(sp.url){l.href=sp.url;l.textContent=sp.button2||'ひらく';l.hidden=false;$('spotNone').hidden=true}else{l.hidden=true;$('spotNone').hidden=false}
@@ -4156,6 +4157,7 @@ function update(dt){
   }
   const gy=groundY(player.pos.x,player.pos.z);
   if(SPR.in){player.ground=true;player.vy=0}
+  else if(player.sit){player.pos.y=player.sit.y+SIT_Y;player.ground=true;player.vy=0} // すわっている間は いすの座面の高さに(地面まで しずむと いすが ピヨちゃんに うもれて消えて見える)
   else if(player.fly){const ty=gy+FLY_LV[player.lv];player.pos.y+=(ty-player.pos.y)*Math.min(1,dt*2.6);player.ground=false;player.vy=0}
   else if(player.ground){
     if(gy>player.pos.y)player.pos.y+=(gy-player.pos.y)*Math.min(1,dt*22);
