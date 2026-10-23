@@ -452,8 +452,15 @@ body.selfie #camFlip{background:rgba(255,226,168,.42);border-color:#ffe2a8;color
 #btnFrameTog[hidden]{display:none}
 @media (orientation:landscape) and (max-height:540px){
   #albumImg{max-height:calc(100vh - 150px)}
-  #photoImg{grid-row:1/-1}
+  #photoImg{grid-row:1/span 4;grid-column:1}
   #btnFrameTog{margin-top:0}
+  /* 横画面の写真: 右の列に メモ・わく・ボタンを ならべて、とじる/カメラをおわる が 画面の下に かくれないように */
+  #photoSheet{grid-template-rows:auto;grid-auto-rows:auto;align-content:center;row-gap:6px;overflow-y:auto;padding-top:10px;padding-bottom:10px}
+  #photoNote,#btnFrameTog,#photoSheet .actions{grid-column:2}
+  #photoNote{font-size:10.5px;line-height:1.4}
+  #btnFrameTog{padding:5px 12px;font-size:12px}
+  #photoSheet .actions{gap:5px;margin-top:0}
+  #photoSheet .actions .btn{padding-top:5px;padding-bottom:5px;font-size:12.5px;line-height:1.25}
 }
 
 /* ===== OKASHI WARP MAP ===== */
@@ -3808,7 +3815,6 @@ function shopSelfieAng(a){ // 雑貨屋さん・お花屋さん(絵の部屋)の
   a=((a+PI)%(PI*2)+PI*2)%(PI*2)-PI;return clamp(a,-SHOP_SELFIE,SHOP_SELFIE)}
 const SHOP_SELFIE=.4;
 function setSelfie(on){
-  if(on&&player.fly){toast('空をとんでいる間は\n自撮りできないよ');return}
   if(!on&&state.selfie){cam.yaw=player.face+Math.PI;cam.cur=undefined}
   state.selfie=on;document.body.classList.toggle('selfie',on);
   if(on){cam.sAng=(ZAK.in||FLW.in)?0:player.face;cam.sp=.14;input.jx=input.jy=0;input.dash=false}
@@ -3851,6 +3857,7 @@ function takeFreePhoto(){
 }
 
 /* ---------- actions: sit, open spot ---------- */
+const SIT_Y=.5,SIT_F=.25; // cafe chair: seat height above the ground (seat top is at .455), and how far forward of the backrest Piyo sits
 function standUp(){
   if(!player.sit)return;const f=player.face;
   player.pos.x-=Math.sin(f)*.9;player.pos.z-=Math.cos(f)*.9;player.sit=null;
@@ -3871,7 +3878,7 @@ function doAct(){
   if(a.type==='cafeEnter'){cafeEnter(a.via);return}
   if(a.type==='cafeExit'){cafeExit(a.via);return}
   if(a.type==='stand'){standUp();return}
-  if(a.type==='sit'){const s=a.obj;player.sit=s;player.pos.set(s.x,s.y+.05,s.z);player.vx=player.vz=0;player.face=s.face;player.ground=true;toast('すわったよ\n動くと立ち上がるよ');return}
+  if(a.type==='sit'){const s=a.obj;player.sit=s;player.pos.set(s.x+Math.sin(s.face)*SIT_F,s.y+SIT_Y,s.z+Math.cos(s.face)*SIT_F);player.vx=player.vz=0;player.face=s.face;player.ground=true;toast('すわったよ\n動くと立ち上がるよ');return}
   if(a.type==='spot'){
     const sp=a.obj.sp;$('spotTitle').textContent=sp.title||'';$('spotCap').textContent=sp.caption||'';
     const l=$('spotLink');if(sp.url){l.href=sp.url;l.textContent=sp.button2||'ひらく';l.hidden=false;$('spotNone').hidden=true}else{l.hidden=true;$('spotNone').hidden=false}
@@ -4156,6 +4163,7 @@ function update(dt){
   }
   const gy=groundY(player.pos.x,player.pos.z);
   if(SPR.in){player.ground=true;player.vy=0}
+  else if(player.sit){player.pos.y=player.sit.y+SIT_Y;player.ground=true;player.vy=0} // すわっている間は いすの座面の高さに(地面まで しずむと いすが ピヨちゃんに うもれて消えて見える)
   else if(player.fly){const ty=gy+FLY_LV[player.lv];player.pos.y+=(ty-player.pos.y)*Math.min(1,dt*2.6);player.ground=false;player.vy=0}
   else if(player.ground){
     if(gy>player.pos.y)player.pos.y+=(gy-player.pos.y)*Math.min(1,dt*22);
@@ -4186,9 +4194,9 @@ function update(dt){
     const fl=player.ground?(speed>.4?Math.sin(player.phase*2)*.25:0):-1.1;
     piyo.wings[0].rotation.z=-.15+(player.ground?fl*.4:fl);piyo.wings[1].rotation.z=.15-(player.ground?fl*.4:fl);
   }
-  if(state.selfie&&!player.fly&&speed<.4){
+  if(state.selfie&&speed<.4){ // 自撮り: とまっている間は カメラの方を むく(ほうきの上でも)
     player.face=angLerp(player.face,cam.sAng,Math.min(1,dt*10));g.rotation.y=player.face;
-    if(!player.sit){piyo.wings[1].rotation.z=1.9-Math.sin(t*9)*.08;piyo.feet[0].rotation.x=piyo.feet[1].rotation.x=0}
+    if(!player.sit&&!player.fly){piyo.wings[1].rotation.z=1.9-Math.sin(t*9)*.08;piyo.feet[0].rotation.x=piyo.feet[1].rotation.x=0}
   }
   blob.position.set(player.pos.x,gy+.12,player.pos.z);const bs=1-Math.min(.5,(player.pos.y-gy)*.25);blob.scale.set(bs,1,bs);
   // camera
