@@ -411,7 +411,7 @@ window.createHalloweenMagic = function(D) {
   function tick(dt){
     clock+=dt;cooldown=Math.max(0,cooldown-dt);
     if(lastCam&&!state.camMode){photoMode=false;photoTimer=0}
-    if(lastCam!==!!state.camMode){if(state.camMode){cancel();photoMode=active}lastCam=!!state.camMode;ui()}
+    if(lastCam!==!!state.camMode){if(state.camMode){cancel();photoMode=false} /* 写真は ステッキなしと同じ: 画面の向きのまま(縦→縦、横→横)、わくも つけられる (フミオさん 10/24) */lastCam=!!state.camMode;ui()}
     frame.hidden=!(photoMode&&state.camMode&&state.mode==='play');
     if(!ready){ready=true;ui()}
     if(!wand&&getPresent()){
