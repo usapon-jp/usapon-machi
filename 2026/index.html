@@ -23,6 +23,9 @@ html,body{height:100%;margin:0;padding:0;background:var(--ink);color:var(--paper
 body{position:relative;word-break:auto-phrase;text-wrap:pretty}
 #toast,.sheet,.card,#quick,.lead{text-wrap:balance}
 #toast{white-space:pre-line}
+#npcBub{position:absolute;left:0;top:0;z-index:6;transform:translate(-50%,calc(-100% - 12px));width:max-content;max-width:min(300px,84vw);box-sizing:border-box;padding:9px 14px;border-radius:16px;background:#fff;color:#3a2a4a;font-weight:700;font-size:14px;line-height:1.5;white-space:pre-line;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,.25);pointer-events:none;opacity:0;transition:opacity .2s}
+#npcBub.on{opacity:1}
+#npcBub::after{content:"";position:absolute;left:50%;bottom:-9px;margin-left:-9px;border:9px solid transparent;border-bottom:0;border-top-color:#fff} /* 店員さんの ふきだし */
 #c{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none;background:var(--ink)}
 button{font-family:inherit;color:inherit;cursor:pointer}
 #hud{position:absolute;inset:0;pointer-events:none;padding:max(12px,env(safe-area-inset-top,0px)) 16px max(14px,env(safe-area-inset-bottom,0px));box-sizing:border-box}
@@ -525,6 +528,7 @@ body.dressing #quest,body.dressing #mini,body.dressing #joy{visibility:hidden} /
   </div>
 
   <div id="toast"></div>
+  <div id="npcBub"></div>
   <div id="quick" class="card"><span class="qpc"><b>WASD</b> か <b>矢印</b> であるく</span><span class="qtc">左のスティックであるく</span><br><i>くわしい使い方は右上の歯車から</i></div>
 
   <button id="photoBtn" type="button" aria-label="写真をとる">
@@ -878,7 +882,7 @@ body.dressing #quest,body.dressing #mini,body.dressing #joy{visibility:hidden} /
 {"k":"bed","x":15.51,"z":-7.31,"dx":-0.29,"dz":-0.41},
 {"k":"bed","x":-18.01,"z":-18.79,"dx":1.78,"dz":4.67},
 {"k":"bed","x":-6.51,"z":-34.09,"dx":-0.63,"dz":0.32,"r":15},
-{"k":"panel","x":-32.53,"z":5.95,"dx":-1.9,"dz":-2.21,"r":-60},
+{"k":"panel","x":-32.53,"z":5.95,"dx":-0.37,"dz":-0.75,"r":-74},
 {"k":"panel","x":0.96,"z":-33.08,"dx":-13.96,"dz":14.08,"r":99},
 {"k":"panel","x":19.04,"z":-6.55,"dx":1.46,"dz":-1.55,"r":-114},
 {"k":"panel","x":-14.98,"z":32.17,"dx":0,"dz":0,"r":-56},
@@ -2825,13 +2829,13 @@ function addTree(x,z,s,bare){
   TREES.push([x,y0,z,h,Math.floor(rand()*3),rand()*6.283]);
   if(rand()<.6){const lx=x+(rand()-.5)*2.4*s,lz=z+(rand()-.5)*2.4*s,ly=y0+h*.62;B.lamp.add(lx,ly,lz,.3,.38,.3,0,'#ffb64a');addGlow(lx,ly,lz,4,'#ffa845')}
   groundDress(x,z,1.5*s,8);
-  addCircle(x,z,.7*s);camSph.push({x,y:y0+h*.7,z,r:2.2*s});
+  addCircle(x,z,.7*s);camSph.push({x,y:y0+h*.58,z,r:.52*h,ey:.58}); // 葉っぱ全体(よこ はば 約±.5h、高さ 約.28h〜.88h)を カメラが よける だ円に
 }
 function bigTree(x,z,s,lanterns){
   const y0=groundY(x,z),h=8.2*s;
   TREES.push([x,y0,z,h,Math.floor(rand()*3),rand()*6.283]);
   groundDress(x,z,2.8*s,16);
-  addCircle(x,z,.95*s);camSph.push({x,y:y0+h*.7,z,r:3.4*s});
+  addCircle(x,z,.95*s);camSph.push({x,y:y0+h*.58,z,r:.52*h,ey:.58});
   for(let i=0;i<lanterns;i++){const a=i/lanterns*PI*2,r=(2.2+rand()*2.4)*s,lx=x+Math.cos(a)*r,lz=z+Math.sin(a)*r,ly=y0+h*.45+rand()*1.2*s;
     B.lamp.add(lx,ly,lz,.4,.5,.4,0,'#ffb64a');addGlow(lx,ly,lz,5,'#ffa845')}
 }
@@ -3254,7 +3258,18 @@ const RIDE={len:2.6,seat:.85,stickY:.12,bodyY:.08,pitch:-.08}; // broom length, 
     // trees: Meshy deciduous A/B (towns + big trees) and fir (forest near the fence); far ones are hidden by distance to keep it light
     const sink=(x,z)=>{const e=1,gx=(W.groundY(x+e,z)-W.groundY(x-e,z))/(2*e),gz=(W.groundY(x,z+e)-W.groundY(x,z-e))/(2*e);return Math.min(.6,.05+.8*Math.hypot(gx,gz))};
     const TT=[mk(PROPS.treeA,1,99),mk(PROPS.treeB,1,99),mk(PROPS.treeC,1,99)],TF=mk(PROPS.fir,1,99),TD=[];
-    (W.trees||[]).forEach(t=>{const P=TT[t[4]];const k=t[3]*(t[4]<2?.88:1)/P.h;const m=put(P,t[0],t[1]-sink(t[0],t[2]),t[2],t[5],k,k,k);TD.push({m,x:t[0],z:t[2],r:85})});
+    const TFADE=[];
+    (W.trees||[]).forEach(t=>{const P=TT[t[4]];const k=t[3]*(t[4]<2?.88:1)/P.h;const m=put(P,t[0],t[1]-sink(t[0],t[2]),t[2],t[5],k,k,k);TD.push({m,x:t[0],z:t[2],r:85});
+      m.material=P.mat.clone();TFADE.push({m,x:t[0],z:t[2],y:t[1]+t[3]*.58,r:t[3]*.52,o:1})});
+    // カメラが 葉っぱの中に入ったり、葉っぱが ピヨちゃんの前に来たときは、その木を すける(目の前が まっ赤に ならないように)
+    W.treeFade=dt=>{const C=W.camera.position,pl=window.__usapon&&window.__usapon.player;if(!pl)return;const Q=pl.pos,hy=Q.y+1.1;
+      const inE=(q,x,y,z)=>{const dx=x-q.x,dy=(y-q.y)/.58,dz=z-q.z;return dx*dx+dy*dy+dz*dz<q.r*q.r*1.1};
+      for(const q of TFADE){let w=1;
+        if(Math.hypot(q.x-C.x,q.z-C.z)<q.r+9){
+          if(inE(q,C.x,C.y,C.z))w=.12; // カメラが 葉っぱの中
+          else if(!inE(q,Q.x,hy,Q.z))for(let i=1;i<6;i++){const u=i/6,x=C.x+(Q.x-C.x)*u,y=C.y+(hy-C.y)*u,z=C.z+(Q.z-C.z)*u;if(inE(q,x,y,z)){w=.12;break}}} // 葉っぱが ピヨちゃんを かくす
+        if(Math.abs(q.o-w)<.001)continue;q.o+=Math.max(-dt*4,Math.min(dt*4,w-q.o));if(Math.abs(q.o-w)<.02)q.o=w;
+        const M=q.m.material,tr=q.o<.999;if(M.transparent!==tr){M.transparent=tr;M.depthWrite=!tr;M.needsUpdate=true}M.opacity=q.o}};
     (W.firs||[]).forEach(t=>{const k=t[3]/TF.h;const m=put(TF,t[0],t[1]-sink(t[0],t[2]),t[2],t[4],k,k,k);TD.push({m,x:t[0],z:t[2],r:100})});
     const cullTrees=()=>{const cx=camera.position.x,cz=camera.position.z;TD.forEach(d=>{d.m.visible=(d.x-cx)*(d.x-cx)+(d.z-cz)*(d.z-cz)<d.r*d.r})};
     const SH=[mk(PROPS.shrub,99,1),mk(PROPS.shrub2,99,1)];
@@ -3621,9 +3636,9 @@ async function albumDownloadMany(ids){
   const files=[];
   for(const id of ids){const u=await albumGetFull(id);if(!u)continue;try{const b=await (await fetch(u)).blob();files.push(new File([b],'usapon-photo-'+id+'.jpg',{type:'image/jpeg'}))}catch(e){}}
   if(!files.length){toast('写真をよみこめなかったよ');return}
-  try{if(navigator.canShare&&navigator.canShare({files})){await navigator.share({files});return}}catch(e){if(e&&e.name==='AbortError')return}
+  try{if(SHARE_SAVE&&navigator.canShare&&navigator.canShare({files})){await navigator.share({files});return}}catch(e){if(e&&e.name==='AbortError')return}
   files.forEach((f,i)=>setTimeout(()=>{const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)},i*350));
-  toast(files.length+'まい ダウンロードします');
+  toast(files.length+'まい ダウンロードします\nアルバムの「Download」に はいるよ');
 }
 let albumCur=null,albumDelArmed=false;
 async function openAlbum(id){
@@ -3634,11 +3649,13 @@ async function openAlbum(id){
   $('albumCap').textContent=(p?p.def.name+' と ピヨちゃん':(m.kind==='selfie'?'ピヨちゃんの じどり':'ピヨちゃんの 街さんぽ'))+'　'+d.getFullYear()+'.'+(d.getMonth()+1)+'.'+d.getDate();
   $('albumImg').src=url;openModal('mAlbum');
 }
+// iPhone/iPad は 共有の「画像を保存」でしか 写真アプリに入らないので 共有シートを使う。Android などは そのまま ダウンロード(アルバムの Download フォルダに入る)
+const SHARE_SAVE=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 async function savePhotoSrc(src){
   try{
     const b=await (await fetch(src)).blob(),f=new File([b],'usapon-photo-'+Date.now()+'.jpg',{type:'image/jpeg'});
-    if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f]});return}
-    const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=f.name;document.body.appendChild(a);a.click();
+    if(SHARE_SAVE&&navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f]});return}
+    const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=f.name;document.body.appendChild(a);a.click();toast('ダウンロードしたよ\nアルバムの「Download」に はいるよ',3200);
     setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);
   }catch(e){if(e&&e.name==='AbortError')return;toast('保存できなかったよ\n画像を長押ししてね')}
 }
@@ -3879,7 +3896,7 @@ function doAct(){
   if(a.type==='flowerEnter'){flowerEnter();return}
   if(a.type==='flowerExit'){flowerExit();return}
   if(a.type==='flowerTalk'){flowerTalk();return}
-  if(a.type==='cafeTalk'){$('spotTitle').textContent='カフェの てんいんさん';$('spotCap').textContent=['いらっしゃいませ！\nゆっくり していってね','きょうの おすすめは かぼちゃの ラテだよ。\nまどの そとも ながめてみてね',(EVENT.panels?'パネルは みつかった？\nまちの あちこちに かくれているよ':'かくれおばけちゃんは みつかった？\nまちの あちこちに かくれているよ')][(CAFE.talkN=(CAFE.talkN||0)+1)%3];$('spotLink').hidden=true;$('spotNone').hidden=true;openModal('mSpot');return}
+  if(a.type==='cafeTalk'){npcSay('cafe',['いらっしゃいませ！\nゆっくり していってね','きょうの おすすめは かぼちゃの ラテだよ。\nまどの そとも ながめてみてね',(EVENT.panels?'パネルは みつかった？\nまちの あちこちに かくれているよ':'かくれおばけちゃんは みつかった？\nまちの あちこちに かくれているよ')][(CAFE.talkN=(CAFE.talkN||0)+1)%3]);return} // 店員さんの おはなしは 頭の上の白い ふきだし(えらぶものが ないので まどは 出さない)
   if(a.type==='zakkaEnter'){zakkaEnter();return}
   if(a.type==='zakkaExit'){zakkaExit();return}
   if(a.type==='zakkaMenu'){zakMenuOpen();return}
@@ -4222,7 +4239,7 @@ function update(dt){
     const nb=[],nc=[],sph=[];
     for(const b of cols){if(Math.min(b.hw,b.hd)<.2)continue;if(Math.hypot(b.x-tx0,b.z-tz0)<RR+Math.hypot(b.hw,b.hd))nb.push(b)} // thin fences never push the camera
     for(const c of circs){if(c.r<.55)continue;if(Math.hypot(c.x-tx0,c.z-tz0)<RR+c.r)nc.push(c)} // lamp posts / small props never push the camera
-    const addS=q=>{const dx=q.x-tgt.x,dy=q.y-tgt.y,dz=q.z-tgt.z;if(dx*dx+dy*dy+dz*dz>(q.r+.3)*(q.r+.3)&&dx*dx+dz*dz<(q.r+12)*(q.r+12))sph.push(q)};
+    const addS=q=>{const dx=q.x-tgt.x,dy=(q.y-tgt.y)/(q.ey||1),dz=q.z-tgt.z;if(dx*dx+dy*dy+dz*dz>(q.r+.3)*(q.r+.3)&&dx*dx+dz*dz<(q.r+12)*(q.r+12))sph.push(q)};
     for(const q of camSph)addS(q);
     for(const o of ghosts){const sc=o.g.scale.x;addS({x:o.g.position.x,y:o.g.position.y+.5*sc,z:o.g.position.z,r:.8*sc})}
     const blocked=(x,y,z)=>{
@@ -4232,7 +4249,7 @@ function update(dt){
         if(Math.abs(lx)<b.hw+CR&&Math.abs(lz)<b.hd+CR)return true}
       for(const c of nc){if(y>=c.top-.15)continue;const dx=x-c.x,dz=z-c.z,rr=c.r+CR;if(dx*dx+dz*dz<rr*rr)return true}
       for(const b of camBox)if(x>b.x0&&x<b.x1&&y>b.y0&&y<b.y1&&z>b.z0&&z<b.z1)return true;
-      for(const q of sph){const dx=x-q.x,dy=y-q.y,dz=z-q.z;if(dx*dx+dy*dy+dz*dz<q.r*q.r)return true}
+      for(const q of sph){const dx=x-q.x,dy=(y-q.y)/(q.ey||1),dz=z-q.z;if(dx*dx+dy*dy+dz*dz<q.r*q.r)return true}
       return false};
     let best=d,bp=pe;
     for(let lift=0;lift<=0;lift+=.14) /* pitch stays fixed: lifting made the view bob up and down while walking */{
@@ -4289,7 +4306,7 @@ function update(dt){
     if(!p.found&&dd<5.2&&Math.abs(player.pos.y-p.y0)<2.5&&playing)discover(p);
     if(p.pop>0){p.pop=Math.max(0,p.pop-dt*1.8);p.group.scale.setScalar(p.sc*(1+Math.sin(p.pop*PI)*.12))}
   }
-  const canShoot=playing&&near&&near.found&&nd<4.4;
+  const canShoot=playing&&!player.fly&&near&&near.found&&nd<4.4; // ほうきで とんでいる時は パネル写真にしない(ふつうの写真)
   state.nearPanel=canShoot?near:null;$('photoBtn').classList.toggle('on',!!playing);$('photoBtn').classList.toggle('near',!!canShoot);
   // action button: sit / stand / spots
   let act=null;
@@ -5375,9 +5392,9 @@ function cafeBuild(){
   // shelves with jars (right) and in the niche (left)
   const jars=(x,y,z,n)=>{for(let i=0;i<n;i++){const xx=x+i*.27,h=.16+rnd()*.12;cyl(['#efe3cc','#7a5a3a','#d9cfb8','#a8905a'][i%4],xx,y+h/2+.02,z,.09,h);cyl('#6a5030',xx,y+h+.04,z,.095,.04)}};
   for(const y of [1.95,2.45]){box(WOOD,4.9,y,-HD+.16,1.7,.05,.3);box(DARK,4.15,y-.1,-HD+.12,.05,.14,.2);box(DARK,5.65,y-.1,-HD+.12,.05,.14,.2);jars(4.3,y+.02,-HD+.18,5)}
-  {const nx=-3.2;box('#d9b88a',nx,1.25,-HD-1.15,1.7,2.5,.05);box('#d9b88a',nx-.85,1.25,-HD-.55,.05,2.5,1.2);box('#d9b88a',nx+.85,1.25,-HD-.55,.05,2.5,1.2);box('#8a5a34',nx,.02,-HD-.55,1.7,.04,1.2);
+  {const nx=-3.2;box('#d9b88a',nx,1.25,-HD-1.15,1.7,2.5,.05);box('#d9b88a',nx-.85,1.25,-HD-.585,.05,2.5,1.15);box('#d9b88a',nx+.85,1.25,-HD-.585,.05,2.5,1.15);box('#8a5a34',nx,.02,-HD-.585,1.7,.04,1.15); // 横の板・床・ふたは かべの面までで止める(前に はみ出すと アーチのまわりに四角いわくが見える)
     for(const y of [.8,1.4,2.0]){box(WOOD,nx,y,-HD-.7,1.6,.05,.4);jars(nx-.6,y+.02,-HD-.7,5)}
-    box('#d9b88a',nx,2.52,-HD-.55,1.75,.05,1.25)} // たなの上のふた(うしろから空が見えないように)
+    box('#d9b88a',nx,2.52,-HD-.585,1.75,.05,1.15)} // たなの上のふた(うしろから空が見えないように)
   // glass dome stand + pastries (dome itself is a transparent mesh below)
   cyl(WOOD,1.5,1.12,-2.6,.34,.08);cyl('#f2ead8',1.5,1.17,-2.6,.3,.03);
   [[-.1,0],[.1,.05],[0,-.1]].forEach((a,i)=>ell(i?'#d9944a':'#e0a05a',1.5+a[0],1.23,-2.6+a[1],.1,.06,.07,i));
@@ -5899,9 +5916,7 @@ function askYN(title,q,onYes){ // 店員さんの「はい / いいえ」(RPGの
   openModal('mAsk');setTimeout(()=>{try{$('askY').focus()}catch(e){}},50)}
 function flowerTalk(){
   if(typeof dressUnlocked==='function'&&dressUnlocked()){askYN('まほうの おはなやさん','まほうの ポーションで\nおきがえ する？',openDress);return} // ぜんぶ集めたら、店員さんからも おきがえ
-  $('spotTitle').textContent='まほうの おはなやさん';
-  $('spotCap').textContent='まほうの ポーションで おきがえが できるよ。\nかくれおばけちゃんを ぜんぶ みつけると、おかし集めが はじまるよ。\nおかしを ぜんぶ あつめたら つかえるよ。\nいまは '+dressProgress();
-  $('spotLink').hidden=true;$('spotNone').hidden=true;openModal('mSpot');
+  npcSay('flower','まほうの ポーションで おきがえが できるよ。\nおばけちゃんを ぜんぶ みつけて、\nおかしを ぜんぶ あつめたら つかえるよ。\nいまは '+dressProgress(),8000);
 }
 function flowerTick(dt,t){
   if(!FLW.in)return;const Z=FLW;
@@ -5921,8 +5936,18 @@ const NPC={dir:'assets/piyo/',buf:{},list:[],
   tint:{flower:[.59,.71,.52],cafe:[.59,.33,.22],store:[.63,.40,.86]},tinted:{beret_felt:1,scarf_felt:1,hat_store:1},
   outfits:{flower:['apron_flower','scarf_felt','beret_felt','deco_flower'],cafe:['apron_cafe','scarf_felt','beret_felt','deco_cafe'],store:['apron_store','scarf_felt','hat_store','star_hat','star_scarf']}};
 function npcGet(n){return NPC.buf[n]||(NPC.buf[n]=fetch(NPC.dir+n+'.glb').then(r=>{if(!r.ok)throw new Error(n+' '+r.status);return r.arrayBuffer()}))}
+// 店員さんの ふきだし: 頭の上に白い ふきだしを出す。しばらくたつか、はなれると きえる
+const _bub=new THREE.Vector3();
+function npcSay(shop,text,ms){const h=NPC.by&&NPC.by[shop];if(!h){toast(text,ms||5000);return}
+  const b=$('npcBub');b.textContent=text;b.classList.add('on');state.bub={h,until:performance.now()+(ms||5000)};bubTick()}
+function bubTick(){const B=state.bub;if(!B)return;const b=$('npcBub');
+  B.h.updateMatrixWorld();_bub.set(0,0,0);B.h.localToWorld(_bub);const far=Math.hypot(_bub.x-player.pos.x,_bub.z-player.pos.z)>4.5;
+  _bub.set(0,1.75,0);B.h.localToWorld(_bub);_bub.project(camera);
+  if(performance.now()>B.until||far||state.mode!=='play'||state.camMode||_bub.z>1){b.classList.remove('on');state.bub=null;return}
+  const W=window.innerWidth,hw=b.offsetWidth/2,bh=b.offsetHeight; // 画面の はしで 切れないように
+  b.style.left=clamp((_bub.x+1)/2*W,hw+8,W-hw-8).toFixed(1)+'px';b.style.top=Math.max(bh+70,(1-_bub.y)/2*window.innerHeight).toFixed(1)+'px'}
 function npcMake(shop,parent,x,y,z,ry,sc){
-  const holder=new THREE.Group();holder.position.set(x,y,z);holder.rotation.y=ry||0;holder.scale.setScalar(sc||1);parent.add(holder);
+  const holder=new THREE.Group();(NPC.by||(NPC.by={}))[shop]=holder;holder.position.set(x,y,z);holder.rotation.y=ry||0;holder.scale.setScalar(sc||1);parent.add(holder);
   if(y>.05){const k=sc||1,st=new THREE.Group(),M=shop==='cafe'?THREE.MeshLambertMaterial:THREE.MeshBasicMaterial,w=new M({color:0xb07a45}),d=new M({color:0x8a5a34}); // 踏み台(カウンターの中で、顔が見える高さに)
     const top=new THREE.Mesh(new THREE.BoxGeometry(.9*k,.08*k,.7*k),w);top.position.y=y-.04*k;st.add(top);
     for(const sx of [-1,1])for(const sz of [-1,1]){const l=new THREE.Mesh(new THREE.BoxGeometry(.08*k,y-.08*k,.08*k),d);l.position.set(sx*.38*k,(y-.08*k)/2,sz*.28*k);st.add(l)}
@@ -6626,7 +6651,7 @@ function potionTick(dt,t,playing){
   function loop(now){
     const dt=Math.max(0,Math.min(.05,(now-last)/1000));last=now;
     if(isTouch&&PR_MAX>1&&state.mode==='play'&&!state.camMode&&!document.hidden){perfW.t+=dt;perfW.n++;if(perfW.t>3){if(perfW.t/perfW.n>1/36){PR_MAX=PR_MAX>1.3?1.3:1;onResize()}perfW.t=0;perfW.n=0}} // スマホで動きが重いとき(36コマ/秒より下)は 画面の細かさを下げて なめらかさを優先
-    update(dt);sky.position.copy(camera.position);
+    update(dt);sky.position.copy(camera.position);bubTick();if(W.treeFade&&!INTERIOR.on&&!CAFE.in)W.treeFade(dt);
     springRender();renderer.render(scene,camera);paperHole();dressPreviewRender(dt);
     if(first){first=false;$('loading').style.display='none'}
     requestAnimationFrame(loop);
