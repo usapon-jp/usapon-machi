@@ -6665,8 +6665,8 @@ let MAGIC=null,CAMFX=null;
   $('introMission').textContent=DATA.mission||'';$('introTeaser').textContent=DATA.teaser||'';
   buildPanels();if(save.done&&!panels.every(p=>p.found)){save.done=false;persist()} // 見本パネルで「ぜんぶ見つけた」人も、新しいパネルは さがし直し(ほうきは そのまま)
   buildSpots();buildPresent();buildGifts();candySync();buildPotion();piyoDress.init();buildGlow();layoutInit();rotateCafePon();cafeModels();flowerModels();flyUI();drawMapBase();refreshHUD();
-  MAGIC=window.createHalloweenMagic({THREE,scene,camera,canvas,piyo,state,player,ED,W,STAIRS,shopsOut,groundY,collidesAt,edApply,edPos,edSt,edBase,burst,SPARK,toast,AUDIO,setCamMode,setSelfie,takeFreePhoto,askYN,getSave:()=>save,getPresent:()=>PRESENT,blocked:()=>INTERIOR.on||SPR.in||!!candyPlace});
-  CAMFX=window.createCamEffects({THREE,scene,camera,state,player,getSave:()=>save,getMagic:()=>MAGIC,indoor:()=>!!(INTERIOR.on||state.inCafe||state.inZakka||state.inFlower),toast,shoot:()=>takeFreePhoto()});
+  if(window.createHalloweenMagic)MAGIC=window.createHalloweenMagic({THREE,scene,camera,canvas,piyo,state,player,ED,W,STAIRS,shopsOut,groundY,collidesAt,edApply,edPos,edSt,edBase,burst,SPARK,toast,AUDIO,setCamMode,setSelfie,takeFreePhoto,askYN,getSave:()=>save,getPresent:()=>PRESENT,blocked:()=>INTERIOR.on||SPR.in||!!candyPlace});
+  if(window.createCamEffects)CAMFX=window.createCamEffects({THREE,scene,camera,state,player,getSave:()=>save,getMagic:()=>MAGIC,indoor:()=>!!(INTERIOR.on||state.inCafe||state.inZakka||state.inFlower),toast,shoot:()=>takeFreePhoto()});
   cam.yaw=1.4;player.face=Math.atan2(-Math.sin(cam.yaw),-Math.cos(cam.yaw));onResize(); // opening view: Piyo just inside the gate, welcome sign + first panel ahead-left, town beyond
   if(state.debug)buildDebug();
   let last=performance.now(),first=true;const perfW={t:0,n:0};
