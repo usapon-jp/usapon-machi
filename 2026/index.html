@@ -250,6 +250,8 @@ body.touch .tb svg:not(.mk-ic) *{stroke:#8f6e86!important}
 body.touch #tbJump{width:56px;height:56px;right:calc(var(--ar) + 52px);bottom:calc(var(--ab) - 28px);background:linear-gradient(180deg,#ebe0fb,#d8c6f5)}
 body.touch #tbDash{width:66px;height:66px;right:calc(var(--ar) - 33px);bottom:calc(var(--ab) - 33px);background:linear-gradient(180deg,#ffd9ad,#f8b26a)}
 body.touch #broomBtn{width:56px;height:56px;right:calc(var(--ar) + 29px);bottom:calc(var(--ab) + 29px);background:linear-gradient(180deg,#ebe0fb,#d8c6f5)}
+body.touch #tbDown{width:48px;height:48px;right:calc(var(--ar) + 116px);bottom:calc(var(--ab) - 24px);background:linear-gradient(180deg,#ebe0fb,#d8c6f5)}
+body:not(.flying) #tbDown{display:none!important} /* ほうきの したへ ボタンは とんでいる間だけ */
 body.touch #photoBtn{width:62px;height:62px;right:calc(var(--ar) - 31px);bottom:calc(var(--ab) + 49px);background:linear-gradient(180deg,#ffd9ad,#f8b26a)}
 body.touch #broomBtn.on{background:linear-gradient(180deg,#ffd9ad,#f8b26a);color:#8f6e86;box-shadow:0 0 0 3px rgba(255,255,255,.75),0 0 0 4.5px #f8b26a,0 4px 16px rgba(70,45,80,.18)}
 body.touch .tb:active,body.touch .tb.hold{transform:scale(.92);border-color:rgba(255,255,255,.95);box-shadow:0 0 0 3px rgba(255,255,255,.8),0 0 18px 3px rgba(255,255,255,.85),0 4px 16px rgba(70,45,80,.18)}
@@ -330,7 +332,7 @@ body.touch #joy{left:calc(22px + env(safe-area-inset-left,0px));bottom:max(50px,
   #camTour .ctl{font-size:12.5px;padding:6px 10px}
 }
 /* ===== MINIMAL WHITE TOUCH UI (しろ・はんとうめい) ===== */
-body.touch #tbJump,body.touch #tbDash,body.touch #photoBtn,body.touch #broomBtn{background:rgba(255,255,255,.13);border:1.5px solid rgba(255,255,255,.55);color:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.14);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+body.touch #tbJump,body.touch #tbDash,body.touch #tbDown,body.touch #photoBtn,body.touch #broomBtn{background:rgba(255,255,255,.13);border:1.5px solid rgba(255,255,255,.55);color:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.14);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
 body.touch #broomBtn.on{background:rgba(255,255,255,.34);border-color:#fff;color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.45),0 0 12px rgba(255,226,168,.7)}
 body.touch .tb:active,body.touch .tb.hold{background:rgba(255,226,168,.36);border-color:#ffe2a8;box-shadow:0 0 0 1px rgba(0,0,0,.14),0 0 14px rgba(255,226,168,.55)}
 body.touch #photoBtn:active{background:rgba(255,226,168,.36)}
@@ -358,6 +360,7 @@ body.selfie #camFlip{background:rgba(255,226,168,.42);border-color:#ffe2a8;color
   body.touch #tbDash{width:54px;height:54px;right:calc(22px + env(safe-area-inset-right,0px));bottom:max(22px,calc(env(safe-area-inset-bottom,0px) + 16px))}
   body.touch #tbJump{width:48px;height:48px;right:calc(86px + env(safe-area-inset-right,0px));bottom:max(18px,calc(env(safe-area-inset-bottom,0px) + 12px))}
   body.touch #photoBtn{width:50px;height:50px;right:calc(24px + env(safe-area-inset-right,0px));bottom:max(84px,calc(env(safe-area-inset-bottom,0px) + 78px))}
+  body.touch #tbDown{width:44px;height:44px;right:calc(142px + env(safe-area-inset-right,0px));bottom:max(20px,calc(env(safe-area-inset-bottom,0px) + 14px))}
   body.touch #broomBtn{width:46px;height:46px;right:calc(84px + env(safe-area-inset-right,0px));bottom:max(76px,calc(env(safe-area-inset-bottom,0px) + 70px))}
   body.touch #tbDash .mk-ic{width:30px;height:30px}body.touch #tbJump .mk-ic{width:26px;height:26px}
   #photoBtn svg{width:24px;height:24px}body.touch #broomBtn svg{width:24px;height:24px}
@@ -549,6 +552,7 @@ body.dressing #quest,body.dressing #mini,body.dressing #joy{visibility:hidden} /
   <div id="joy"><i class="chev u"></i><i class="chev d"></i><i class="chev l"></i><i class="chev r"></i><div id="knob"></div></div>
   <div id="tbtns">
     <div class="tb" id="tbDash"><svg class="mk-ic" aria-hidden="true"><use href="#mk-dash"/></svg><span>ダッシュ</span></div>
+    <div class="tb" id="tbDown" aria-label="したへ"><svg viewBox="0 0 24 24" fill="none" stroke="#fff1d8" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v13M6 13l6 6 6-6"/></svg><span>したへ</span></div>
     <div class="tb big" id="tbJump"><svg class="mk-ic" aria-hidden="true"><use href="#mk-jump"/></svg><span>ジャンプ</span></div>
   </div>
 
@@ -3973,11 +3977,12 @@ canvas.addEventListener('pointerup',endPtr);canvas.addEventListener('pointercanc
   joy.addEventListener('pointerup',end);joy.addEventListener('pointercancel',end);
   const dash=$('tbDash'),jump=$('tbJump');
   [dash,jump,$('photoBtn'),$('broomBtn')].forEach(b=>{if(b)b.addEventListener('contextmenu',e=>e.preventDefault())}); // long-press must not open the OS menu (it cancelled the held dash)
-  dash.addEventListener('pointerdown',e=>{if(player.fly){input.down=true;e.preventDefault();return}e.preventDefault();
+  dash.addEventListener('pointerdown',e=>{e.preventDefault(); // ほうきで とんでいる間も ダッシュ(フミオさん 10/24)
     // 1回おすとダッシュ開始(もう1回おすと止まる)。方向キーから手をはなすと止まる。方向キーをさわっていないときは、少ししたら止まる
     if(input.dashLatch){input.dash=false;input.dashLatch=false;dash.classList.remove('hold');return}
     input.dash=true;input.dashLatch=true;input.dashIdle=0;dash.classList.add('hold')});
   jump.addEventListener('pointerdown',e=>{input.jump=true;e.preventDefault()});
+  const down=$('tbDown');down.addEventListener('contextmenu',e=>e.preventDefault());down.addEventListener('pointerdown',e=>{input.down=true;e.preventDefault()});
 })();
 $('photoBtn').addEventListener('click',()=>{if(state.mode!=='play')return;if(state.nearPanel)takePhoto(state.nearPanel,0);else setCamMode(true)});
 $('camShut').addEventListener('click',()=>{if(state.mode==='play'&&state.camMode)takeFreePhoto()});
@@ -4180,10 +4185,10 @@ function update(dt){
   }
   let mag=Math.hypot(ix,iy);if(mag>1){ix/=mag;iy/=mag;mag=1}
   if(player.sit){if(playing&&(mag>.35||input.jump))standUp();else{mag=0;ix=iy=0;input.jump=false}}
-  if(input.dashLatch){input.dashIdle=(mag>.05?0:(input.dashIdle||0)+dt);if(input.dashIdle>1.8||!playing||player.fly){input.dash=false;input.dashLatch=false;const db=$('tbDash');if(db)db.classList.remove('hold')}}
+  if(input.dashLatch){input.dashIdle=(mag>.05?0:(input.dashIdle||0)+dt);if(input.dashIdle>1.8||!playing){input.dash=false;input.dashLatch=false;const db=$('tbDash');if(db)db.classList.remove('hold')}}
   const dash=playing&&(input.keys.ShiftLeft||input.keys.ShiftRight||input.dash);
   if(dash&&mag>.05&&mag<1){ix/=mag;iy/=mag;mag=1} // ダッシュ中は、丸の中(ゆっくり)でも ぜんぶ ダッシュの速さになる
-  const sp=(player.fly?(dash?8.6:5.8):(dash?7.6:4.3))*mag;
+  const sp=(player.fly?(dash?11:8.5):(dash?7.6:4.3))*mag; // ほうきは 歩きの 約2倍(フミオさん 10/24: もっと速く)
   const my=state.selfie?cam.sAng:cam.yaw; // 自撮り中もスティックで歩ける(自撮りカメラから見た向き)
   const fx=-Math.sin(my),fz=-Math.cos(my),rx=Math.cos(my),rz=-Math.sin(my);
   const tx=(rx*ix+fx*iy)*sp,tz=(rz*ix+fz*iy)*sp,k2=Math.min(1,dt*(mag>0?7:9)); // 歩きはじめ・止まるときを少しなめらかに(急な速さの変化はカメラ酔いのもと)
@@ -6322,7 +6327,7 @@ function flyUI(){
   document.querySelectorAll('.needBroom').forEach(el=>{el.hidden=!broomOn()});
   const d=$('tbDash'),j=$('tbJump');
   if(tbDashHTML===null){tbDashHTML=d.innerHTML;tbJumpHTML=j.innerHTML}
-  d.innerHTML=player.fly?'<svg viewBox="0 0 24 24" fill="none" stroke="#fff1d8" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v13M6 13l6 6 6-6"/></svg><span>したへ</span>':tbDashHTML;
+  document.body.classList.toggle('flying',!!player.fly);
   j.innerHTML=player.fly?'<svg viewBox="0 0 24 24" fill="none" stroke="#fff1d8" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6M6 11l6-6 6 6"/></svg><span>うえへ</span>':tbJumpHTML;
 }
 
