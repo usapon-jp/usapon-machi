@@ -877,6 +877,8 @@ body.dressing #quest,body.dressing #mini,body.dressing #joy{visibility:hidden} /
 ]}
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="magic.js"></script>
+<script src="cam-effects.js"></script>
 <script>
 // ===== BGM / SFX (WebAudio, no files) =====
 /* ===== SPRING TRACKS (癒しの泉のBGM) — source: audio/spring-tracks.js ===== */
@@ -3247,7 +3249,7 @@ const RIDE={len:2.6,seat:.85,stickY:.12,bodyY:.08,pitch:-.08}; // broom length, 
     const TT=[mk(PROPS.treeA,1,99),mk(PROPS.treeB,1,99),mk(PROPS.treeC,1,99)],TF=mk(PROPS.fir,1,99),TD=[];
     (W.trees||[]).forEach(t=>{const P=TT[t[4]];const k=t[3]*(t[4]<2?.88:1)/P.h;const m=put(P,t[0],t[1]-sink(t[0],t[2]),t[2],t[5],k,k,k);TD.push({m,x:t[0],z:t[2],r:85})});
     (W.firs||[]).forEach(t=>{const k=t[3]/TF.h;const m=put(TF,t[0],t[1]-sink(t[0],t[2]),t[2],t[4],k,k,k);TD.push({m,x:t[0],z:t[2],r:100})});
-    const cullTrees=()=>{const cx=camera.position.x,cz=camera.position.z;TD.forEach(d=>{d.m.visible=(d.x-cx)*(d.x-cx)+(d.z-cz)*(d.z-cz)<d.r*d.r})};
+    const cullTrees=()=>{const cx=camera.position.x,cz=camera.position.z;TD.forEach(d=>{d.m.visible=(d.m.position.x-cx)*(d.m.position.x-cx)+(d.m.position.z-cz)*(d.m.position.z-cz)<d.r*d.r})};
     const SH=[mk(PROPS.shrub,99,1),mk(PROPS.shrub2,99,1)];
     (W.shrubs||[]).forEach(t=>{const k=1.7*t[3];const m=put(SH[t[5]],t[0],t[1]-sink(t[0],t[2])*.6,t[2],t[4],k,k,k);TD.push({m,x:t[0],z:t[2],r:60})});
     // village entrance: two Meshy gate pillars at the south gate (start position)
@@ -3778,7 +3780,7 @@ function takePhoto(p,k){
 function setCamMode(on){
   if(!on&&state.selfie){state.selfie=false;cam.yaw=player.face+Math.PI;cam.cur=undefined}
   state.camMode=on;if(!on){state.selfie=false;piyo.group.visible=true;blob.visible=true}else{cam.fp=.05;cam.zoom=1}
-  document.body.classList.toggle('cammode',on);document.body.classList.toggle('selfie',!!state.selfie);
+  document.body.classList.toggle('cammode',on);document.body.classList.toggle('selfie',!!state.selfie);if(CAMFX)CAMFX.camOn(on);
   input.jx=input.jy=0;
   $('camTag').textContent='カメラモード';
   if(on){let seen=false;try{seen=localStorage.getItem('usapon-camtour')==='1'}catch(e){}
@@ -3786,7 +3788,7 @@ function setCamMode(on){
 }
 function showCamTour(){
   const t=$('camTour'),W=window.innerWidth,H=window.innerHeight;let holes='',rings='',labs='';
-  [['camShut','しゃしんを とる','up'],['camFlip','じどり ⇔ ふつう\nきりかえ','up-r'],['camBack','カメラモードを\nおわる','down'],['joy','あるく','up-l'],['camHelp','この せつめい','down-r']].forEach(a=>{
+  [['camShut','しゃしんを とる','up'],['camFlip','じどり ⇔ ふつう\nきりかえ','up-r'],['camFx','エフェクト','down-r'],['camBack','カメラモードを\nおわる','down'],['joy','あるく','up-l'],['camHelp','この せつめい','down-r']].forEach(a=>{
     const el=$(a[0]);if(!el)return;const r=el.getBoundingClientRect();if(r.width<4||r.height<4)return;
     const x=r.left-6,y=r.top-6,w=r.width+12,h=r.height+12,rx=Math.min(w,h)/2;
     holes+='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="'+rx+'" fill="#000"/>';
@@ -3836,22 +3838,26 @@ function frameCanvas(src,IW,IH,selfie){
   return out.toDataURL('image/jpeg',.92);
 }
 function updateFrameTog(){$('btnFrameTog').textContent=lastFree&&lastFree.framed?'わくを はずす':'わくを つける'}
-function takeFreePhoto(){
+function takeFreePhoto(story=!!(MAGIC&&MAGIC.story())){
+  if(CAMFX?CAMFX.beforePhoto():(MAGIC&&MAGIC.beforePhoto(story)))return; // camera effect (or the wand spell) first; the picture is taken at its best moment
+  if(MAGIC)MAGIC.capture();
+  const originalFov=camera.fov;
   try{AUDIO.sfx('shutter')}catch(e){}
   lastShot={free:true,panel:state.nearPanel};
-  const SS=renderer.capabilities.maxTextureSize>=4096?1.5:1,LS=window.innerWidth>window.innerHeight*1.15,IW=LS?1440:1080,IH=LS?1080:1440,PW=IW*SS|0,PH=IH*SS|0;
+  const SS=story?1:(renderer.capabilities.maxTextureSize>=4096?1.5:1),LS=window.innerWidth>window.innerHeight*1.15,IW=story?1080:(LS?1440:1080),IH=story?1920:(LS?1080:1440),PW=IW*SS|0,PH=IH*SS|0;
   const oldPR=renderer.getPixelRatio();let url=null;
   try{
+    if(story&&window.innerWidth/window.innerHeight<9/16)camera.fov=2*Math.atan(Math.tan(originalFov*Math.PI/360)*(window.innerWidth/window.innerHeight)/(9/16))*180/Math.PI;
     renderer.setPixelRatio(1);renderer.setSize(PW,PH,false);camera.aspect=PW/PH;camera.updateProjectionMatrix();
     glowMat.uniforms.scale.value=PH/2;sky.position.copy(camera.position);
     springRender();renderer.render(scene,camera);
     const o2=cv(IW,IH);o2.getContext('2d').drawImage(renderer.domElement,0,0,PW,PH,0,0,IW,IH);
-    const FR=photoFrame();url=FR?frameCanvas(o2,IW,IH,state.selfie):o2.toDataURL('image/jpeg',.92);
+    const FR=!story&&photoFrame();url=FR?frameCanvas(o2,IW,IH,state.selfie):o2.toDataURL('image/jpeg',.92);
     lastFree={cv:o2,IW,IH,selfie:state.selfie,framed:FR,idP:null};
   }catch(e){console.error(e)}
-  renderer.setPixelRatio(oldPR);onResize();
+  camera.fov=originalFov;renderer.setPixelRatio(oldPR);onResize();
   if(url){
-    $('photoImg').src=url;lastFree.idP=albumAdd(url,'',state.selfie?'selfie':'free');$('btnFrameTog').hidden=false;updateFrameTog();$('btnRetake').textContent='つづけてとる';$('btnToCam').hidden=true;$('btnToPanel').hidden=!lastShot.panel;$('btnPhotoClose').hidden=true;$('btnCamEnd').hidden=!state.camMode;
+    $('photoImg').src=url;lastFree.idP=albumAdd(url,'',state.selfie?'selfie':'free');$('btnFrameTog').hidden=story;updateFrameTog();$('btnRetake').textContent='つづけてとる';$('btnToCam').hidden=true;$('btnToPanel').hidden=!lastShot.panel;$('btnPhotoClose').hidden=true;$('btnCamEnd').hidden=!state.camMode;
     const fl=$('flash');fl.classList.add('on');requestAnimationFrame(()=>requestAnimationFrame(()=>fl.classList.remove('on')));
     burst(player.pos.x,player.pos.y+1.6,player.pos.z,30,SPARK,3.5,2);openModal('mPhoto');
   }else toast('写真をとれませんでした\nもう一度ためしてね');
@@ -3895,7 +3901,7 @@ window.addEventListener('keydown',e=>{
   input.keys[e.code]=true;
   if(e.code==='Space')input.jump=true;
   if((e.code==='KeyF'||e.code==='Enter')&&state.nearPanel&&!e.repeat)takePhoto(state.nearPanel,0);
-  if(e.code==='KeyP'&&state.mode==='play'&&!e.repeat){if(state.camMode)takeFreePhoto();else if(state.nearPanel)takePhoto(state.nearPanel,0);else setCamMode(true)}
+  if(e.code==='KeyP'&&state.mode==='play'&&!e.repeat){if(state.camMode)takeFreePhoto();else if(MAGIC&&MAGIC.inspect().active)setCamMode(true);else if(state.nearPanel)takePhoto(state.nearPanel,0);else setCamMode(true)}
   if(e.code==='KeyV'&&state.mode==='play'&&state.camMode&&!e.repeat)setSelfie(!state.selfie)
   if(e.code==='KeyE'&&!e.repeat)doAct();
   if(e.code==='KeyH'&&!e.repeat)showHint();
@@ -3945,7 +3951,7 @@ canvas.addEventListener('pointerup',endPtr);canvas.addEventListener('pointercanc
     input.dash=true;input.dashLatch=true;input.dashIdle=0;dash.classList.add('hold')});
   jump.addEventListener('pointerdown',e=>{input.jump=true;e.preventDefault()});
 })();
-$('photoBtn').addEventListener('click',()=>{if(state.mode!=='play')return;if(state.nearPanel)takePhoto(state.nearPanel,0);else setCamMode(true)});
+$('photoBtn').addEventListener('click',()=>{if(state.mode!=='play')return;if(MAGIC&&MAGIC.inspect().active)setCamMode(true);else if(state.nearPanel)takePhoto(state.nearPanel,0);else setCamMode(true)});
 $('camShut').addEventListener('click',()=>{if(state.mode==='play'&&state.camMode)takeFreePhoto()});
 $('camFlip').addEventListener('click',()=>{if(state.mode==='play'&&state.camMode)setSelfie(!state.selfie)});
 $('camTour').addEventListener('click',hideCamTour);
@@ -6230,7 +6236,7 @@ function openPresent(){
   state.kira=1;AUDIO.sfx('wand');
   try{navigator.vibrate&&navigator.vibrate([30,40,60])}catch(e){}
   toast('まほうのステッキを みつけた！',3200);
-  setTimeout(()=>toast('ステッキの ちからは\nもうすぐ つかえるようになるよ',3600),3500);
+  setTimeout(()=>toast('★ まほうボタンで 小物をふわり！\nえらぶ → はこぶ → まわして おく',4600),3500);
 }
 function presentTick(dt,t,playing){
   const P=PRESENT;if(!P)return;
@@ -6482,7 +6488,7 @@ function candyTick(dt,t,playing){
   let d0=null;const rc=new THREE.Raycaster(),v2=new THREE.Vector2();
   canvas.addEventListener('pointerdown',e=>{d0={x:e.clientX,y:e.clientY,t:performance.now()}},true);
   canvas.addEventListener('pointerup',e=>{if(!d0)return;const mv=Math.hypot(e.clientX-d0.x,e.clientY-d0.y),dt=performance.now()-d0.t;d0=null;
-    if(mv>10||dt>450||state.mode!=='play'||candyPlace||state.camMode)return;const sps=Object.values(CW).filter(s=>s.visible);if(!sps.length)return;
+    if(mv>10||dt>450||state.mode!=='play'||candyPlace||state.camMode||(MAGIC&&MAGIC.inspect().active))return;const sps=Object.values(CW).filter(s=>s.visible);if(!sps.length)return;
     const r=canvas.getBoundingClientRect();v2.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1);rc.setFromCamera(v2,camera);
     const h=rc.intersectObjects(sps)[0];if(!h||h.distance>40)return;const i=h.object.userData.candy;
     askYN('おかしの ばしょ','「'+CANDY[i].n+'」の ばしょを かえる？\n(いちど ひろって、すきな ばしょに おけるよ)',()=>candyPick(i))},true);
@@ -6597,6 +6603,7 @@ function potionTick(dt,t,playing){
   }
 }
 
+let MAGIC=null,CAMFX=null;
 /* ---------- boot ---------- */
 (async function boot(){
   DATA=await loadData();
@@ -6604,12 +6611,14 @@ function potionTick(dt,t,playing){
   
   $('introMission').textContent=DATA.mission||'';$('introTeaser').textContent=DATA.teaser||'';
   buildPanels();buildSpots();buildPresent();buildGifts();candySync();buildPotion();piyoDress.init();buildGlow();layoutInit();rotateCafePon();cafeModels();flowerModels();flyUI();drawMapBase();refreshHUD();
+  MAGIC=window.createHalloweenMagic({THREE,scene,camera,canvas,piyo,state,player,ED,W,STAIRS,shopsOut,groundY,collidesAt,edApply,edPos,edSt,edBase,burst,SPARK,toast,AUDIO,setCamMode,setSelfie,takeFreePhoto,askYN,getSave:()=>save,getPresent:()=>PRESENT,blocked:()=>INTERIOR.on||SPR.in||!!candyPlace});
+  CAMFX=window.createCamEffects({THREE,scene,camera,state,player,getSave:()=>save,getMagic:()=>MAGIC,indoor:()=>!!(INTERIOR.on||state.inCafe||state.inZakka||state.inFlower),toast,shoot:()=>takeFreePhoto()});
   cam.yaw=1.4;player.face=Math.atan2(-Math.sin(cam.yaw),-Math.cos(cam.yaw));onResize(); // opening view: Piyo just inside the gate, welcome sign + first panel ahead-left, town beyond
   if(state.debug)buildDebug();
   let last=performance.now(),first=true;
   function loop(now){
     const dt=Math.max(0,Math.min(.05,(now-last)/1000));last=now;
-    update(dt);sky.position.copy(camera.position);
+    update(dt);if(MAGIC)MAGIC.tick(dt);if(CAMFX)CAMFX.tick(dt);sky.position.copy(camera.position);
     springRender();renderer.render(scene,camera);paperHole();dressPreviewRender(dt);
     if(first){first=false;$('loading').style.display='none'}
     requestAnimationFrame(loop);
@@ -6621,7 +6630,7 @@ function potionTick(dt,t,playing){
     let tot=0;for(let j=0;j<=n;j++)for(let i=0;i<=n;i++)if(free(i,j))tot++;
     const pt=(x,z)=>seen[idx(Math.round((x+40)/st),Math.round((z+40)/st))]===1;
     return {reached:c,freeCells:tot,pct:Math.round(c/tot*100),gateN:pt(0,-38),fountain:pt(2,12),plazaS:pt(0,30),plazaN:pt(0,-28),stairs:STAIRS.map(s=>pt(s.x,(s.a+s.b)/2))}};
-  window.__usapon={NPC,shopViewOut,gifts:()=>G,candyW:()=>CW,flowerEnter,flowerExit,flwState:()=>FLW,input,zakkaEnter,zakkaExit,zakState:()=>ZAK,cafeEnter,cafeExit,cafeState:()=>CAFE,reach,tpTo,state,player,cam,panels:()=>panels,save:()=>save,warnings,slots,seats,spots:()=>spots,setFly,presentReset,presentPos:()=>PRESENT&&presentPos(),props:()=>ED.list,layout:()=>edExport(false),cordTest:{GARL,cordAdd,cordsExport,cordsLoad,cordRemove,cordKey,cordDefault,cordChanged}};
+  window.__usapon={magic:MAGIC,NPC,shopViewOut,gifts:()=>G,candyW:()=>CW,flowerEnter,flowerExit,flwState:()=>FLW,input,zakkaEnter,zakkaExit,zakState:()=>ZAK,cafeEnter,cafeExit,cafeState:()=>CAFE,reach,tpTo,state,player,cam,panels:()=>panels,save:()=>save,warnings,slots,seats,spots:()=>spots,setFly,presentReset,presentPos:()=>PRESENT&&presentPos(),props:()=>ED.list,layout:()=>edExport(false),cordTest:{GARL,cordAdd,cordsExport,cordsLoad,cordRemove,cordKey,cordDefault,cordChanged}};
 
 })();
 })();
