@@ -153,9 +153,17 @@ body.touch .keys{display:none}
 .teaserbox b{display:block;font-size:15px;color:var(--lantern);margin-bottom:2px}
 #photoSheet{width:min(460px,100%);text-align:center}
 #photoImg{display:block;width:100%;max-height:62vh;object-fit:contain;border-radius:6px;background:#000;-webkit-user-select:auto;user-select:auto;-webkit-touch-callout:default}
-#inAppWarn{margin:14px 0 0;padding:12px 14px;border-radius:14px;background:rgba(255,241,216,.96);color:#5b3b6e;font-size:13px;font-weight:700;line-height:1.65;text-align:left}
-#inAppWarn b{color:#c2410c}
-#inAppWarn .btn{margin-top:10px;padding:8px 18px;font-size:13px}
+#inAppWarn{margin:14px 0 0;padding:14px 14px 12px;border-radius:14px;background:rgba(255,241,216,.96);color:#5b3b6e;font-size:13px;font-weight:700;line-height:1.6;text-align:center}
+#inAppWarn .iaT{display:block;font-size:16px;color:#c2410c;margin-bottom:4px}
+#inAppWarn p{margin:0 0 8px}
+#btnCopyUrl{display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;margin:0 0 6px;padding:9px 12px;border:2px solid #f08a2c;border-radius:12px;background:#fff;color:#5b3b6e;font-family:inherit;font-weight:700;font-size:13px;line-height:1.3;cursor:pointer}
+#btnCopyUrl #iaUrl{flex:1;min-width:0;text-align:left}
+#iaUrl span{white-space:nowrap}
+#btnCopyUrl svg{flex:none;width:22px;height:22px;color:#f08a2c}
+#btnCopyUrl:active{transform:scale(.97)}
+#inAppWarn #iaDone{opacity:1;margin-bottom:2px}
+#inAppWarn #iaDone.ok{color:#c2410c;font-weight:800}
+#inAppWarn small{display:block;font-size:11px;font-weight:600;opacity:.8}
 #photoNote{font-size:12.5px;color:var(--mist);margin-top:10px;line-height:1.6}
 #flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:30;transition:opacity .5s ease-out}
 #flash.on{opacity:.9;transition:none}
@@ -586,7 +594,7 @@ body.dressing #quest,body.dressing #mini,body.dressing #joy{visibility:hidden} /
     <h1 id="introTitle"><span class="evp-on"><small>うさぽん村のハロウィン</small>ピヨちゃんの<wbr>パネル探し</span><span class="evp-off">うさぽん村の<wbr>ハロウィン</span></h1>
     <p class="lead"><span class="nb">小さな街を歩いて、</span><span class="nb">ハロウィンを楽しもう。</span><br><span class="evp-on">パネルを見つけたら、写真を撮ってね。</span><span class="evp-off">かくれおばけちゃんを見つけて、おかしを集めよう。</span></p>
     <span id="introMission" hidden></span><span id="introTeaser" hidden></span>
-    <div id="inAppWarn" hidden><b>LINEやインスタのアプリ内で開いていませんか？</b><br>この画面だと、写真の保存がうまくいかないことがあります。あとでブラウザ（Safari・Chrome）で開き直すと、進み具合も引きつがれません。<br><b>はじめからブラウザで開いてあそんでね。</b><br><button class="btn sub" id="btnCopyUrl" type="button">URLをコピー</button></div>
+    <div id="inAppWarn" hidden><b class="iaT">ブラウザから ひらいてね</b><p>インスタやLINEの中だと、<br>写真が 保存できないことが あります。</p><button id="btnCopyUrl" type="button" aria-label="URLをコピー"><span id="iaUrl"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg></button><small id="iaDone">コピーして、Safari や Chrome に はりつけてね</small><small>※とちゅうで 開きなおすと、はじめからに なります</small></div>
     <div class="actions"><button class="btn" id="btnStart" type="button">街へ出かける</button></div>
   </div>
 </div>
@@ -4068,11 +4076,11 @@ $('btnTourReplay').addEventListener('click',()=>{closeModal('mHelp');if(state.mo
 (function(){
   const inApp=/Line\/|Instagram|FBAN|FBAV|FB_IAB|MicroMessenger|TikTok|musical_ly|Twitter|Snapchat|KAKAOTALK|NAVER\(inapp/i.test(navigator.userAgent||'')||/[#&]inapp\b/.test(location.hash);
   if(!inApp)return;
-  $('inAppWarn').hidden=false;
-  $('photoNote').dataset.inapp='1';$('photoNote').textContent='このアプリ内の画面だと「保存」がうまくいかないことがあります。画像を長押しするか、ブラウザ（Safari・Chrome）で開き直してね。';
+  $('inAppWarn').hidden=false;{const u=location.href.split('#')[0].replace(/^https?:\/\//,''),k=u.indexOf('/')+1,e=$('iaUrl');e.innerHTML='';[u.slice(0,k),u.slice(k)].forEach((t,i)=>{if(i)e.append(document.createElement('wbr'));const x=document.createElement('span');x.textContent=t;e.append(x)})} // ドメインと パスの あいだで だけ 改行
+  $('photoNote').dataset.inapp='1';$('photoNote').textContent='アプリの中だと 保存できないことが あります。画像を 長押しして 保存してね。';
   $('btnCopyUrl').addEventListener('click',()=>{
     const u=location.href.split('#')[0];
-    const ok=()=>{$('btnCopyUrl').textContent='コピーしたよ！SafariかChromeに貼りつけてね'};
+    const ok=()=>{const d=$('iaDone');d.textContent='コピーしたよ！Safari や Chrome に はりつけてね';d.classList.add('ok')};
     try{navigator.clipboard.writeText(u).then(ok,()=>{window.prompt('このURLをコピーしてブラウザで開いてね',u)})}catch(e){window.prompt('このURLをコピーしてブラウザで開いてね',u)}
   });
 })();
