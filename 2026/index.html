@@ -5916,7 +5916,7 @@ function askYN(title,q,onYes){ // 店員さんの「はい / いいえ」(RPGの
   openModal('mAsk');setTimeout(()=>{try{$('askY').focus()}catch(e){}},50)}
 function flowerTalk(){
   if(typeof dressUnlocked==='function'&&dressUnlocked()){askYN('まほうの おはなやさん','まほうの ポーションで\nおきがえ する？',openDress);return} // ぜんぶ集めたら、店員さんからも おきがえ
-  npcSay('flower','まほうの ポーションで\nおきがえが できるよ。\nおばけちゃんを ぜんぶ みつけて\nおかしを ぜんぶ あつめたら\nつかえるよ。\n（いまは '+dressProgress()+'）',8000);
+  npcSay('flower','まほうの ポーションで\nおきがえが できるよ。\n\nおばけちゃんを ぜんぶ みつけて\nおかしを ぜんぶ あつめたら\nつかえるよ。\n（いまは '+dressProgress()+'）',8000);
 }
 function flowerTick(dt,t){
   if(!FLW.in)return;const Z=FLW;
