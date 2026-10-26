@@ -77,6 +77,7 @@ body:not(.touch) #broomBtn{bottom:calc(max(14px,env(safe-area-inset-bottom,0px))
 #broomBtn.pulse{animation:bpulse 1s ease-in-out 6}
 @keyframes bpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.16)}}
 body.nobtn #broomBtn{display:none}
+body.touch .onlyPC,body:not(.touch) .onlySP{display:none!important} /* ほうきの説明は 使っている きかいの分だけ */
 #doneBroom{white-space:pre-line;margin-top:12px;padding:10px 12px;border-radius:12px;background:rgba(143,107,255,.18);border:1px solid rgba(200,180,255,.5);font-weight:700}
 
 #photoBtn.on{opacity:1;pointer-events:auto;transform:scale(1)}
@@ -628,9 +629,12 @@ body.dressing #quest,body.dressing #mini,body.dressing #joy{visibility:hidden} /
       <div class="r"><span>カメラボタン</span><em class="evp-on">パネルの近くで写真</em><em class="evp-off">写真をとる</em></div>
     </div>
     <div class="rows hp" id="hp-br">
-      <div class="r"><span><kbd>Q</kbd> / ほうきボタン</span><em>のる・おりる</em></div>
-      <div class="r"><span><kbd>Space</kbd> / ▲ボタン</span><em>うえへ</em></div>
-      <div class="r"><span><kbd>C</kbd> / ▼ボタン</span><em>したへ</em></div>
+      <div class="r onlySP"><span>ほうきボタン</span><em>のる・おりる</em></div>
+      <div class="r onlySP"><span>▲ / ▼ボタン</span><em>うえへ・したへ</em></div>
+      <div class="r onlySP"><span>ダッシュボタン</span><em>はやく とぶ</em></div>
+      <div class="r onlyPC"><span><kbd>Q</kbd></span><em>のる・おりる</em></div>
+      <div class="r onlyPC"><span><kbd>Space</kbd> / <kbd>C</kbd></span><em>うえへ・したへ</em></div>
+      <div class="r onlyPC"><span><kbd>Shift</kbd></span><em>はやく とぶ</em></div>
     </div>
         </div>
       </div>
@@ -3696,7 +3700,7 @@ function showComplete(){AUDIO.sfx('fanfare');
   const c=DATA.completion||{};$('doneTitle').textContent=c.title||'ぜんぶ見つけたよ！';$('doneBody').textContent=c.body||'';
   const lw=$('doneLinkWrap');if(c.link&&c.link.url){$('doneLink').href=c.link.url;$('doneLink').textContent=c.link.label||'ひらく';lw.hidden=false}else lw.hidden=true;
   const db=$('doneBroom');db.hidden=!broomOn();
-  db.textContent='ごほうび：まほうのほうき を手に入れた！\n'+(isTouch?'右下の ほうきボタンで のってみよう':'Q キー（または 右下のほうきボタン）で のってみよう');
+  db.textContent='まほうのほうきを 手に入れた！\n'+(isTouch?'ほうきボタンで のってみよう':'Q キーで のってみよう');
   openModal('mDone');
 }
 function startParty(){state.party=true;state.partyUntil=state.t+14}
@@ -6323,7 +6327,7 @@ function setFly(on){
   document.body.classList.toggle('flying',player.fly);flyUI();
   if(on){
     player.ground=false;player.vy=0;AUDIO.sfx('broom');burst(player.pos.x,player.pos.y+.4,player.pos.z,30,SPARK,3,1);
-    if(!state.flyTold){state.flyTold=true;toast(isTouch?'ほうきで とんでるよ！\n▲で うえへ　▼で したへ':'ほうきで とんでるよ！\nSpace で うえへ　C で したへ　Q で おりる',4200)}
+    if(!state.flyTold){state.flyTold=true;toast(isTouch?'ほうきで とんでるよ！\n▲で うえへ　▼で したへ':'ほうきで とんでるよ！\nSpace うえ　C した　Q おりる',4200)}
   }else{player.vy=0}
 }
 let tbDashHTML=null,tbJumpHTML=null;
