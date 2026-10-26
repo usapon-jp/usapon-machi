@@ -77,7 +77,23 @@ body:not(.touch) #broomBtn{bottom:calc(max(14px,env(safe-area-inset-bottom,0px))
 #broomBtn.pulse{animation:bpulse 1s ease-in-out 6}
 @keyframes bpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.16)}}
 body.nobtn #broomBtn{display:none}
-body.touch .onlyPC,body:not(.touch) .onlySP{display:none!important} /* ほうきの説明は 使っている きかいの分だけ */
+body.touch .onlyPC,body:not(.touch) .onlySP{display:none!important}
+/* 解放の案内: 「〇〇 GET!」を 1.5秒 → 絵つきの 小さな まど */
+#getBan{position:absolute;left:0;right:0;top:38%;z-index:21;text-align:center;pointer-events:none;opacity:0;transform:scale(.6)}
+#getBan.on{animation:getBan 1.5s ease-out forwards}
+#getBan b{display:inline-block;padding:14px 26px;border-radius:999px;background:linear-gradient(180deg,#ffe08a,#f8a23a);color:#3a1a00;font-size:clamp(22px,7vw,32px);font-weight:900;letter-spacing:1px;white-space:nowrap;box-shadow:0 0 0 4px #fff,0 0 40px 10px rgba(255,210,120,.8);transform:rotate(-3deg)}
+@keyframes getBan{0%{opacity:0;transform:scale(.6)}15%{opacity:1;transform:scale(1.08)}25%{transform:scale(1)}85%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.04)}}
+#mGet .sheet{width:min(330px,100%);text-align:center;border-color:#ffd27a}
+#mGet h2{margin:0 0 12px;color:#ffc95e}
+#getPic{position:relative;width:140px;height:140px;margin:0 auto 12px;border-radius:50%;background:radial-gradient(circle,#4a3580,#2a1b4d);display:grid;place-items:center}
+#getPic .gpBtn{width:80px;height:80px;border-radius:50%;background:linear-gradient(180deg,#ebe0fb,#d8c6f5);display:grid;place-items:center;box-shadow:0 0 0 6px rgba(255,210,120,.6)}
+#getPic .gpBtn svg{width:44px;height:44px;fill:none;stroke:#8f6e86;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+#getPic .gpTap{position:absolute;right:4px;bottom:2px;font-size:38px}
+#getPic .gpEmo{font-size:70px;line-height:1}
+#getPic .gpKey{display:inline-block;padding:8px 22px;border-radius:10px;background:#fff1d8;color:#2a1b4d;font-weight:900;font-size:40px;box-shadow:0 4px 0 #b89c7a}
+#getL1{margin:4px 0;font-size:18px;font-weight:800}
+#getL2{margin:0;font-size:14px;opacity:.85}
+#getL2:empty{display:none} /* ほうきの説明は 使っている きかいの分だけ */
 #doneBroom{white-space:pre-line;margin-top:12px;padding:10px 12px;border-radius:12px;background:rgba(143,107,255,.18);border:1px solid rgba(200,180,255,.5);font-weight:700}
 
 #photoBtn.on{opacity:1;pointer-events:auto;transform:scale(1)}
@@ -748,6 +764,16 @@ body.dressing #quest,body.dressing #mini,body.dressing #joy{visibility:hidden} /
     <p id="doneBroom" hidden></p>
     <div class="actions left" id="doneLinkWrap" hidden><a class="btn" id="doneLink" href="#" target="_blank" rel="noopener" style="text-decoration:none"></a></div>
     <div class="actions"><button class="btn" id="btnDoneClose" type="button">さんぽをつづける</button></div>
+  </div>
+</div>
+
+<div id="getBan"><b id="getBanTxt"></b></div>
+<div class="modal" id="mGet">
+  <div class="sheet">
+    <h2 id="getTitle"></h2>
+    <div id="getPic"></div>
+    <p id="getL1"></p><p id="getL2"></p>
+    <div class="actions"><button class="btn" id="btnGetOk" type="button">OK</button></div>
   </div>
 </div>
 
@@ -3656,7 +3682,7 @@ async function albumDownloadMany(ids){
   if(!files.length){toast('写真をよみこめなかったよ');return}
   try{if(SHARE_SAVE&&navigator.canShare&&navigator.canShare({files})){await navigator.share({files});return}}catch(e){if(e&&e.name==='AbortError')return}
   files.forEach((f,i)=>setTimeout(()=>{const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)},i*350));
-  toast(files.length+'まい ダウンロードします\nアルバムの「Download」に はいるよ');
+  toast(files.length+'まい「Download」に ほぞんするよ');
 }
 let albumCur=null,albumDelArmed=false;
 async function openAlbum(id){
@@ -3673,7 +3699,7 @@ async function savePhotoSrc(src){
   try{
     const b=await (await fetch(src)).blob(),f=new File([b],'usapon-photo-'+Date.now()+'.jpg',{type:'image/jpeg'});
     if(SHARE_SAVE&&navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f]});return}
-    const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=f.name;document.body.appendChild(a);a.click();toast('ダウンロードしたよ\nアルバムの「Download」に はいるよ',3200);
+    const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=f.name;document.body.appendChild(a);a.click();toast('「Download」に ほぞんしたよ',2600);
     setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);
   }catch(e){if(e&&e.name==='AbortError')return;toast('保存できなかったよ\n画像を長押ししてね')}
 }
@@ -3697,6 +3723,8 @@ function renderGhostBook(){
   GHOST_DEF.forEach((d,i)=>{const o=ghostChans[i],ok=!!(o&&o.found);nm[i].textContent=ok?d.name:'？？？';wh[i].textContent=ok?(o.where||''):''});
 }
 function showComplete(){AUDIO.sfx('fanfare');
+  if(broomOn()){getShow({get:'まほうのほうき GET!',title:'ぜんぶ見つけたよ！',pic:GP.btn(GP.broom),picPc:GP.key('Q'),sp:['このボタンで のれるよ','▲▼ で うえ・した'],pc:['Q キーで のれるよ','Space / C で うえ・した'],
+    done:()=>{if(!player.fly){const b=$('broomBtn');b.classList.remove('pulse');void b.offsetWidth;b.classList.add('pulse')}}});return}
   const c=DATA.completion||{};$('doneTitle').textContent=c.title||'ぜんぶ見つけたよ！';$('doneBody').textContent=c.body||'';
   const lw=$('doneLinkWrap');if(c.link&&c.link.url){$('doneLink').href=c.link.url;$('doneLink').textContent=c.link.label||'ひらく';lw.hidden=false}else lw.hidden=true;
   const db=$('doneBroom');db.hidden=!broomOn();
@@ -3826,7 +3854,7 @@ function setCamMode(on){
   input.jx=input.jy=0;
   $('camTag').textContent='カメラモード';
   if(on){let seen=false;try{seen=localStorage.getItem('usapon-camtour')==='1'}catch(e){}
-    if(!seen)setTimeout(()=>{if(state.camMode)showCamTour()},350);else toast('カメラモード（ピヨちゃんの目線）\nドラッグでむき、スティックで移動',2400)}
+    if(!seen)setTimeout(()=>{if(state.camMode)showCamTour()},350);else if(!isTouch)toast('カメラモード',1600)}
 }
 function showCamTour(){
   const t=$('camTour'),W=window.innerWidth,H=window.innerHeight;let holes='',rings='',labs='';
@@ -5513,7 +5541,7 @@ function cafeEnter(via){
     if(via==='side'){player.pos.set(CAFE.X+CAFE.HW-1.9,0,CAFE.Z+2.6);player.face=-PI/2;cafeResetCam(PI/2,.26)}
     else{player.pos.set(CAFE.X+CAFE.DOOR,0,CAFE.Z+3.5);player.face=PI;cafeResetCam(0,.26)}
     cam.dist=5.2;
-    CAFE.fade.classList.remove('on');toast('カフェに はいったよ\n入口のそばで「でる」をおすと そとへ出られるよ',3600);
+    CAFE.fade.classList.remove('on');toast('カフェに はいったよ',2200);
     setTimeout(()=>{CAFE.busy=false},380);
   },400);
 }
@@ -5711,7 +5739,7 @@ function zakkaEnter(){
   setTimeout(()=>{
     zakSet(true);const Z=ZAK;Z.dist0=cam.dist;
     player.pos.set(Z.X+Z.spawn[0],0,Z.Z-Z.spawn[1]);player.face=PI;cafeResetCam(0,.3);Z.cam.x=Z.cam.d=0;Z.okYaw=undefined;Z.oz=undefined;Z.zk=1;Z.offX=Z.offY=0;Z.viewC=null;Z.lastDist=undefined;
-    CAFE.fade.classList.remove('on');toast('ざっかやに はいったよ\nしょうひんに ちかづくと「みる」が でるよ',3600);
+    CAFE.fade.classList.remove('on');toast('ざっかやに はいったよ',2200);
     setTimeout(()=>{ZAK.busy=false},380);
   },400);
 }
@@ -5908,7 +5936,7 @@ function flowerEnter(){
   setTimeout(()=>{
     flwSet(true);const Z=FLW;Z.dist0=cam.dist;
     player.pos.set(Z.X+Z.spawn[0],0,Z.Z-Z.spawn[1]);player.face=PI;cafeResetCam(0,.3);Z.cam.x=Z.cam.d=0;Z.okYaw=undefined;Z.oz=undefined;Z.zk=1;Z.offX=Z.offY=0;Z.viewC=null;Z.lastDist=undefined;
-    CAFE.fade.classList.remove('on');toast('おはなやさんに はいったよ\nカウンターの前で「おはなしする」が でるよ',3600);
+    CAFE.fade.classList.remove('on');toast('おはなやさんに はいったよ',2200);
     setTimeout(()=>{FLW.busy=false},380);
   },400);
 }
@@ -6292,8 +6320,7 @@ function openPresent(){
   for(let i=0;i<6;i++){const a=i/6*PI*2;setTimeout(()=>burst(w.x+Math.cos(a)*2.2,w.y+.6,w.z+Math.sin(a)*2.2,24,SPARK,2.6,1.5),120+i*90)}
   state.kira=1;AUDIO.sfx('wand');
   try{navigator.vibrate&&navigator.vibrate([30,40,60])}catch(e){}
-  toast('まほうのステッキを みつけた！',3200);
-  setTimeout(()=>toast('★ まほうボタンで 小物をふわり！\nえらぶ → はこぶ → まわして おく',4600),3500);
+  setTimeout(()=>getShow({get:'まほうのステッキ GET!',title:'まほうのステッキ',pic:GP.btn(GP.wand),sp:['このボタンで もつよ','光る小物を タップで ふわり'],pc:['このボタンで もつよ','光る小物を クリックで ふわり']}),2600);
 }
 function presentTick(dt,t,playing){
   const P=PRESENT;if(!P)return;
@@ -6327,7 +6354,7 @@ function setFly(on){
   document.body.classList.toggle('flying',player.fly);flyUI();
   if(on){
     player.ground=false;player.vy=0;AUDIO.sfx('broom');burst(player.pos.x,player.pos.y+.4,player.pos.z,30,SPARK,3,1);
-    if(!state.flyTold){state.flyTold=true;toast(isTouch?'ほうきで とんでるよ！\n▲で うえへ　▼で したへ':'ほうきで とんでるよ！\nSpace うえ　C した　Q おりる',4200)}
+    if(!state.flyTold){state.flyTold=true;if(!isTouch)toast('Space うえ　C した　Q おりる',3200)}
   }else{player.vy=0}
 }
 let tbDashHTML=null,tbJumpHTML=null;
@@ -6431,9 +6458,8 @@ function openGift(g){
   burst(p.x,gy+.9,p.z,36,SPARK,3,2);AUDIO.sfx('found');
   toast(GHOST_DEF[g.i].name+'からの プレゼント！\n'+CANDY[g.i].n+'を もらったよ！',2800);
 }
-function candyGuide(){ // はじめて おかしを もらったときの つかいかた
-  const show=()=>{$('spotTitle').textContent='おかしの つかいかた';$('spotCap').textContent='もらった おかしは、プレゼントの あった ばしょに おいてあるよ。\n画面の すみの 小さな 地図を タッチすると「おかしのワープ」が ひらくよ。\nおかしを タッチすると、その場所へ ワープできるよ！\n街の おかしを タッチすると、すきな ばしょへ おきかえる ことも できるよ。\nおかしは ぜんぶで 6こ。街の あちこちの プレゼントを さがしてね';$('spotLink').hidden=true;$('spotNone').hidden=true;openModal('mSpot')};
-  if(state.mode==='play')show();else{const w=setInterval(()=>{if(state.mode==='play'){clearInterval(w);show()}},500)}}
+function candyGuide(){ // はじめて おかしを もらったとき: ワープ 開放
+  getShow({get:'ワープ 開放!',title:'おかしの ワープ',pic:GP.emo('🗺️')+(isTouch?'<span class="gpTap">👆</span>':''),sp:['小さな地図を タッチ','おかしの ばしょへ ワープ'],pc:['小さな地図を クリック','おかしの ばしょへ ワープ']})}
 function giftTick(dt,t,playing){
   if(!G.length)return;
   const want=save.cand.length?'auto':'none';if(mini.style.pointerEvents!==want){mini.style.pointerEvents=want;mini.classList.toggle('tap',!!save.cand.length)}
@@ -6442,7 +6468,7 @@ function giftTick(dt,t,playing){
     if(save.gift)gReveal=true;
     else if(gAnnT<0)gAnnT=state.t+3.4;
     else if(state.t>=gAnnT){
-      gReveal=true;save.gift=1;persist();AUDIO.sfx('found');showMsg('おめでとう！','かくれおばけちゃんを ぜんぶ みつけたね！\nおれいに プレゼントを あげる！\n街の あちこちに かくしたから さがしてね🎁');
+      gReveal=true;save.gift=1;persist();AUDIO.sfx('found');getShow({get:'プレゼント しゅつげん!',title:'おばけちゃん コンプリート',pic:GP.emo('🎁'),sp:['街に プレゼントが でたよ','あけると おかしが もらえるよ']});
       G.forEach(g=>{if(save.cand.indexOf(g.i)<0){const p=gp(g);burst(p.x,groundY(p.x,p.z)+.7,p.z,16,SPARK,2.4,1.6)}});
     }
   }
@@ -6464,7 +6490,7 @@ function giftTick(dt,t,playing){
       if(g.cs){if(el>.35){const k=Math.min((el-.35)/.45,1),b=1-Math.pow(1-k,3),fade=el<1.9?1:Math.max(0,1-(el-1.9)/.5);
         g.cs.material.opacity=fade;g.cs.scale.setScalar(1.05*b+.01);g.cs.position.set(p.x+.55,gy+1.0+b*1.1+Math.sin(el*5)*.05,p.z)}}
       if(el>2.5){gDrop(g);g.phase=2;g.grp.visible=state.editOn;candySync();if(g.first){g.first=false;candyGuide()}
-        if(candyDone()){AUDIO.sfx('fanfare');showMsg('おかし コンプリート！','おかしが ぜんぶ そろったよ！\nおはなやさんの ふしぎな びんで、色かえポーションが つかえるように なったよ🧪\n地図を タッチすると、おかしの ばしょへ ワープできるよ')}}
+        if(candyDone()){AUDIO.sfx('fanfare');getShow({get:'おきがえ 開放!',title:'色かえポーション',pic:GP.emo('🧪'),sp:['おはなやさんで','おきがえが できるよ']})}}
     }
   });
 }
@@ -6495,6 +6521,20 @@ $('btnCandyClose').addEventListener('click',()=>closeModal('mCandy'));
 $('btnCandyX').addEventListener('click',()=>closeModal('mCandy'));
 /* ---------- おかしの おき場所: 街に おかしを置く(ワープ先)。タッチ→「ばしょを かえる？」→ もちもの → 「ここに おく？」(緑の丸なら おける) ---------- */
 function cpos(i){const v=save.candPos[i];return v?{x:v[0],z:v[1]}:null}
+const GETQ={busy:false,q:[],cb:null};
+const GP={ // 絵: ボタンは ゲームの中と おなじ形
+  btn:svg=>'<div class="gpBtn"><svg viewBox="0 0 24 24">'+svg+'</svg></div>'+(isTouch?'<span class="gpTap">👆</span>':''),
+  emo:e=>'<span class="gpEmo">'+e+'</span>',key:k=>'<span class="gpKey">'+k+'</span>',
+  broom:'<path d="M20.5 3.5 11 13"/><path d="M11 13c-2.2-1-5.2.2-7 3.2L3 21l4.8-1c3-1.8 4.2-4.8 3.2-7z"/><path d="M6.2 17.2 8.4 15M8 19.6l2.2-2.2"/>',
+  wand:'<path d="m5 21 9-12m1-7 2 3 4 .5-3 2.5.6 4-3.6-2-3.5 2 .6-4L8 5.5 12 5z"/>'};
+function getShow(o){ // 「〇〇 GET!」→ 絵つきの まど(スマホと パソコンで 文を かえる)
+  if(GETQ.busy){GETQ.q.push(o);return}GETQ.busy=true;
+  const go=()=>{state.mode='modal';const b=$('getBan');$('getBanTxt').textContent=o.get;b.classList.remove('on');void b.offsetWidth;b.classList.add('on');
+    try{burst(player.pos.x,player.pos.y+1.6,player.pos.z,60,SPARK,4,2.5)}catch(e){}
+    setTimeout(()=>{b.classList.remove('on');const L=(isTouch?o.sp:(o.pc||o.sp))||[];
+      $('getTitle').textContent=o.title;$('getPic').innerHTML=(isTouch?o.pic:(o.picPc||o.pic));$('getL1').textContent=L[0]||'';$('getL2').textContent=L[1]||'';GETQ.cb=o.done||null;openModal('mGet')},1500)};
+  if(state.mode==='play')go();else{const w=setInterval(()=>{if(state.mode==='play'){clearInterval(w);go()}},500)}}
+$('btnGetOk').addEventListener('click',()=>{closeModal('mGet');const f=GETQ.cb;GETQ.cb=null;GETQ.busy=false;if(f)f();const n=GETQ.q.shift();if(n)setTimeout(()=>getShow(n),400)});
 function showMsg(title,txt){const show=()=>{$('spotTitle').textContent=title;$('spotCap').textContent=txt;$('spotLink').hidden=true;$('spotNone').hidden=true;openModal('mSpot')};
   if(state.mode==='play')show();else{const w=setInterval(()=>{if(state.mode==='play'){clearInterval(w);show()}},500)}}
 const CW={};let candyPlace=null;
@@ -6530,7 +6570,7 @@ function candyPlaceOk(){if(!candyPlace||!candyPlace.ok)return;const i=candyPlace
   burst(save.candPos[i][0],groundY(save.candPos[i][0],save.candPos[i][1])+1,save.candPos[i][1],24,SPARK,2.4,1.6);AUDIO.sfx('found');toast('「'+CANDY[i].n+'」を おいたよ！\nここへ ワープできるよ',2600)}
 function candyPick(i){ // 回収して もちものへ
   delete save.candPos[i];if(save.candBag.indexOf(i)<0)save.candBag.push(i);persist();candySync();AUDIO.sfx('found');
-  toast('おかしを ひろったよ！\nおかしボタンで すきな ばしょに おけるよ',3000);try{candyBtn.classList.add('pulse')}catch(e){}}
+  toast('おかしを ひろったよ！',2200);try{candyBtn.classList.add('pulse')}catch(e){}}
 function candyTick(dt,t,playing){
   for(const k in CW){const p=cpos(+k);if(!p)continue;const sp=CW[k];sp.position.set(p.x,groundY(p.x,p.z)+1.05+Math.sin(t*2+ +k)*.08,p.z);sp.visible=!INTERIOR.on}
   if(candyPlace){
@@ -6689,7 +6729,7 @@ let MAGIC=null,CAMFX=null;
     let tot=0;for(let j=0;j<=n;j++)for(let i=0;i<=n;i++)if(free(i,j))tot++;
     const pt=(x,z)=>seen[idx(Math.round((x+40)/st),Math.round((z+40)/st))]===1;
     return {reached:c,freeCells:tot,pct:Math.round(c/tot*100),gateN:pt(0,-38),fountain:pt(2,12),plazaS:pt(0,30),plazaN:pt(0,-28),stairs:STAIRS.map(s=>pt(s.x,(s.a+s.b)/2))}};
-  window.__usapon={magic:MAGIC,NPC,shopViewOut,gifts:()=>G,candyW:()=>CW,flowerEnter,flowerExit,flwState:()=>FLW,input,zakkaEnter,zakkaExit,zakState:()=>ZAK,cafeEnter,cafeExit,cafeState:()=>CAFE,reach,tpTo,state,player,cam,panels:()=>panels,save:()=>save,warnings,slots,seats,spots:()=>spots,setFly,presentReset,presentPos:()=>PRESENT&&presentPos(),props:()=>ED.list,layout:()=>edExport(false),cordTest:{GARL,cordAdd,cordsExport,cordsLoad,cordRemove,cordKey,cordDefault,cordChanged}};
+  window.__usapon={getShow,GP,magic:MAGIC,NPC,shopViewOut,gifts:()=>G,candyW:()=>CW,flowerEnter,flowerExit,flwState:()=>FLW,input,zakkaEnter,zakkaExit,zakState:()=>ZAK,cafeEnter,cafeExit,cafeState:()=>CAFE,reach,tpTo,state,player,cam,panels:()=>panels,save:()=>save,warnings,slots,seats,spots:()=>spots,setFly,presentReset,presentPos:()=>PRESENT&&presentPos(),props:()=>ED.list,layout:()=>edExport(false),cordTest:{GARL,cordAdd,cordsExport,cordsLoad,cordRemove,cordKey,cordDefault,cordChanged}};
 
 })();
 })();
