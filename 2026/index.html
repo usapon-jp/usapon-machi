@@ -4002,17 +4002,26 @@ canvas.addEventListener('pointermove',e=>{
   cam.yaw-=dx*.0068*sk;cam.pitch=clamp(cam.pitch+dy*.0052*sk,(ZAK.in||FLW.in)?-.6:.04,1.45); // お店の中(ふつうの視点)は 見上げられるように 下限を -0.6 に
 });
 const endPtr=e=>{ptrs.delete(e.pointerId);pinch0=0};
-window.addEventListener('blur',()=>{ptrs.clear();pinch0=0});document.addEventListener('visibilitychange',()=>{ptrs.clear();pinch0=0});window.addEventListener('pointerup',endPtr,true);window.addEventListener('mouseup',()=>{if(ptrs.size){ptrs.clear();pinch0=0}},true);
+const resetViewPointers=()=>{ptrs.clear();pinch0=0};
+window.addEventListener('blur',resetViewPointers);document.addEventListener('visibilitychange',resetViewPointers);
+window.addEventListener('resize',resetViewPointers);window.addEventListener('orientationchange',resetViewPointers);
+window.addEventListener('pointerup',endPtr,true);window.addEventListener('mouseup',()=>{if(ptrs.size)resetViewPointers()},true);
 canvas.addEventListener('pointerup',endPtr);canvas.addEventListener('pointercancel',endPtr);
 (function(){
   const joy=$('joy'),knob=$('knob');let id=null,cx=0,cy=0,RC=48;
   // 2だんかい: 丸の中=ゆっくり歩く(最大で半分の速さ) / 丸より外まで引っぱる=ふつうに歩く(スタスタ)。丸の外は少し先までつまみが動く
   const set=(x,y)=>{let dx=x-cx,dy=y-cy;const m=Math.hypot(dx,dy),OUT=RC+22;if(m>OUT){dx=dx/m*OUT;dy=dy/m*OUT}const mm=Math.min(m,OUT);knob.style.transform='translate('+dx+'px,'+dy+'px)';joy.classList.toggle('act',m>8);
     const f=mm<=RC?.5*mm/RC:.5+.5*Math.min(1,(mm-RC)/22);input.jx=mm>0?dx/mm*f:0;input.jy=mm>0?-dy/mm*f:0;joy.classList.toggle('fast',mm>RC+4)};
-  joy.addEventListener('pointerdown',e=>{if(id!==null)return;id=e.pointerId;joy.setPointerCapture(e.pointerId);const r=joy.getBoundingClientRect();cx=r.left+r.width/2;cy=r.top+r.height/2;RC=r.width/2;set(e.clientX,e.clientY);e.preventDefault()});
+  joy.addEventListener('pointerdown',e=>{if(id!==null&&!joy.hasPointerCapture(id))reset();if(id!==null)return;id=e.pointerId;joy.setPointerCapture(e.pointerId);const r=joy.getBoundingClientRect();cx=r.left+r.width/2;cy=r.top+r.height/2;RC=r.width/2;set(e.clientX,e.clientY);e.preventDefault()});
   joy.addEventListener('pointermove',e=>{if(e.pointerId===id)set(e.clientX,e.clientY)});
-  const end=e=>{if(e.pointerId!==id)return;id=null;knob.style.transform='';joy.classList.remove('act','fast');input.jx=0;input.jy=0;if(input.dashLatch){input.dash=false;input.dashLatch=false;dash.classList.remove('hold')}}; // ダッシュは、方向キーから手をはなすまで続く
+  const reset=()=>{id=null;knob.style.transform='';joy.classList.remove('act','fast');input.jx=0;input.jy=0;if(input.dashLatch){input.dash=false;input.dashLatch=false;dash.classList.remove('hold')}}; // ダッシュは、方向キーから手をはなすまで続く
+  const end=e=>{if(e.pointerId===id)reset()};
   joy.addEventListener('pointerup',end);joy.addEventListener('pointercancel',end);
+  // Safari can drop pointer capture while the phone rotates, without delivering pointerup.
+  joy.addEventListener('lostpointercapture',end);
+  window.addEventListener('pointerup',end,true);window.addEventListener('pointercancel',end,true);
+  window.addEventListener('blur',reset);document.addEventListener('visibilitychange',()=>{if(document.hidden)reset()});
+  window.addEventListener('resize',reset);window.addEventListener('orientationchange',reset);
   const dash=$('tbDash'),jump=$('tbJump');
   [dash,jump,$('photoBtn'),$('broomBtn')].forEach(b=>{if(b)b.addEventListener('contextmenu',e=>e.preventDefault())}); // long-press must not open the OS menu (it cancelled the held dash)
   dash.addEventListener('pointerdown',e=>{e.preventDefault(); // ほうきで とんでいる間も ダッシュ(フミオさん 10/24)
