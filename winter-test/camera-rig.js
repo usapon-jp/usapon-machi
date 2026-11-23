@@ -4,6 +4,8 @@
 import * as T from 'three';
 import { clamp } from './layout.js';
 
+// Left/right drag direction. +1 = like the Halloween game (drag right -> look right). -1 = the first winter preview.
+const TURN=1;
 const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
 
 export function createCameraRig({camera,canvas,player,body,isBlocked,groundHeight,walkHeight,blocked=()=>false}) {
@@ -48,10 +50,10 @@ export function createCameraRig({camera,canvas,player,body,isBlocked,groundHeigh
       }
       pinch=d;return;
     }
-    if(rig.eyeView){rig.eyeYaw=wrap(rig.eyeYaw-dx*.0063);rig.eyePitch=clamp(rig.eyePitch-dy*.0044,-.72,.74);}
-    else if(rig.camMode&&rig.selfie){rig.sAng=wrap(rig.sAng-dx*.0068);rig.sp=clamp(rig.sp+dy*.003,-.12,.45);}
-    else if(rig.camMode){const z=Math.max(.4,rig.zoom);rig.yaw=wrap(rig.yaw-dx*.0063*z);rig.fp=clamp(rig.fp+dy*.0048*z,-1.1,1.25);}
-    else{rig.yaw=wrap(rig.yaw-dx*.0063);rig.pitch=clamp(rig.pitch+dy*.0044,-.36,.83);}
+    if(rig.eyeView){rig.eyeYaw=wrap(rig.eyeYaw+TURN*dx*.0063);rig.eyePitch=clamp(rig.eyePitch-dy*.0044,-.72,.74);}
+    else if(rig.camMode&&rig.selfie){rig.sAng=wrap(rig.sAng+TURN*dx*.0068);rig.sp=clamp(rig.sp+dy*.003,-.12,.45);}
+    else if(rig.camMode){const z=Math.max(.4,rig.zoom);rig.yaw=wrap(rig.yaw+TURN*dx*.0063*z);rig.fp=clamp(rig.fp+dy*.0048*z,-1.1,1.25);}
+    else{rig.yaw=wrap(rig.yaw+TURN*dx*.0063);rig.pitch=clamp(rig.pitch+dy*.0044,-.36,.83);}
   });
   for(const name of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(name,e=>{drags.delete(e.pointerId);pinch=grip();});
   const release=()=>{drags.clear();pinch=0;};
