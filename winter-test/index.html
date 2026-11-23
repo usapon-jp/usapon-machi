@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#504658">
+<title>うさぽん村　城下町</title>
+<link rel="stylesheet" href="./style.css">
+<script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+</head>
+<body>
+<main id="game" aria-label="うさぽん村 城下町の散策">
+  <canvas id="view" aria-label="城下町の3D画面"></canvas>
+  <header><h1>うさぽん村 <span>城下町</span></h1><p id="place">北門</p></header>
+  <nav aria-label="散策メニュー">
+    <button id="map-button" aria-controls="map-panel" aria-expanded="false">地図</button>
+    <button id="winter" aria-pressed="true">雪</button>
+    <button id="home">北門へ</button>
+  </nav>
+  <section id="map-panel" hidden aria-label="城下町の地図">
+    <canvas id="map" width="370" height="530"></canvas>
+  </section>
+  <div id="joystick" aria-label="移動"><div id="knob"></div></div>
+  <button id="viewpoint" type="button" hidden>景色を見る</button>
+  <p id="help">WASD・矢印で歩く　ドラッグで視点</p>
+  <p id="status" role="status">城下町を読み込み中…</p>
+</main>
+<script type="module" src="./game.js"></script>
+</body>
+</html>
