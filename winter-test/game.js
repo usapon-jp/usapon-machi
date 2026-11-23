@@ -1,14 +1,18 @@
 import * as T from 'three';
 import { buildPlayer, buildTown } from './town.js';
+import { createHud } from './hud.js';
+import { createCameraRig } from './camera-rig.js';
+import { createAlbum } from './album.js';
+import { createPhoto } from './photo.js';
+import { createCamEffects } from './cam-effects.js';
 import {
-  bounds, bridge, canWalk, castle, clamp, court, groundHeight, houses, inHouse,
+  bounds, bridge, canWalk, castle, clamp, court, groundHeight, houses, inHouse, northFir,
   paths, riverZ, spawn, squares, tree, upperTerrace, viewpoints, walkHeight
 } from './layout.js';
 
 const $ = selector => document.querySelector(selector);
 const canvas=$('#view'), status=$('#status'), place=$('#place'), help=$('#help');
 const coarse=matchMedia('(pointer: coarse)').matches;
-if(coarse)help.textContent='左で歩く　画面をドラッグで視点';
 
 async function play() {
   const renderer=new T.WebGLRenderer({canvas,antialias:!coarse,powerPreference:'high-performance'});
@@ -18,45 +22,55 @@ async function play() {
   const scene=new T.Scene();
   const camera=new T.PerspectiveCamera(64,1,.12,190);
   const map=makeMap();
-  const keys=new Set(), joy={x:0,y:0};
-  let snowing=true,yaw=.23,pitch=.09,orbitDistance=4.5;
+  const hud=createHud({coarse});
+  let snowing=true;
   const viewButton=$('#viewpoint');
-  let nearView=null,eyeView=null,eyeYaw=0,eyePitch=0;
+  let nearView=null;
   let resCap=coarse?1.3:1.75,mapTimer=0;
   const [town,{player,body}]=await Promise.all([buildTown(scene,coarse),buildPlayer(scene)]);
   player.position.set(spawn.x,walkHeight(spawn.x,spawn.z),spawn.z);
   player.rotation.y=Math.PI-.18;
-  const look=new T.Vector3(), angleWrap=angle=>Math.atan2(Math.sin(angle),Math.cos(angle));
-  const target=new T.Vector3(), desired=new T.Vector3(), probe=new T.Vector3();
+  const angleWrap=angle=>Math.atan2(Math.sin(angle),Math.cos(angle));
   const horizontal=new T.Vector2(), velocity=new T.Vector2();
   const animations=[];
   body.traverse(o=>{ if(o.isBone && /LeftUpLeg|RightUpLeg/i.test(o.name)) animations.push([o,o.rotation.x]); });
-  let bob=0;
+  let arm=null;
+  body.traverse(o=>{ if(o.isBone && /RightArm/i.test(o.name)) arm={bone:o,base:o.rotation.clone()}; });
+  let bob=0,jumpY=0,jumpV=0,wave=0;
+  const WAVE={axis:'z',amt:-1.25}; // RightArm: z- lifts it outwards (checked by eye)
+
+  // camera: the town's own blockers (ground and banks, the big tree, houses, the north wall)
+  const isBlocked=(x,y,z)=>y<groundHeight(x,z)+.55||
+    (Math.hypot(x-tree.x,z-tree.z)<tree.radius+.28&&y<groundHeight(tree.x,tree.z)+tree.planterHeight+tree.height-tree.sink)||
+    houses.some(a=>inHouse(x,z,a,.16)&&y<groundHeight(a.x,a.z)+a.h+1.8)||
+    (z>-42.1&&z<-40.1&& (Math.abs(x)>1.85 || y>8.0))||
+    firBlocks(x,y,z);
+  // the big fir by the north gate (a cone of branches over a short trunk): keeps the selfie camera out of it
+  function firBlocks(x,y,z){
+    const h=y-groundHeight(northFir.x,northFir.z),d=Math.hypot(x-northFir.x,z-northFir.z);
+    return h<6&&d<(h<1?.5:2.7*(1-(h-1)/5.2))+.3;
+  }
+  const rig=createCameraRig({camera,canvas,player,body,isBlocked,groundHeight,walkHeight,blocked:hud.anyModal});
+
   function size(){
     const w=canvas.clientWidth,h=canvas.clientHeight;
     renderer.setPixelRatio(Math.min(devicePixelRatio||1,resCap));
     renderer.setSize(w,h,false);
     camera.aspect=w/h;
-    camera.fov=eyeView?(w/h<.84?88:68):(w/h<.84?72:64);
+    camera.fov=rig.wantedFov(w/h);
     camera.updateProjectionMatrix();
   }
   function leaveView(){
-    if(!eyeView)return;
-    eyeView=null;
-    body.visible=true;
+    if(!rig.eyeView)return;
+    rig.leaveView();
     viewButton.textContent='景色を見る';
     viewButton.removeAttribute('aria-pressed');
     size();
   }
   viewButton.addEventListener('click',()=>{
-    if(eyeView){leaveView();return;}
+    if(rig.eyeView){leaveView();return;}
     if(!nearView)return;
-    eyeView=nearView;
-    const [px,pz]=eyeView.eye??[eyeView.x,eyeView.z];
-    const [x,y,z]=eyeView.look;
-    eyeYaw=Math.atan2(x-px,pz-z);
-    eyePitch=Math.atan2(y-walkHeight(px,pz)-(eyeView.eyeHeight??1.22),Math.hypot(x-px,z-pz));
-    body.visible=false;
+    rig.enterView(nearView);
     velocity.set(0,0);
     viewButton.textContent='散策に戻る';
     viewButton.setAttribute('aria-pressed','true');
@@ -65,79 +79,16 @@ async function play() {
   addEventListener('resize',size);
   size();
 
-  const movement=new Set(['KeyW','KeyS','KeyA','KeyD','ArrowLeft','ArrowRight','ArrowUp','ArrowDown']);
-  addEventListener('keydown',e=>{
-    if(!movement.has(e.code)|| (e.target instanceof HTMLButtonElement&&e.code.startsWith('Arrow')))return;
-    e.preventDefault();
-    keys.add(e.code);
-  });
-  addEventListener('keyup',e=>keys.delete(e.code));
-  addEventListener('blur',()=>{keys.clear();drags.clear();resetJoy();});
-  document.addEventListener('visibilitychange',()=>{
-    if(document.hidden){keys.clear();drags.clear();resetJoy();}
-  });
-
-  const drags=new Map();
-  let pinch=0;
-  const grip=()=> {
-    const [a,b]=drags.values();
-    return a&&b?Math.hypot(a.x-b.x,a.y-b.y):0;
-  };
-  canvas.addEventListener('pointerdown',e=>{
-    if(e.pointerType==='mouse'&&e.button!==0)return;
-    canvas.setPointerCapture(e.pointerId);drags.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    pinch=grip();
-  });
-  canvas.addEventListener('pointermove',e=>{
-    const p=drags.get(e.pointerId);
-    if(!p)return;
-    const dx=e.clientX-p.x,dy=e.clientY-p.y;
-    p.x=e.clientX;p.y=e.clientY;
-    if(eyeView){
-      if(drags.size===1){
-        eyeYaw=angleWrap(eyeYaw-dx*.0063);
-        eyePitch=clamp(eyePitch-dy*.0044,-.72,.74);
-      }
-    }else if(drags.size===2){
-      const distance=grip();
-      if(pinch)orbitDistance=clamp(orbitDistance+(pinch-distance)*.024,2.5,9);
-      pinch=distance;
-    } else if(drags.size===1){
-      yaw=angleWrap(yaw-dx*.0063);
-      pitch=clamp(pitch+dy*.0044,-.36,.83);
-    }
-  });
-  for(const event of ['pointerup','pointercancel','lostpointercapture']){
-    canvas.addEventListener(event,e=>{drags.delete(e.pointerId);pinch=grip();});
-  }
-  canvas.addEventListener('wheel',e=>{
-    e.preventDefault(); orbitDistance=clamp(orbitDistance+e.deltaY*.005,2.5,9);
-  },{passive:false});
-
-  const joystick=$('#joystick'),knob=$('#knob');
-  let stick=null;
-  function resetJoy(){stick=null;joy.x=joy.y=0;knob.style.transform='';}
-  function joystickAt(e){
-    const rect=joystick.getBoundingClientRect();
-    const x=(e.clientX-(rect.left+rect.right)/2)/30,y=(e.clientY-(rect.top+rect.bottom)/2)/30;
-    const mag=Math.max(1,Math.hypot(x,y));
-    joy.x=x/mag;joy.y=-y/mag;
-    knob.style.transform=`translate(${joy.x*25}px,${joy.y*-25}px)`;
-  }
-  joystick.addEventListener('pointerdown',e=>{
-    if(stick!==null)return;
-    stick=e.pointerId;joystick.setPointerCapture(stick);joystickAt(e);
-  });
-  joystick.addEventListener('pointermove',e=>{if(e.pointerId===stick)joystickAt(e);});
-  for(const name of ['pointerup','pointercancel','lostpointercapture']){
-    joystick.addEventListener(name,e=>{if(e.pointerId===stick)resetJoy();});
-  }
+  const album=createAlbum(hud);
+  const photo=createPhoto({renderer,scene,camera,rig,hud,album,coarse,resize:size,beforeLeave:leaveView});
+  const fx=createCamEffects({scene,camera,rig,player,toast:hud.toast,shoot:photo.shoot,live:()=>!hud.anyModal()});
+  photo.setFx(fx);
 
   const mapButton=$('#map-button');
   mapButton.addEventListener('click',()=>{
     const panel=$('#map-panel');panel.hidden=!panel.hidden;
     mapButton.setAttribute('aria-expanded',String(!panel.hidden));
-    map(player.position);
+    map(player.position,player.rotation.y);
   });
   $('#winter').addEventListener('click',e=>{
     snowing=!snowing;
@@ -149,18 +100,19 @@ async function play() {
     leaveView();
     player.position.set(spawn.x,walkHeight(spawn.x,spawn.z),spawn.z);
     player.rotation.y=Math.PI-.18;
-    yaw=.23;pitch=.09;orbitDistance=4.5;velocity.set(0,0);
-    cameraView(1);map(player.position);
+    rig.reset();velocity.set(0,0);jumpY=jumpV=0;
+    rig.update(0,true);map(player.position,player.rotation.y);
   });
 
   function move(dt,t){
-    const press=(...codes)=>codes.some(c=>keys.has(c))?1:0;
-    const across=press('KeyD','ArrowRight')-press('KeyA','ArrowLeft')+joy.x;
-    const forward=press('KeyW','ArrowUp')-press('KeyS','ArrowDown')+joy.y;
-    horizontal.set(across,forward).clampLength(0,1);
+    const {x:across,y:forward,running}=hud.axes(dt);
+    const frozen=hud.anyModal();
+    horizontal.set(frozen?0:across,frozen?0:forward).clampLength(0,1);
     if(horizontal.lengthSq()>0)leaveView();
+    const yaw=rig.moveYaw();
     const s=Math.sin(yaw),c=Math.cos(yaw),p=player.position,lastX=p.x,lastZ=p.z;
-    const stride=5.05, easing=1-Math.exp(-dt*21);
+    // walk 5.05 m/s as before; dash = Halloween's dash/walk ratio (7.6 / 4.3)
+    const stride=running?8.9:5.05, easing=1-Math.exp(-dt*(horizontal.lengthSq()>0?21:14));
     velocity.x+=(stride*(horizontal.x*c+horizontal.y*s)-velocity.x)*easing;
     velocity.y+=(stride*(horizontal.x*s-horizontal.y*c)-velocity.y)*easing;
     const x=p.x+velocity.x*dt, z=p.z+velocity.y*dt;
@@ -170,57 +122,43 @@ async function play() {
       if(canWalk(p.x,z))p.z=z;
     }
     const step=Math.hypot(p.x-lastX,p.z-lastZ);
-    p.y+=(walkHeight(p.x,p.z)-p.y)*(1-Math.exp(-dt*23));
+    // jump: a small hop on top of the walking height (no new ground rules)
+    if(hud.input.jump){hud.input.jump=false;if(jumpY===0&&!frozen&&!rig.eyeView){jumpV=5.4;jumpY=.0001;}}
+    if(jumpY>0){jumpV-=19*dt;jumpY=Math.max(0,jumpY+jumpV*dt);if(jumpY===0)jumpV=0;}
+    const ground=walkHeight(p.x,p.z);
+    const baseY=(p.y-(player.userData.jumpY||0));
+    const settled=baseY+(ground-baseY)*(1-Math.exp(-dt*23));
+    p.y=settled+jumpY;player.userData.jumpY=jumpY;
     if(step>.0002) {
       const facing=Math.atan2(p.x-lastX,p.z-lastZ);
       player.rotation.y+=angleWrap(facing-player.rotation.y)*(1-Math.exp(-dt*15));
     }
+    // selfie: while standing still Piyo turns to the camera and waves
+    const still=step<dt*.4;
+    if(rig.camMode&&rig.selfie&&still)player.rotation.y+=angleWrap(-rig.sAng-player.rotation.y)*(1-Math.exp(-dt*10));
+    wave+=((rig.camMode&&rig.selfie&&still&&jumpY===0?1:0)-wave)*(1-Math.exp(-dt*8));
+    if(arm){arm.bone.rotation.copy(arm.base);arm.bone.rotation[WAVE.axis]+=wave*(WAVE.amt+Math.sin(t*9)*.12);}
     bob += step*5.1;
     const motion=Math.min(1,step/(Math.max(dt,.001)*3.4));
     body.position.y=Math.sin(bob*2)*.035*motion+Math.sin(t*4.4)*.018;
     body.rotation.z=Math.sin(bob)*.065*motion;
-    for(const [i,[bone,base]] of animations.entries())bone.rotation.x=base+Math.sin(bob+i*Math.PI)*.30*motion;
+    const air=jumpY>0?1:0;
+    for(const [i,[bone,base]] of animations.entries())bone.rotation.x=base+Math.sin(bob+i*Math.PI)*.30*motion*(1-air)-air*.55;
   }
 
-  function cameraView(alpha){
-    const p=player.position,s=Math.sin(yaw),c=Math.cos(yaw);
-    if(eyeView){
-      const [x,z]=eyeView.eye??[eyeView.x,eyeView.z];
-      camera.position.set(x,walkHeight(x,z)+(eyeView.eyeHeight??1.22),z);
-      look.copy(camera.position).add(target.set(Math.sin(eyeYaw),Math.tan(eyePitch),-Math.cos(eyeYaw)));
-      camera.lookAt(look);
-      return;
-    }
-    const h=2.12+pitch*orbitDistance;
-    target.set(p.x+s*2.7,p.y+2.98-pitch*3.35,p.z-c*2.7);
-    desired.set(p.x-s*orbitDistance,p.y+h,p.z+c*orbitDistance);
-    const isBlocked=(x,y,z)=>y<groundHeight(x,z)+.55||
-      (Math.hypot(x-tree.x,z-tree.z)<tree.radius+.28&&y<groundHeight(tree.x,tree.z)+tree.planterHeight+tree.height-tree.sink)||
-      houses.some(a=>inHouse(x,z,a,.16)&&y<groundHeight(a.x,a.z)+a.h+1.8)||
-      (z>-42.1&&z<-40.1&& (Math.abs(x)>1.85 || y>8.0));
-    // Pull the camera in before it passes through walls, buildings or banks.
-    for(let t=.1;t<=1.01;t+=.075){
-      probe.set(p.x,p.y+1.65,p.z).lerp(desired,t);
-      if(isBlocked(probe.x,probe.y,probe.z)){
-        desired.set(p.x,p.y+1.65,p.z).lerp(desired,Math.max(.16,t-.095));
-        alpha=1;
-        break;
-      }
-    }
-    camera.position.lerp(desired,alpha);
-    look.lerp(target,alpha);
-    camera.lookAt(look);
-  }
-  cameraView(1);
+  rig.update(0,true);
   status.hidden=true;
   let start=performance.now(),previous=start,perfTime=0,perfN=0;
   function update(now){
     const elapsed=(now-previous)*.001,dt=Math.min(.045,elapsed),t=(now-start)*.001;
     previous=now;
     if(!document.hidden){
-      move(dt,t);cameraView(1-Math.exp(-dt*22));town.time.value=t;
+      move(dt,t);rig.update(dt);town.time.value=t;
+      const wf=rig.wantedFov(camera.aspect);
+      if(Math.abs(camera.fov-wf)>.05){camera.fov+=(wf-camera.fov)*Math.min(1,dt*8);camera.updateProjectionMatrix();}
       town.mill.rotation.z=t*town.wheelSpeed;
       if(snowing)town.snow.update(dt,t,player.position);
+      fx.tick(dt);
       mapTimer+=dt;
       if(mapTimer>.12){
         mapTimer=0;
@@ -229,11 +167,11 @@ async function play() {
         const current=z>-49?'北門':z>-54?'川辺の店並み':z>=bridge.a&&Math.abs(x-bridge.x)<2.35?'石のアーチ橋':
           z>-64?'小川のほとり':z>-76?'ツリー広場':onTerrace?'展望テラス':z>-92&&x>9.15?'商店街':
           z>court.z+5?'城へ続く小道':'城前の広場';
-        nearView=viewpoints.find(v=>Math.hypot(v.x-x,v.z-z)<=v.radius)??null;
-        viewButton.hidden=!nearView;
+        nearView=rig.camMode?null:viewpoints.find(v=>Math.hypot(v.x-x,v.z-z)<=v.radius)??null;
+        viewButton.hidden=!nearView&&!rig.eyeView;
         const caption=nearView?.name??current;
         if(place.textContent!==caption)place.textContent=caption;
-        if(!$('#map-panel').hidden)map(player.position);
+        if(!$('#map-panel').hidden)map(player.position,player.rotation.y);
       }
       renderer.render(scene,camera);
       if(coarse&&resCap>1&&elapsed<.5) {
@@ -247,8 +185,11 @@ async function play() {
     // Read-only diagnostics for the isolated preview.
     window.townDiagnostics=()=>({
       player:player.position.toArray(), draws:renderer.info.render.calls, triangles:renderer.info.render.triangles,
-      houses:houses.length, webgl:renderer.getContext().getParameter(renderer.getContext().VERSION)
+      houses:houses.length, webgl:renderer.getContext().getParameter(renderer.getContext().VERSION),
+      camera:camera.position.toArray().map(v=>+v.toFixed(2)),fov:+camera.fov.toFixed(1),
+      rig:{yaw:rig.yaw,pitch:rig.pitch,dist:rig.dist,camMode:rig.camMode,selfie:rig.selfie,zoom:rig.zoom},fx:fx.inspect(),photo:photo.inspect()
     });
+    window.townTest={WAVE,rig,photo,fx,hud,player,teleport:(x,z,yaw)=>{player.position.set(x,walkHeight(x,z),z);if(yaw!==undefined)rig.yaw=yaw;rig.update(0,true);}};
   }
   requestAnimationFrame(update);
 }
@@ -301,10 +242,14 @@ function makeMap(){
     b.arc(...out(v.x,v.z),4.5,0,2*Math.PI);
     b.fillStyle='#80566c';b.strokeStyle='#fff5db';b.lineWidth=1.7;b.fill();b.stroke();
   }
-  return p=>{
+  return (p,facing)=>{
     g.drawImage(base,0,0);
-    g.beginPath();g.arc(...out(p.x,p.z),6.7,0,Math.PI*2);
-    g.fillStyle='#795589';g.strokeStyle='#fff7e6';g.lineWidth=3;g.fill();g.stroke();
+    // Piyo: a dot with an arrow for where she faces (as on the Halloween minimap)
+    const [x,y]=out(p.x,p.z);
+    g.save();g.translate(x,y);g.rotate(Math.PI-(facing??Math.PI));
+    g.beginPath();g.moveTo(0,-13);g.lineTo(9,7);g.lineTo(0,2.5);g.lineTo(-9,7);g.closePath();
+    g.fillStyle='#795589';g.strokeStyle='#fff7e6';g.lineWidth=3;g.lineJoin='round';g.stroke();g.fill();
+    g.restore();
   };
 }
 
