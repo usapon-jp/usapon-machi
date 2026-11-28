@@ -60,7 +60,12 @@ export const houses = [
   { id: 'keeper',   x:3.3, z:-108.5,yaw:2.92, w:3.9, d:4.6, h:3.6,  style:'tower',   trim:0x7a597f },
   { id: 'shelter',  x:29.75,z:-113.4,yaw:.03,w:4.0, d:3.7, h:3.3,  style:'workshop',trim:0x567160 },
   { id: 'lanterns', x:31.6,z:-91.7,yaw:-1.02,w:4.5,d:3.6,h:3.48,style:'shop',trim:0x72638b },
-  { id: 'books',    x:1.45,z:-91.96,yaw:2.92,w:4.9,d:3.8,h:3.6,style:'shop',trim:0x557c80 }
+  { id: 'books',    x:1.45,z:-91.96,yaw:2.92,w:4.9,d:3.8,h:3.6,style:'shop',trim:0x557c80 },
+  { id: 'rabbit-pair', x:24,z:-74.15,yaw:-.1,w:8,d:4.65,h:4.5,style:'balcony',trim:0x688575,
+    doorways:[
+      { id:'rabbit-pair-left', x:-2.84, trim:0x587b6d },
+      { id:'rabbit-pair-right', x:2.84, trim:0x79618b }
+    ] }
 ];
 
 export const teaHouse=houses.find(h=>h.id==='tea');
@@ -223,12 +228,12 @@ export function groundHeight(x,z) {
 const treePlazaLevel=slopeHeight(tree.x,tree.z);
 const giftCos=Math.cos(giftShop.yaw),giftSin=Math.sin(giftShop.yaw);
 
-function buildEntrance(house) {
+function buildEntrance(house, doorway) {
   const {d,yaw,id,style}=house,s=Math.sin(yaw),c=Math.cos(yaw);
   const letter=id===letterHouse,tea=house===teaHouse;
   const base=groundHeight(house.x,house.z)-(letter?.24:0);
-  const doorWidth=style==='bakery'?1.02:style==='gift'||style==='mill'||style==='workshop'?.96:.89;
-  const x=letter?.04:tea?-.13:0;
+  const doorWidth=doorway||style==='bakery'?1.02:style==='gift'||style==='mill'||style==='workshop'?.96:.89;
+  const x=doorway?.x??(letter?.04:tea?-.13:0);
   const width=letter?1.60:tea?1.55:doorWidth*1.46;
   const start=d/2+(letter?-.08:tea?-.067:.075);
   const landingEnd=d/2+(letter?.33:tea?.52:.46);
@@ -257,28 +262,28 @@ function buildEntrance(house) {
       const footing=Math.min(...groundSamples,surface)-.045;
       return {near,far,width:span,top:surface,bottom:footing};
     });
-    if(steps.at(-1).top-landing<=.17||count===10)return {base,threshold,doorWidth,x,s,c,start,end,pavement,steps};
+    if(steps.at(-1).top-landing<=.17||count===10)return {...doorway,base,threshold,doorWidth,x,s,c,start,end,steps};
   }
 }
-const entrances=new Map(houses.map(h=>[h,buildEntrance(h)]));
-export const entranceFor=house=>entrances.get(house);
+const entrances=new Map(houses.map(h=>[h,h.doorways?.map(doorway=>buildEntrance(h,doorway))??[buildEntrance(h)]]));
+export const entrancesFor=house=>entrances.get(house);
+export const entranceFor=house=>entrancesFor(house)?.[0];
 
 export function bridgeHeight(z) {
   const h=clamp((z-bridge.a)/(bridge.b-bridge.a),0,1);
   return mix(groundHeight(bridge.x,bridge.a),groundHeight(bridge.x,bridge.b),h)+.22*Math.sin(Math.PI*h);
 }
-export function walkHeight(x,z) {
-  if(onBridge(x,z))return bridgeHeight(z);
-  const ground=groundHeight(x,z);
-  for(const [house,entry] of entrances){
+export function entranceHeight(x,z) {
+  for(const [house,entries] of entrances)for(const entry of entries){
     const dx=x-house.x,dz=z-house.z;
-    if(Math.abs(dx)>entry.end+1||Math.abs(dz)>entry.end+1)continue;
+    const reach=entry.end+Math.abs(entry.x)+1;
+    if(Math.abs(dx)>reach||Math.abs(dz)>reach)continue;
     const along=dx*entry.s+dz*entry.c;
     if(along<entry.start||along>=entry.end)continue;
     const step=entry.steps.find(step=>along<step.far);
-    if(step&&Math.abs(dx*entry.c-dz*entry.s-entry.x)<=step.width/2)return Math.max(ground,step.top-entry.pavement);
+    if(step&&Math.abs(dx*entry.c-dz*entry.s-entry.x)<=step.width/2)return step.top;
   }
-  return ground;
+  return -Infinity;
 }
 export function onBridge(x,z,pad=0) {
   return Math.abs(x-bridge.x)<=bridge.halfWidth-pad && z>=bridge.a && z<=bridge.b;
@@ -329,8 +334,12 @@ function squaredDistanceToPath(x,z,points) {
   return (x-a)**2+(z-b)**2;
 }
 
-function entrancePath(house) {
-  const step=front(house,.22), arrival=front(house,.94);
+function entrancePath(house,entry) {
+  const at=distance=>{
+    const [x,z]=front(house,distance);
+    return entry.id?[x+entry.x*entry.c,z-entry.x*entry.s]:[x,z];
+  };
+  const step=at(.22),arrival=at(entry.id?Math.max(.94,entry.end-house.d/2+.26):.94);
   const candidates=paths.map(({points})=>nearestPoint(...arrival,points))
     .sort((a,b)=>Math.hypot(a[0]-arrival[0],a[1]-arrival[1])-Math.hypot(b[0]-arrival[0],b[1]-arrival[1]));
   for(const end of candidates){
@@ -352,7 +361,7 @@ function entrancePath(house) {
   return null;
 }
 
-export const doorstepPaths=houses.map(entrancePath).filter(Boolean);
+export const doorstepPaths=houses.flatMap(h=>entrancesFor(h).map(entry=>entrancePath(h,entry))).filter(Boolean);
 export const pavedPaths=[...paths,...doorstepPaths];
 const apronDepths={bakery:2.3,mill:1.35,gift:2.4,letter:1.65,herbs:1.22,tailor:1.25,terrace:1.55,chimney:1.4,lanterns:1.15,books:1.0};
 export const forecourts=houses.filter(h=>apronDepths[h.id]).map(h=>{

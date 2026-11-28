@@ -47,10 +47,6 @@
 #help-button { min-width:42px; font-weight:800; }
 
 /* ---------- toast / flash ---------- */
-#toast { position:absolute; left:50%; top:26%; transform:translate(-50%,-6px); max-width:min(86vw,420px); width:max-content; padding:10px 18px; border-radius:18px;
-  background:var(--plum); color:var(--cream); font-size:13.5px; line-height:1.6; text-align:center; white-space:pre-line; word-break:keep-all; overflow-wrap:anywhere;
-  opacity:0; pointer-events:none; transition:opacity .25s,transform .25s; z-index:12; }
-#toast.on { opacity:1; transform:translate(-50%,0); }
 #flash { position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:30; transition:opacity .5s ease-out; }
 #flash.on { opacity:.9; transition:none; }
 
@@ -129,4 +125,66 @@ button.link { min-height:30px; background:none; border:0; color:var(--warm); tex
   header { top:max(62px,calc(env(safe-area-inset-top) + 52px)); }
   h1 { font-size:14px; }
   #map-panel { top:max(62px,calc(env(safe-area-inset-top) + 52px)); }
+}
+
+#santa-talk,#santa-route { position:absolute; left:50%; transform:translateX(-50%); z-index:4;
+  bottom:max(61px,calc(env(safe-area-inset-bottom) + 50px));
+  width:max-content; max-width:calc(100% - 40px); margin:0; }
+#santa-talk { background:#fff0dc; color:#5b303b; padding:0 16px; font-weight:800; box-shadow:0 4px 12px #38233359; }
+#santa-route { background:#34293be8; color:#fff9eb; border:1px solid #f4dad18a; border-radius:18px;
+  top:max(62px,calc(env(safe-area-inset-top) + 52px)); bottom:auto;
+  padding:7px 13px; text-align:center; pointer-events:none; font-size:12px; }
+@media (max-width:520px) {
+  #santa-route { top:max(111px,calc(env(safe-area-inset-top) + 101px)); }
+}
+#mSanta { background:none; align-items:flex-end; padding-bottom:max(24px,env(safe-area-inset-bottom)); }
+#game:has(#mSanta.on) :is(nav,#map-panel,#joystick,#tbtns,#photoBtn,#viewpoint,#help) { visibility:hidden; }
+#santa-speech { width:min(375px,100%); padding:11px 14px; border-radius:20px; background:#fff3e5;
+  color:#57323b; border:1px solid #dcb2a4; box-shadow:0 5px 20px #35223767; text-align:center; }
+#santa-speaker { margin:0; color:#854951; font-size:12px; font-weight:800; }
+#santa-line { margin:5px 0 9px; font-size:clamp(14px,3.8vw,17px); line-height:1.55; white-space:pre-line; line-break:strict; }
+#santa-next { padding-inline:17px; }
+#santa-next:focus-visible,#santa-talk:focus-visible { outline-color:#7b3e51; }
+#santa-skip { position:absolute; right:max(12px,env(safe-area-inset-right));
+  bottom:max(12px,env(safe-area-inset-bottom)); }
+#mSanta [hidden] { display:none; }
+@media(pointer:coarse) {
+  #santa-talk { bottom:max(129px,calc(env(safe-area-inset-bottom) + 115px)); }
+}
+
+#season-actions { position:absolute; bottom:max(118px,calc(env(safe-area-inset-bottom) + 112px)); left:50%; transform:translateX(-50%); display:flex; flex-direction:column; gap:6px; align-items:center; z-index:4; }
+#season-actions button,#season-actions select { background:#fff0dc; color:#5b303b; padding:7px 12px; font:inherit; font-weight:800; border:1px solid #e6c9b5; border-radius:18px; white-space:nowrap; }
+#season-fade { position:fixed; inset:0; z-index:9999; background:#201829; opacity:0; pointer-events:none; transition:opacity .22s; }
+#season-fade.active { opacity:1; pointer-events:auto; }
+
+#game header { top:max(12px,env(safe-area-inset-top)); left:calc(16px + env(safe-area-inset-left)); }
+#game header h1{font-size:clamp(13px,3vw,18px)}
+#mini-toggle{position:absolute;top:calc(max(12px,env(safe-area-inset-top)) + 46px);left:calc(16px + env(safe-area-inset-left));width:108px;height:108px;padding:0;border-radius:14px;overflow:hidden;background:#1b1238;box-shadow:0 1px 5px #0004}
+#village-mini{display:block;width:100%;height:100%;opacity:.92}
+#map-panel{left:calc(16px + env(safe-area-inset-left));right:auto;z-index:5;max-height:calc(100% - 200px);overflow:auto}
+body.cammode #mini-toggle{display:none}
+#game:has(#mSanta.on) #mini-toggle{visibility:hidden}
+@media(max-width:520px){
+  #game header h1{font-size:12px;letter-spacing:0}
+  #game header p{font-size:11px}
+  #mini-toggle{width:84px;height:84px;left:calc(12px + env(safe-area-inset-left))}
+  #map-panel{left:calc(12px + env(safe-area-inset-left))}
+}
+#mini-toggle[hidden]{display:none}
+#map-panel #home{display:block;margin:7px auto}
+@media(pointer:coarse) and (min-height:541px){
+  #tbDash{width:66px;height:66px;right:calc(13px + env(safe-area-inset-right));bottom:max(21px,calc(env(safe-area-inset-bottom) + 15px))}
+  #tbJump{width:56px;height:56px;right:calc(98px + env(safe-area-inset-right));bottom:max(26px,calc(env(safe-area-inset-bottom) + 20px))}
+  #photoBtn{width:62px;height:62px;right:calc(15px + env(safe-area-inset-right));bottom:max(103px,calc(env(safe-area-inset-bottom) + 97px))}
+}
+#winter-broom{position:absolute;right:calc(18px + env(safe-area-inset-right));bottom:calc(max(14px,env(safe-area-inset-bottom)) + 104px);width:62px;height:62px;display:grid;place-content:center;justify-items:center;gap:2px;padding:0;border-radius:50%;border:3px solid #e8d4ff;background:linear-gradient(#a886ee,#6741ad);color:white;box-shadow:0 2px 9px #63468366}
+#winter-broom svg{width:27px;height:27px}
+#winter-broom span{font-size:10px;font-weight:800}
+#winter-broom[hidden],.santa-meeting-open #winter-broom,body.cammode #winter-broom{display:none}
+@media(pointer:coarse){
+  #winter-broom{width:56px;height:56px;right:calc(75px + env(safe-area-inset-right));bottom:max(83px,calc(env(safe-area-inset-bottom) + 77px));border-width:1.5px;background:#ffffff26}
+  #winter-broom span{display:none}
+}
+@media(pointer:coarse) and (orientation:landscape) and (max-height:540px){
+  #winter-broom{width:46px;height:46px;right:calc(84px + env(safe-area-inset-right));bottom:max(76px,calc(env(safe-area-inset-bottom) + 70px))}
 }

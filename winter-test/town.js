@@ -1,4 +1,6 @@
+import {santaDestinations} from './santa-destinations.js';
 import * as T from 'three';
+import { createWalkHeight } from './walk-surface.js';
 import { buildLetterHouse, meshGrid, roofTileGeometry } from './letter-house.js';
 import { buildTeaHouse } from './tea-house.js';
 import { winterFlowers } from './winter-flowers.js';
@@ -8,7 +10,7 @@ import { createRiverWater } from './river-water.js';
 import { GLTFLoader } from './vendor/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from './vendor/addons/utils/BufferGeometryUtils.js';
 import {
-  benches, bridge, bridgeHeight, castle, clamp, court, entranceFor, forecourts, front, gardens, giftWindowX, groundHeight, hillGate, houses, inHouse, letterHouse, mix,
+  benches, bridge, bridgeHeight, castle, clamp, court, entrancesFor, forecourts, front, gardens, giftWindowX, groundHeight, hillGate, houses, inHouse, letterHouse, mix,
   nearestPoint, northFir, pavedAt, pavedPaths, riverWidth, riverZ, smooth, squareBank, squares, streetLamps, teaHouse, terraceRail, terraceWalls, tree, treeSquare,
   upperTerrace, viewpoints, waterY
 } from './layout.js';
@@ -368,9 +370,10 @@ function archDoor(shape=archContour(new T.Shape()), bevelSize=.023) {
 function shutterHalf(side){
   const outline=new T.Shape();
   outline.moveTo(0,-.5);
-  outline.lineTo(side*.5,-.5);
-  outline.lineTo(side*.5,.5);
-  outline.bezierCurveTo(side*.20,.50,0,.38,0,.18);
+  outline.lineTo(-side*.5,-.5);
+  outline.lineTo(-side*.5,.50);
+  // The opening's control points, measured from the hinge at its outer edge.
+  outline.bezierCurveTo(-side*.20,.50,0,.38,0,.18);
   outline.closePath();
   return new T.ExtrudeGeometry(outline,{depth:.8,bevelEnabled:true,bevelThickness:.1,bevelSize:.014,
     bevelSegments:1,curveSegments:8}).translate(0,0,-.4);
@@ -425,9 +428,12 @@ function lanternGeometry(sides, roof) {
 }
 
 function buildHouses(scene,batch,winter,tex,G,M) {
+  const letterDoors=new Map();
+  const deliverable=new Set(santaDestinations.map(santa=>santa.houseId??santa.id));
   const mats={
     plaster:matte(0xffffff,{map:tex.plaster,side:T.DoubleSide}),
     timber:matte(0xffffff,{map:tex.wood}),
+    roofTrim:matte(0x76523c,{map:tex.wood}),
     glass:new T.MeshBasicMaterial({map:tex.glass}),
     roofs:[matte(0xffffff,{map:tex.tile,side:T.DoubleSide}),matte(0xd59a99,{map:tex.tile,side:T.DoubleSide}),matte(0xad878e,{map:tex.tile,side:T.DoubleSide})]
   };
@@ -458,7 +464,7 @@ function buildHouses(scene,batch,winter,tex,G,M) {
   const tile=roofTileGeometry(3,4),tileMaterial=matte(0xffffff,{side:T.DoubleSide});
   for(const [i,h] of houses.entries()){
     if(h.id===letterHouse){
-      buildLetterHouse(h,groundHeight,scene,winter,tex,G.roses);
+      letterDoors.set(h.id,buildLetterHouse(h,groundHeight,scene,winter,tex,G.roses));
       continue;
     }
     if(h===teaHouse){
@@ -466,17 +472,21 @@ function buildHouses(scene,batch,winter,tex,G,M) {
       continue;
     }
     const {x,z,w,d,yaw,style}=h, y=groundHeight(x,z);
+    const paired=Boolean(h.doorways);
     const giftShop=h.id==='gift';
     const marketShop=['herbs','tailor','lanterns','books'].includes(h.id);
     const plazaHouse=['atelier','cottager','terrace'].includes(h.id);
-    const shapedWindows=giftShop||marketShop||plazaHouse;
+    const shapedWindows=giftShop||marketShop||plazaHouse||paired;
     const height=h.h,profile=roofProfiles[h.id]??roofProfiles[style],hero=['mill','bakery','gift','letter','workshop'].includes(style);
     const rise=style==='tower'?3.0:style==='workshop'?1.43:style==='mill'?2.14:style==='letter'?2.23:1.63+(i%5)*.235;
     const c=Math.cos(yaw),s=Math.sin(yaw);
     const hasAwning=style==='bakery'||style==='shop'||style==='gift';
     const f=hasAwning||style==='workshop';
-    const hasBalcony=style==='bay'||style==='balcony';
+    const hasBalcony=!paired&&(style==='bay'||style==='balcony');
     const storyBeamY=2.158,storyBeamHeight=.087;
+    const entries=entrancesFor(h),entry=entries[0];
+    const doorLimit=Math.min(storyBeamY-storyBeamHeight/2-.17,hasBalcony?height*.55-.20:Infinity);
+    const doorHeightAt=threshold=>Math.min(height*.50,(doorLimit-threshold)/1.07);
     const local=(px,py,pz)=>[x+px*c+pz*s,y+py,z-px*s+pz*c];
     const add=(geo,m,color,px,py,pz,a,b,k,rot=0,roll=0,pitch=0,snow=false)=>{
       batch.add(geo,m,color,...local(px,py,pz),a,b,k,yaw+rot,roll,pitch,snow);
@@ -512,7 +522,19 @@ function buildHouses(scene,batch,winter,tex,G,M) {
         }
       }
     }
-    add(G.box,mats.plaster,shade,0,.24+height/2,0,w,height,d);
+    const openings=entries.filter(entry=>deliverable.has(entry.id??h.id));
+    if(openings.length){
+      let edge=-w/2;
+      for(const {x,doorWidth,threshold} of openings){
+        const width=doorWidth*.82,left=x-width/2;
+        const top=paired?threshold+doorHeightAt(threshold)*.82:1.80;
+        add(G.box,mats.plaster,shade,(edge+left)/2,.24+height/2,0,left-edge,height,d);
+        add(G.box,mats.plaster,shade,x,(top+height+.24)/2,0,width,height+.24-top,d);
+        add(G.box,mats.plaster,shade,x,.24+height/2,-d/2+.14,width,height,.28);
+        edge=x+width/2;
+      }
+      add(G.box,mats.plaster,shade,(edge+w/2)/2,.24+height/2,0,w/2-edge,height,d);
+    }else add(G.box,mats.plaster,shade,0,.24+height/2,0,w,height,d);
     const span=w+(h.id==='workshop'?.33:.73),depth=d+.82;
     if(!profile.hip){
       const ends=new T.Mesh(gable(w,d,rise,profile),matte(shade,{map:tex.plaster,side:T.DoubleSide}));
@@ -529,32 +551,44 @@ function buildHouses(scene,batch,winter,tex,G,M) {
     const snowy=new T.Mesh(roofMeshGeometry(span,depth,rise,profile,true,tiledRoof?.215:.074),M.snow);
     snowy.position.copy(roofMesh.position);snowy.rotation.y=yaw;winter.add(snowy);
 
+    const roofTrim=[];
+    const eaveHeight=(px,pz)=>{
+      const u=.5+px/span;
+      const end=roofPoint(u,1,span,depth,rise,profile)[2];
+      return height+.19+roofPoint(u,.5+pz/(2*end),span,depth,rise,profile)[1];
+    };
     for(const side of [-1,1]){
       const edge=side===1?.99:.01;
       const rail=Array.from({length:12},(_,j)=>{
         const [xx,yy,zz]=roofPoint(edge,j/11,span,depth,rise,profile);
         return new T.Vector3(xx,height+.135+yy,zz);
       });
-      const fascia=new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(rail),14,.052,5,false),mats.timber);
-      fascia.position.set(...local(0,0,0));fascia.rotation.y=yaw;scene.add(fascia);
-      timber(wood,side*(w/2-.082),(.48+height)*.5,frontZ+.039,.144,height-.46,.12);
+      roofTrim.push(new T.TubeGeometry(new T.CatmullRomCurve3(rail),14,.052,5,false));
+      timber(wood,side*(w/2-.082),(.59+height)*.5,frontZ+.039,.144,height-.35,.12);
       timber(wood,0,height+.16,side*(d/2+.036),w-.085,.12,.13);
       const rafterCount=Math.max(5,Math.round(d/.65));
+      const innerX=side*(w/2-.065),outerX=side*(span/2-.064);
       for(let j=0;j<rafterCount;j++){
-        const [xx,yy,zz]=roofPoint(edge,(j+1)/(rafterCount+1),span,depth,rise,profile);
-        const inner=side*(w/2-.065);
-        const len=Math.abs(xx-inner)+.047;
-        timber(0x75523c,(xx+inner)*.5,height+.055+yy,zz,len,.112,.106,0,-side*.060);
+        const zz=mix(-d/2+.31,d/2-.31,(j+.5)/rafterCount);
+        const outerY=eaveHeight(outerX,zz)-.065;
+        const innerY=Math.min(height+.208,eaveHeight(innerX,zz)-.066);
+        const dx=outerX-innerX,dy=outerY-innerY;
+        timber(0x75523c,(outerX+innerX)*.5,(outerY+innerY)*.5,zz,
+          Math.hypot(dx,dy),.073,.085,0,Math.atan(dy/dx));
       }
-      // Curved bargeboards follow both slopes and add a visible depth at the overhang.
-      for(const [lo,hi] of [[0,profile.ridge],[profile.ridge,1]])for(let j=0;j<6;j++){
-        const [ax,ay,az]=roofPoint(mix(lo,hi,j/6),side===1?1:0,span,depth,rise,profile);
-        const [bx,by,bz]=roofPoint(mix(lo,hi,(j+1)/6),side===1?1:0,span,depth,rise,profile);
-        if(profile.hip)continue;
-        timber(0x614035,(ax+bx)*.5,height+.14+(ay+by)*.5,(az+bz)*.5,
-          Math.hypot(bx-ax,by-ay)+.046,.127,.141,0,Math.atan2(by-ay,bx-ax));
+      if(!profile.hip){
+        // Keep the gable trim tucked behind the roof edge at the eave and ridge.
+        for(const [lo,hi] of [[.01,profile.ridge],[profile.ridge,.99]]){
+          const trim=Array.from({length:13},(_,j)=>{
+            const [xx,yy,zz]=roofPoint(mix(lo,hi,j/12),side===1?.989:.011,span,depth,rise,profile);
+            return new T.Vector3(xx,height+.128+yy,zz);
+          });
+          roofTrim.push(new T.TubeGeometry(new T.CatmullRomCurve3(trim),16,.043,6,false));
+        }
       }
     }
+    const fascia=new T.Mesh(mergeGeometries(roofTrim),mats.roofTrim);
+    fascia.position.set(...local(0,0,0));fascia.rotation.y=yaw;scene.add(fascia);
     const ridgeCount=Math.ceil(depth/.35);
     for(let j=0;j<ridgeCount;j++){
       const [xx,yy,zz]=roofPoint(profile.ridge,(j+.5)/ridgeCount,span,depth,rise,profile);
@@ -573,9 +607,9 @@ function buildHouses(scene,batch,winter,tex,G,M) {
       }
     }
     if(!f){
-      timber(wood,0,storyBeamY,frontZ+.034,w-.075,storyBeamHeight,.104);
+      timber(wood,0,storyBeamY,frontZ+.034,w+.052,storyBeamHeight,.104);
       for(const side of [-1,1]){
-        timber(wood,side*(w/2+.031),storyBeamY,0,d+.02,storyBeamHeight,.100,Math.PI/2);
+        timber(wood,side*(w/2+.024),storyBeamY,.103,d-.132,storyBeamHeight,.086,Math.PI/2);
       }
     }
     const chimneyX=(i%2?1:-1)*w*.28,chimneyZ=-d*.22;
@@ -591,15 +625,15 @@ function buildHouses(scene,batch,winter,tex,G,M) {
 
     const windowAt=(px,py,pz,ww,hh,role,angle=0)=>{
       const ax=Math.sin(angle),az=Math.cos(angle);
-      const detail=(color,mm,xx,yy,zz,a,b,k,geo=G.box)=>{
-        add(geo,mm,color,px+xx*az+zz*ax,py+yy,pz-xx*ax+zz*az,a,b,k,angle);
+      const detail=(color,mm,xx,yy,zz,a,b,k,geo=G.box,turn=0)=>{
+        add(geo,mm,color,px+xx*az+zz*ax,py+yy,pz-xx*ax+zz*az,a,b,k,angle+turn);
       };
       if(shapedWindows){
-        detail(0xb39375,M.plain,0,0,.023,ww+.21,hh+.20,.185,arch);
+        detail(0xb39375,M.plain,0,0,-.014,ww+.21,hh+.20,.259,arch);
         detail(0x815235,mats.timber,0,0,.105,ww+.07,hh+.065,.13,arch);
         detail(0xffffff,mats.glass,0,0,.150,ww,hh,.037,arch);
       }else{
-        detail(0x50382e,M.plain,0,0,0,ww+.17,hh+.17,.097);
+        detail(0x50382e,M.plain,0,0,-.035,ww+.17,hh+.17,.167);
         detail(0xffffff,mats.glass,0,0,.060,ww,hh,.022);
         for(const side of [-1,1]){
           detail(wood,mats.timber,side*(ww/2+.035),0,.082,.094,hh+.16,.18);
@@ -610,17 +644,30 @@ function buildHouses(scene,batch,winter,tex,G,M) {
       detail(0x9a6647,mats.timber,0,0,.175,ww+(shapedWindows?.025:.06),shapedWindows?.033:.054,.045);
       detail(wood,mats.timber,0,0,.178,shapedWindows?.031:.055,hh,.047);
       detail(stone,M.plain,0,-hh/2-.075,.12,ww+.23,.093,.29);
+      if(role==='postcards'){
+        detail(0x80573d,mats.timber,0,-hh/2-.057,.229,ww+.19,.052,.409);
+        detail(0xa47750,mats.timber,0,-hh/2-.025,.425,ww+.19,.030,.026);
+      }
       if(role==='shutters'){
         for(const side of [-1,1]){
-          const hinge=side*(ww/2+.051),mid=hinge+side*ww*.25;
-          if(shapedWindows)detail(h.trim,mats.timber,hinge,0,.052,ww,hh,.078,curvedShutters[side===1?1:0]);
-          else detail(h.trim,mats.timber,mid,0,.052,ww*.5,hh,.078);
+          const hinge=side*(ww/2+.044);
+          const hingeDepth=shapedWindows?.148:.115;
+          const turn=Math.PI-side*.15, c=Math.cos(turn),s=Math.sin(turn);
+          const shutterDetail=(color,material,x,y,z,w,h,d,geo=G.box)=>
+            detail(color,material,hinge+x*c+z*s,y,hingeDepth-x*s+z*c,w,h,d,geo,turn);
+          const mid=-side*ww*.25;
+          if(shapedWindows)shutterDetail(h.trim,mats.timber,0,0,0,ww,hh,.054,curvedShutters[side===1?1:0]);
+          else shutterDetail(h.trim,mats.timber,mid,0,0,ww*.5,hh,.056);
           for(const cy of [-.31,.105]){
-            detail(0x8b886e,M.plain,mid,cy*hh,.100,ww*.44,.034,.026);
-            detail(0xb49863,M.plain,hinge+side*ww*.105,cy*hh,.117,.024,.025,.018);
+            shutterDetail(wood,mats.timber,mid,cy*hh,-.032,ww*.44,.034,.021);
+            for(const u of [.11,.40]){
+              shutterDetail(0xb49863,M.plain,-side*ww*u,cy*hh,-.046,.020,.020,.015);
+            }
           }
-          const seamX=hinge+side*ww*.30;
-          detail(wood,mats.timber,seamX,shapedWindows?-.026*hh:0,.096,.010,hh*(shapedWindows?.87:.965),.013);
+          for(const [u,top] of [[.17,.34],[.33,.44]]){
+            const y=shapedWindows?top:.48;
+            shutterDetail(wood,mats.timber,-side*ww*u,(y-.48)*hh/2,-.028,.008,(y+.48)*hh,.008);
+          }
         }
       }
       if(role==='flowers'){
@@ -634,17 +681,15 @@ function buildHouses(scene,batch,winter,tex,G,M) {
       }
     };
     const face=d/2+.09;
-    const entry=entranceFor(h);
-    const {doorWidth,threshold}=entry;
-    const doorLimit=Math.min(storyBeamY-storyBeamHeight/2-.17,hasBalcony?height*.55-.20:Infinity);
-    const doorHeight=Math.min(height*.50,(doorLimit-threshold)/1.07);
-    const doorY=portion=>threshold+portion*doorHeight;
+    const {doorWidth}=entry;
     const jambEdge=doorWidth*.629;
     const doorClear=Math.max(.81,jambEdge+.15);
     const room=w/2-.23-doorClear;
     const shopWindowX=doorClear+room/2;
     const shopWindowW=Math.min(w*.29,room-.37);
-    if(f){
+    if(paired){
+      for(const side of [-1,1])windowAt(side*.98,1.33,face,1.58,1.30,'postcards');
+    }else if(f){
       if(!giftShop)windowAt(-shopWindowX,1.47,face,shopWindowW,1.24,'plain');
       windowAt(shopWindowX,1.46,face,shopWindowW*.87,1.20,'plain');
     }else{
@@ -676,15 +721,39 @@ function buildHouses(scene,batch,winter,tex,G,M) {
     if(!profile.hip&&h.id!=='terrace')windowAt((profile.ridge-.5)*w,height+.69,face,.54,.73,'plain');
 
     const doorFace=face+.114;
-    add(doorFrame,mats.timber,giftShop?0x906140:0x71503a,0,doorY(.5),face+.075,doorWidth,doorHeight,.24);
-    add(arch,mats.timber,h.trim,0,doorY(.5),doorFace,doorWidth,doorHeight,.13);
-    for(const {x,top} of plankSeams){
-      const base=-.47;
-      box(0x3a4839,x*doorWidth,doorY(.5+(base+top)/2),doorFace+.059,.013,(top-base)*doorHeight,.012);
-    }
-    add(G.ball,M.plain,0xcc9a5f,.33*doorWidth,doorY(.47),doorFace+.106,.075,.075,.088);
-    for(const {near,far,top,bottom,width} of entry.steps){
-      add(G.box,mats.plaster,stone,entry.x,(top+bottom)/2-y,(near+far)/2,width,top-bottom,far-near);
+    const doorHeight=doorHeightAt(entry.threshold);
+    const doorY=portion=>entry.threshold+portion*doorHeight;
+    for(const doorway of entries){
+      const {id=h.id,x,trim,threshold,steps}=doorway;
+      const heightOfDoor=doorHeightAt(threshold);
+      const atHeight=portion=>threshold+portion*heightOfDoor;
+      add(doorFrame,mats.timber,giftShop?0x906140:0x71503a,x,atHeight(.5),face+.035,doorWidth,heightOfDoor,.325);
+      let addDoor=add;
+      if(deliverable.has(id)){
+        const house=new T.Group();house.position.set(h.x,y,h.z);house.rotation.y=yaw;scene.add(house);
+        const hinge=new T.Group();hinge.position.set(x-doorWidth/2,0,doorFace);house.add(hinge);
+        addDoor=(geo,material,color,px,py,pz,sx,sy,sz)=>{
+          const mat=material.clone();mat.color.set(color);
+          const mesh=new T.Mesh(geo,mat);
+          mesh.position.set(px-x+doorWidth/2,py,pz-doorFace);mesh.scale.set(sx,sy,sz);
+          hinge.add(mesh);
+        };
+        letterDoors.set(id,{house,entry:doorway,frontZ:doorFace,setOpen(angle){hinge.rotation.y=-angle;}});
+      }
+      addDoor(arch,mats.timber,trim??h.trim,x,atHeight(.5),doorFace,doorWidth,heightOfDoor,.13);
+      for(const {x:offset,top} of plankSeams){
+        const base=-.47;
+        addDoor(G.box,M.plain,0x3a4839,x+offset*doorWidth,atHeight(.5+(base+top)/2),doorFace+.059,.013,(top-base)*heightOfDoor,.012);
+      }
+      addDoor(G.ball,M.plain,0xcc9a5f,x+.33*doorWidth,atHeight(.47),doorFace+.106,.075,.075,.088);
+      if(paired){
+        addDoor(G.box,M.plain,0x684232,x,atHeight(.63),doorFace+.071,.34,.111,.035);
+        addDoor(G.box,M.plain,0xc5985b,x,atHeight(.63),doorFace+.091,.305,.082,.025);
+        addDoor(G.box,M.plain,0x43352f,x,atHeight(.64),doorFace+.105,.247,.024,.011);
+      }
+      for(const {near,far,top,bottom,width} of steps){
+        add(G.box,mats.plaster,stone,x,(top+bottom)/2-y,(near+far)/2,width,top-bottom,far-near);
+      }
     }
     buildHouseMarker(h,face,add,G,M);
 
@@ -705,14 +774,15 @@ function buildHouses(scene,batch,winter,tex,G,M) {
         const origin=segment*k-aw*.5;
         const color=new T.Color(giftShop?(k%2===0?0x41645d:0x65877a):k%2===0?h.trim:0xf3dfb6);
         const base=points.length/3,columns=fold.length;
-        for(let j=0;j<along.length+down.length;j++){
-          const skirt=j>=along.length, t=skirt?down[j-along.length]:along[j];
+        for(let j=0;j<=along.length+down.length;j++){
+          const hem=j===along.length+down.length;
+          const skirt=j>=along.length, t=hem?1:skirt?down[j-along.length]:along[j];
           for(const [col,u] of fold.entries()){
             const xx=origin+segment*u,ridge=Math.sin(Math.PI*u),sag=Math.sin(xx*1.2)*.021;
             const hang=.115+.061*ridge+.012*Math.sin(xx*1.2+.77);
             const y=(skirt?frontEdge-t*hang:slopingY(t))+sag;
             const z=skirt?depth+.025+.047*Math.sin(t*Math.PI*.85)+.034*ridge*t:.025+t*depth;
-            points.push(xx,y,z);
+            points.push(xx,y+(hem?.013:0),z-(hem?.018:0));
             const tone=color.clone().multiplyScalar((.86+.17*ridge)*(skirt?(t>=.91?.74:.89+.09*t):1));
             colors.push(tone.r,tone.g,tone.b);
             if(j&&col){
@@ -724,17 +794,19 @@ function buildHouses(scene,batch,winter,tex,G,M) {
       }
       const awning=new T.Mesh(geometry(points,null,indices,colors),canvasMat);
       awning.position.set(...local(center,0,face));awning.rotation.y=yaw;scene.add(awning);
-      timber(0x805a3e,center,frontEdge-.049,face+depth-.027,aw-.044,.062,.057);
+      timber(0x805a3e,center,awningTop-.026,face-.034,aw-.055,.067,.145);
+      timber(0x805a3e,center,frontEdge-.047,face+depth+.003,aw-.062,.053,.053);
       for(const side of [-1,1]){
         const xx=center+side*aw*.435;
-        const up=frontEdge-.06,down=frontEdge-.35,run=depth+.015;
-        timber(0x75523c,xx,down,face-.066,.097,.139,.125);
-        timber(0x78573e,xx,(up+down)*.5,face-.016+run*.5,.052,.061,Math.hypot(run,up-down),
+        const up=frontEdge-.055,down=frontEdge-.323,run=depth+.028;
+        timber(0x75523c,xx,down,face-.060,.082,.111,.112);
+        timber(0x78573e,xx,(up+down)*.5,face-.025+run*.5,.046,.052,Math.hypot(run,up-down),
           0,0,-Math.atan2(up-down,run));
       }
       const signX=w*.38,signY=Math.max(height*.65+.34,shortAwning?2.73:awningTop+.63);
+      timber(wood,signX,signY+.229,face-.062,.106,.323,.130);
       timber(wood,signX,signY+.35,face+.48,.075,.085,.98);
-      timber(wood,signX,signY+.15,face+.22,.075,.079,.51,0,0,-.65);
+      timber(wood,signX,signY+.15,face+.196,.075,.079,.51,0,0,-.65);
       add(mold,M.plain,0x63503b,signX,signY+.19,face+.91,.046,.34,.046);
       add(signDisk,mats.timber,0x624230,signX,signY-.23,face+.93,.98,.145,.98,0,0,Math.PI/2);
       add(signDisk,M.plain,0xa5714c,signX,signY-.23,face+1.014,.855,.05,.855,0,0,Math.PI/2);
@@ -924,17 +996,19 @@ function buildHouses(scene,batch,winter,tex,G,M) {
       }
     }
     if(hasBalcony){
-      const center=style==='bay'?-w*.18:0;
-      const floor=height*.55;
-      timber(wood,center,floor,face+.39,w*.65,.128,.87);
+      const bay=style==='bay';
+      const center=bay?-w*.18:0;
+      const floor=bay?upperHeight-.81:height*.55;
+      const floorWidth=w*(bay?.43:.65);
+      timber(wood,center,floor,face+.352,floorWidth,.128,.91);
       for(const side of [-1,1]){
-        const run=.61,rise=.268;
-        const support=style==='bay'&&side===1?center+w*.325-.08:center+side*w*.224;
-        timber(0x75553e,support,floor-.187,face+.267,
+        const run=.68,rise=.268;
+        const support=center+floorWidth*(bay?(side===1?.18:-.35):side*.345);
+        timber(0x75553e,support,floor-.187,face+.21,
           .084,.087,Math.hypot(run,rise),0,0,-Math.atan2(rise,run));
       }
-      if(style==='bay'){
-        box(shade,center,upperHeight,face+.24,w*.37,1.54,.54);
+      if(bay){
+        add(G.box,mats.plaster,shade,center,upperHeight,face+.24,w*.37,1.54,.54);
         windowAt(center,upperHeight,face+.57,1.12,.95,'flowers');
         const hoodWidth=w*.41;
         timber(0xa6654c,center,upperHeight+.876,face+.317,hoodWidth,.074,.803,0,0,.235);
@@ -961,9 +1035,10 @@ function buildHouses(scene,batch,winter,tex,G,M) {
       star.position.set(...local(lanternX,lanternY,face+.36));star.rotation.y=yaw;scene.add(star);
     }
   }
+  return letterDoors;
 }
 
-function bridgeModel(scene,batch,tex,G,M,winter) {
+function bridgeModel(scene,batch,tex,G,M,winter,addSurface) {
   const {a,b,x,halfWidth:w}=bridge;
   const mid=(a+b)/2, span=3.40, rise=1.25, spring=waterY-.42;
   const across=w+.115;
@@ -1166,12 +1241,12 @@ function bridgeModel(scene,batch,tex,G,M,winter) {
 
   scene.add(new T.Mesh(geometry(pos,null,null,colors),matte(0xffffff,{side:T.DoubleSide,vertexColors:true})));
   const deck=matte(0xfdf5ee,{map:tex.road,side:T.DoubleSide});
-  scene.add(ribbon(samples([[x,b],[x,a]],.21),(w+.13)*2,deck,(_,z)=>bridgeHeight(z),.031));
+  addSurface(ribbon(samples([[x,b],[x,a]],.21),(w+.13)*2,deck,(_,z)=>bridgeHeight(z),.031));
   // Fit the deck to the two existing roads without a visible gap around the end stones.
   const threshold=matte(0xf0dcc8,{map:tex.road,side:T.DoubleSide,polygonOffset:true,polygonOffsetFactor:-1});
   for(const [z,dir] of [[a,-1],[b,1]]){
     const join=samples([[x,z],[x,z+dir*.65]],.16);
-    scene.add(ribbon(join,w*1.88,threshold,(xx,zz)=>{
+    addSurface(ribbon(join,w*1.88,threshold,(xx,zz)=>{
       const t=Math.abs(zz-z)/.65;
       return mix(bridgeHeight(z),groundHeight(xx,zz),t);
     },.040));
@@ -1433,14 +1508,14 @@ function landscape(scene,batch,G,M,tex,fir){
   }
 }
 
-function buildStreets(scene,batch,tex,G,M){
+function buildStreets(batch,tex,G,M,addSurface){
   const road=matte(0xffffff,{map:tex.road,side:T.DoubleSide,polygonOffset:true,polygonOffsetFactor:-1});
   const bridgeEntrance=pavedPaths[0].points.findIndex(([x,z])=>x===bridge.x&&z===bridge.a);
   for(const [i,path] of pavedPaths.entries()){
     const lines=i===0?[path.points.slice(0,bridgeEntrance).concat([[bridge.x,bridge.b]]),path.points.slice(bridgeEntrance)]:[path.points];
     for(const line of lines){
       const points=samples(line,.31);
-      scene.add(ribbon(points,path.width,road,groundHeight,i===0?.124:.109));
+      addSurface(ribbon(points,path.width,road,groundHeight,i===0?.124:.109));
       if(i!==0)continue;
       for(let j=1;j<points.length-1;j+=2){
         const [cx,cz]=points[j],[ax,az]=points[j-1],[bx,bz]=points[j+1];
@@ -1457,17 +1532,17 @@ function buildStreets(scene,batch,tex,G,M){
       }
     }
   }
-  for(const a of squares)if(!a.outline)scene.add(ellipseGround(a,road,true));
+  for(const a of squares)if(!a.outline)addSurface(ellipseGround(a,road,true));
   for(const area of forecourts){
     const line=[front(area,-area.d),front(area,0)];
-    scene.add(ribbon(samples(line,.27),area.w,road,groundHeight,.117));
+    addSurface(ribbon(samples(line,.27),area.w,road,groundHeight,.117));
   }
 }
 
 const squarePavingHeight=(x,z)=>groundHeight(x,z)+.161;
 const treeSoilHeight=()=>squarePavingHeight(tree.x,tree.z)+tree.planterHeight-.095;
 
-function buildUpperTerrace(scene,batch,tex,G,M){
+function buildUpperTerrace(scene,batch,tex,G,M,addSurface){
   const {x,z,outline}=upperTerrace;
   const edge=samples([...outline,outline[0]],.26);
   const paving=meshGrid(13,edge.length-1,(u,v)=>{
@@ -1477,7 +1552,7 @@ function buildUpperTerrace(scene,batch,tex,G,M){
   });
   const pos=paving.getAttribute('position'),uv=paving.getAttribute('uv');
   for(let i=0;i<pos.count;i++)uv.setXY(i,pos.getX(i)*.29,pos.getZ(i)*.29);
-  scene.add(new T.Mesh(paving,matte(0xe5ccb8,{map:tex.road,side:T.DoubleSide})));
+  addSurface(new T.Mesh(paving,matte(0xe5ccb8,{map:tex.road,side:T.DoubleSide})));
 
   const block=bevelBlock([[-.44,-.34],[.42,-.40],[.44,.37],[-.39,.40]]);
   const baluster=new T.LatheGeometry([[.09,0],[.10,.07],[.066,.12],[.058,.23],[.087,.31],[.080,.41],[.054,.49],[.09,.53],[.09,.57]].map(p=>new T.Vector2(...p)),7);
@@ -1561,7 +1636,7 @@ function buildHillGate(batch,G,M){
   batch.add(block,M.snow,0xffffff,x,y+spring+radius+band+.238,z,1.47,.09,depth+.085,0,0,0,true);
 }
 
-function buildTreeSquare(scene,batch,tex,G,M){
+function buildTreeSquare(scene,batch,tex,G,M,addSurface){
   const square=treeSquare,edge=[...square.outline,square.outline[0]];
   const boundary=samples(edge,.28),rows=25;
   const base=meshGrid(rows,boundary.length-1,(u,v)=>{
@@ -1575,9 +1650,9 @@ function buildTreeSquare(scene,batch,tex,G,M){
     uv.setXY(i,(.937*x+.35*z)*.31,(-.35*x+.937*z)*.31);
   }
   const plazaStone=matte(0xe0ceba,{map:tex.road,side:T.DoubleSide});
-  scene.add(new T.Mesh(base,plazaStone));
+  addSurface(new T.Mesh(base,plazaStone));
   const landing=samples([[bridge.x,bridge.a+.69],[bridge.x,bridge.a-.71]],.13);
-  scene.add(ribbon(landing,bridge.halfWidth*1.86,plazaStone,(x,z)=>{
+  addSurface(ribbon(landing,bridge.halfWidth*1.86,plazaStone,(x,z)=>{
     const t=smooth(bridge.a-.52,bridge.a+.58,z);
     return mix(Math.max(groundHeight(x,z),bridgeHeight(z))+.173,bridgeHeight(z)+.047,t);
   },0));
@@ -1649,7 +1724,7 @@ function buildTreeSquare(scene,batch,tex,G,M){
       indices.push(start,start+1,start+2,start,start+2,start+3);
     }
   }
-  scene.add(new T.Mesh(geometry(pos,uvs,indices,colors),
+  addSurface(new T.Mesh(geometry(pos,uvs,indices,colors),
     matte(0xffffff,{map:tex.plaster,vertexColors:true,side:T.DoubleSide})));
 
   const {yaw}=teaHouse,c=Math.cos(yaw),s=Math.sin(yaw);
@@ -1657,7 +1732,7 @@ function buildTreeSquare(scene,batch,tex,G,M){
   const facade=teaHouse.d/2;
   const [p0,p1]=[frontPoint(-2.72,facade+.63),frontPoint(2.73,facade+.63)];
   const teaPaving=matte(0xc4ae98,{map:tex.road,side:T.DoubleSide});
-  scene.add(ribbon(samples([p0,p1],.21),1.25,teaPaving,groundHeight,.184));
+  addSurface(ribbon(samples([p0,p1],.21),1.25,teaPaving,groundHeight,.184));
 
   const washTexture=canvasTexture((g,n)=>{
     const fill=g.createRadialGradient(n*.5,n*.5,0,n*.5,n*.5,n*.50);
@@ -1945,7 +2020,12 @@ export async function buildTown(scene,coarse) {
   scene.add(new T.HemisphereLight(0xfff2f6,0xc19380,1.85));
   const sunset=new T.DirectionalLight(0xffdfb4,2.05);sunset.position.set(-34,40,-14);scene.add(sunset);
   const snowCover={value:1};
-  scene.add(terrain(tex,snowCover));
+  const walkableMeshes=[];
+  const addSurface=object=>{
+    scene.add(object);
+    object.traverse(mesh=>{if(mesh.isMesh)walkableMeshes.push(mesh);});
+  };
+  addSurface(terrain(tex,snowCover));
   const mill=wheel(scene,G,tex);
   const flowSpeed=.86;
   const wheelX=mill.parent.position.x,wheelZ=mill.parent.position.z;
@@ -1954,16 +2034,17 @@ export async function buildTown(scene,coarse) {
   const time=createRiverWater(T,scene,{riverZ,riverWidth,waterY,groundHeight,bridge,coarse,
     mill:{x:wheelX,z:wheelZ},flowSpeed,snow:snowCover}).time;
   const wheelSpeed=flowSpeed/(1.23*Math.cos(mill.parent.rotation.y));
-  buildStreets(scene,batch,tex,G,M);
-  buildTreeSquare(scene,batch,tex,G,M);
-  buildUpperTerrace(scene,batch,tex,G,M);
+  buildStreets(batch,tex,G,M,addSurface);
+  buildTreeSquare(scene,batch,tex,G,M,addSurface);
+  buildUpperTerrace(scene,batch,tex,G,M,addSurface);
   buildHillGate(batch,G,M);
-  buildHouses(scene,batch,winter,tex,G,M);
+  const letterDoors=buildHouses(scene,batch,winter,tex,G,M);
+  const letterDoor=letterDoors.get(letterHouse);
   buildTeaStall(batch,G,M,tex.wood);
   const [gate,keep,fir,lamp]=await models;
   winterCastle(keep,snowCover);
   sky(scene,keep);
-  bridgeModel(scene,batch,tex,G,M,winter);
+  bridgeModel(scene,batch,tex,G,M,winter,addSurface);
   snowyRiverBanks(batch,G,M);
   winterFir(fir.material,snowCover);
   leaves(scene,batch,winter,G,M,{fir,lamp});
@@ -1971,7 +2052,7 @@ export async function buildTown(scene,coarse) {
   batch.build(winter);
   const snow=flakes(scene,coarse?115:185);
   scene.add(gate,keep);
-  return {winter,snow,mill,time,wheelSpeed,firSnow:snowCover};
+  return {winter,snow,mill,time,wheelSpeed,letterDoor,letterDoors,firSnow:snowCover,walkHeight:createWalkHeight(walkableMeshes)};
 }
 
 export async function buildPlayer(scene) {
@@ -1983,5 +2064,31 @@ export async function buildPlayer(scene) {
   avatar.position.y=-bounds.min.y*scale;
   const player=new T.Group(),body=new T.Group();
   body.add(avatar);player.add(body);scene.add(player);
-  return {player,body};
+  // Include the toe and heel edges so they can catch the lip of a stair.
+  const soles=[];
+  avatar.traverse(mesh=>{
+    if(!mesh.isSkinnedMesh)return;
+    const vertex=new T.Vector3(),indices=[];
+    for(let i=0;i<mesh.geometry.attributes.position.count;i++){
+      mesh.getVertexPosition(i,vertex).applyMatrix4(mesh.matrixWorld);
+      if((vertex.y-bounds.min.y)*scale<=.09)indices.push(i);
+    }
+    soles.push({mesh,indices});
+  });
+
+  const foot=new T.Vector3();
+  function groundedY(walkHeight){
+    const {x,y,z}=player.position;
+    player.updateMatrixWorld(true);
+    // Place the lowest point of the supporting foot on its own surface.
+    let height=-Infinity;
+    for(const {mesh,indices} of soles){
+      for(const i of indices){
+        mesh.getVertexPosition(i,foot).applyMatrix4(mesh.matrixWorld);
+        height=Math.max(height,walkHeight(foot.x,foot.z)-(foot.y-y));
+      }
+    }
+    return height===-Infinity?walkHeight(x,z):height;
+  }
+  return {player,body,groundedY};
 }

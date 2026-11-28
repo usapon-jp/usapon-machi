@@ -7,6 +7,7 @@
 <title>うさぽん村　城下町</title>
 <link rel="stylesheet" href="./style.css">
 <link rel="stylesheet" href="./hud.css">
+<link rel="stylesheet" href="./village-ui.css">
 <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
 </head>
 <body>
@@ -18,15 +19,15 @@
 <main id="game" aria-label="うさぽん村 城下町の散策">
   <canvas id="view" aria-label="城下町の3D画面"></canvas>
   <header><h1>うさぽん村 <span>城下町</span></h1><p id="place">北門</p></header>
-  <nav aria-label="散策メニュー">
-    <button id="map-button" aria-controls="map-panel" aria-expanded="false">地図</button>
-    <button id="album-button" type="button">アルバム</button>
-    <button id="winter" aria-pressed="true">雪</button>
-    <button id="home">北門へ</button>
-    <button id="help-button" type="button" aria-label="あそびかた">？</button>
+  <nav class="village-chips" aria-label="散策メニュー">
+    <button id="album-button" type="button" aria-label="アルバム" title="アルバム" ><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 5.5c3-1 6-.5 9.5 1.5 3.5-2 6.5-2.5 9.5-1.5v13c-3-1-6-.5-9.5 1.5-3.5-2-6.5-2.5-9.5-1.5zM12 7v13"/></svg></button>
+    <button id="help-button" type="button" aria-label="あそびかた" title="あそびかた" ><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0zM9.3 8.8a2.8 2.8 0 0 1 5.5.8c0 2-2.8 2.2-2.8 4m0 3h.01"/></svg></button>
+    <button id="map-button" type="button" aria-label="地図の表示切り替え" title="地図" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.3 6-11a6 6 0 1 0-12 0c0 5.7 6 11 6 11zm0-8a2.7 2.7 0 1 0 0-5.4 2.7 2.7 0 0 0 0 5.4z"/></svg></button>
   </nav>
+  <button id="mini-toggle" type="button" aria-label="地図を開く" aria-controls="map-panel" aria-expanded="false"><canvas id="village-mini" width="180" height="180"></canvas></button>
   <section id="map-panel" hidden aria-label="城下町の地図">
     <canvas id="map" width="370" height="530"></canvas>
+    <button id="home" type="button">北門へ</button>
   </section>
   <div id="joystick" aria-label="移動"><i class="chev u"></i><i class="chev d"></i><i class="chev l"></i><i class="chev r"></i><div id="knob"></div></div>
   <div id="tbtns">
@@ -44,6 +45,26 @@
     <button class="cbtn" id="camHelp" type="button" aria-label="カメラモードのせつめい">?</button>
     <div id="camTour"></div>
   </div>
+  <button id="santa-talk" type="button" hidden>いちごサンタとはなす</button>
+  <p id="santa-route" hidden>キラキラ光る緑のドアへ</p>
+  <div class="modal" id="mSanta" role="dialog" aria-modal="true" aria-labelledby="santa-speaker">
+    <div id="santa-speech">
+      <p id="santa-speaker"></p>
+      <p id="santa-line" aria-live="polite"></p>
+      <button class="btn" id="santa-next" type="button">つぎへ</button>
+    </div>
+    <button id="santa-skip" type="button" hidden>スキップ</button>
+  </div>
+  <div id="season-actions">
+    <button id="north-guide" type="button" hidden>いちごサンタとはなす</button>
+    <button id="letter-lantern" type="button" hidden>スティックでランタンをともす</button>
+    <select id="winter-broom-style" aria-label="ほうきを選ぶ" hidden>
+      <option value="white">赤いリボンの白いほうき</option>
+      <option value="halloween">ハロウィンのほうき</option>
+    </select>
+  </div>
+  <button id="winter-broom" type="button" aria-label="ほうきにのる" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 3.5 11 13m0 0c-2.2-1-5.2.2-7 3.2L3 21l4.8-1c3-1.8 4.2-4.8 3.2-7zM6.2 17.2 8.4 15M8 19.6l2.2-2.2"/></svg><span>ほうき</span></button>
+  <div id="season-fade"></div>
   <div id="toast" role="status"></div>
   <div id="flash"></div>
   <p id="status" role="status">城下町を読み込み中…</p>
@@ -64,10 +85,10 @@
   <div class="modal" id="mAlbumList">
     <div class="sheet" id="albumListSheet">
       <h2>アルバム</h2>
-      <div id="albumChips"><button type="button" class="ach on" data-f="all">ぜんぶ</button><button type="button" class="ach" data-f="fav">★ お気に入り</button></div>
+      <div id="albumChips"></div>
       <div id="albumGrid"></div>
       <p id="albumEmpty" hidden>まだ写真がないよ。カメラのボタンで とってみよう</p>
-      <p class="small">この端末のブラウザに 新しい順で60まいまで のこります（★は のこります）</p>
+      <p class="small">この端末のブラウザに 季節ごとに新しい順で60まいまで のこります（★は のこります）</p>
       <div class="actions"><button class="btn sub" id="btnAlbumListClose" type="button">とじる</button></div>
     </div>
   </div>
@@ -99,11 +120,15 @@
         <p><b>右下のボタン</b> ダッシュ・ジャンプ・カメラ</p>
         <p><b>画面をドラッグ</b> 見るむき　<b>2本指</b> ちかく・とおく</p>
       </div>
+      <p class="small">ツリー広場で、いちごサンタに話しかけられます。</p>
       <p class="small">「景色を見る」が出たら、その場所のながめを ゆっくり見られます。写真は「アルバム」に のこります。</p>
       <div class="actions"><button class="btn sub" id="btnTourReplay" type="button">カメラのせつめいを見る</button><button class="btn" id="btnHelpClose" type="button">とじる</button></div>
     </div>
   </div>
 </main>
+<script src="./season-album-store.js"></script>
+<script src="./santa-guide.js"></script>
+<script src="./season-tools.js"></script>
 <script type="module" src="./game.js"></script>
 </body>
 </html>

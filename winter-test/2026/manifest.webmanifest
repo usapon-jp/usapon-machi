@@ -1,0 +1,19 @@
+{
+  "id": "./",
+  "name": "うさぽん村のハロウィン2026",
+  "short_name": "ハロウィン2026",
+  "description": "ピヨちゃんと歩く、うさぽん村のハロウィン2026",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "any",
+  "background_color": "#e9e9ec",
+  "theme_color": "#1a1033",
+  "lang": "ja",
+  "icons": [
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}

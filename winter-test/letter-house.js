@@ -199,23 +199,34 @@ export function buildLetterHouse(h,groundHeight,scene,winter,tex,roses){
     }
   }
 
-  const doorFace=new T.ExtrudeGeometry(door.shape,{depth:.056,bevelEnabled:true,bevelSize:.012,bevelThickness:.014,bevelSegments:1});
-  place(doorFace,green,door.x,door.y,frontZ+.119);
   const surround=arch(door.w+.23,door.h+.153,new T.Shape(),-.048);
   surround.holes.push(arch(door.w,door.h,new T.Path()));
   const jamb=new T.ExtrudeGeometry(surround,{depth:.086,bevelEnabled:true,bevelSize:.014,bevelThickness:.016,bevelSegments:1,curveSegments:14});
   place(jamb,woodEdge,door.x,door.y,frontZ+.194);
+  const doorFace=new T.ExtrudeGeometry(door.shape,{depth:.056,bevelEnabled:true,bevelSize:.012,bevelThickness:.014,bevelSegments:1});
+  const hinge=new T.Group();
+  hinge.position.set(door.x-door.w/2,door.y,frontZ+.119);
+  const doorPart=(geometry,material,x,y,z,sx=1,sy=1,sz=1)=>
+    place(geometry,material,x-hinge.position.x,y-hinge.position.y,z-hinge.position.z,sx,sy,sz,0,0,hinge);
+  doorPart(doorFace,green,door.x,door.y,frontZ+.119);
   for(let q=-2;q<=2;q++){
     const x=door.x+q*.161, h=1.72-Math.abs(q)*.075;
-    box(q%2?green:recess,x,door.y+h*.5,frontZ+.187,.018,h,.018);
+    doorPart(boxG,q%2?green:recess,x,door.y+h*.5,frontZ+.187,.018,h,.018);
   }
-  place(round,brass,door.x+.322,door.y+.85,frontZ+.251,.084,.084,.126);
+  doorPart(round,brass,door.x+.322,door.y+.85,frontZ+.251,.084,.084,.126);
   const letterWhite=matte(0xead4aa);
-  box(wood,door.x,door.y+1.16,frontZ+.210,.44,.15,.051);
-  box(brass,door.x,door.y+1.16,frontZ+.240,.38,.104,.026);
-  box(recess,door.x,door.y+1.192,frontZ+.256,.32,.031,.012);
-  box(letterWhite,door.x,door.y+1.144,frontZ+.258,.24,.057,.017);
-  place(round,matte(0xa54b48),door.x,door.y+1.151,frontZ+.270,.055,.044,.018);
+  doorPart(boxG,wood,door.x,door.y+1.16,frontZ+.210,.44,.15,.051);
+  doorPart(boxG,brass,door.x,door.y+1.16,frontZ+.240,.38,.104,.026);
+  doorPart(boxG,recess,door.x,door.y+1.192,frontZ+.256,.32,.031,.012);
+  doorPart(boxG,letterWhite,door.x,door.y+1.144,frontZ+.258,.24,.057,.017);
+  doorPart(round,matte(0xa54b48),door.x,door.y+1.151,frontZ+.270,.055,.044,.018);
+  house.add(hinge);
+  const inside=new T.Group();
+  const insideWall=matte(0xc79869);
+  box(insideWall,door.x,door.y+1.11,frontZ-1.35,4.52,2.44,.08,0,0,inside);
+  box(wood,door.x,door.y-.06,frontZ-.61,2.81,.11,1.36,0,0,inside);
+  house.add(inside);
+  inside.visible=false;
   for(const {near,far,top,bottom,width} of entry.steps){
     box(stone,entry.x,(top+bottom)/2-y,(near+far)/2,width,top-bottom,far-near);
   }
@@ -258,9 +269,15 @@ export function buildLetterHouse(h,groundHeight,scene,winter,tex,roses){
     const fringe=Array.from({length:14},(_,j)=>roof(side,1,j/13).map((p,i)=>p-(i===1?.06:0)));
     pipe(fringe,.071,wood);
     for(let k=0;k<9;k++){
-      const [x,yy,z]=roof(side,1,(k+.5)/9);
-      const inner=side*2.61;
-      box(woodEdge,(x+inner)*.5,yy-.116,z,Math.abs(x-inner)+.041,.102,.107,0,side*-.068);
+      const v=mix(.095,.905,(k+.5)/9);
+      const [edgeX,edgeY,z]=roof(side,1,v);
+      const [ridgeX]=roof(side,0,v);
+      const innerX=side*2.55,outerX=edgeX-side*.064;
+      const [,wallRoofY]=roof(side,(innerX-ridgeX)/(edgeX-ridgeX),v);
+      const innerY=Math.min(eave+.04,wallRoofY-.079),outerY=edgeY-.075;
+      const dx=outerX-innerX,dy=outerY-innerY;
+      box(woodEdge,(outerX+innerX)*.5,(outerY+innerY)*.5,z,
+        Math.hypot(dx,dy),.074,.084,0,Math.atan(dy/dx));
     }
     // Irregular snow caps leave the rows of terracotta along the eave visible.
     for(const [a,b,reach] of [[.035,.41,.53],[.45,.691,.60],[.716,.964,.48]]){
@@ -325,4 +342,11 @@ export function buildLetterHouse(h,groundHeight,scene,winter,tex,roses){
   }
   combineStaticMeshes(house);
   combineStaticMeshes(snow);
+  return {house,entry,frontZ,
+    lanternPosition:()=>house.localToWorld(new T.Vector3(lanternX,lanternTop,frontZ+.62)),
+    lanternColor:color=>bright.color.set(color),
+    setOpen(angle){
+    hinge.rotation.y=angle;
+    inside.visible=angle>.01;
+  }};
 }
