@@ -141,8 +141,6 @@ function createStrawberryEvent({scene,camera,player,walkHeight,letterDoor,hud,ca
       const size=new T.Box3().setFromObject(model).getSize(new T.Vector3());
       const scale=1/size.y;
       model.scale.setScalar(scale);
-      const cap=model.getObjectByName('hat');
-      if(definition.color&&cap?.isMesh){cap.material=cap.material.clone();cap.material.color.set(definition.color);}
       envelope=makeEnvelope(scale);
       const animatedRoot=model.getObjectByName(T.PropertyBinding.parseTrackName(clip.tracks[0].name).nodeName);
       if(!animatedRoot)throw new Error('Santa animation root is missing');
