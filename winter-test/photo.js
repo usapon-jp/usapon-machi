@@ -8,6 +8,9 @@ export function createPhoto({renderer,scene,camera,rig,hud,album,coarse,resize,b
   const {toast,openModal,closeModal}=hud;
   let fx=null,last=null;
   const ui={};
+  const note=$('photoNote'),frameToggle=$('btnFrameTog');
+  const savedMessage='「アルバム」に 保存しました';
+  const failedMessage='アルバムに保存できませんでした。写真を端末に保存できます。';
   function setCamMode(on){
     if(on===rig.camMode)return;
     if(on)beforeLeave?.();
@@ -60,18 +63,30 @@ export function createPhoto({renderer,scene,camera,rig,hud,album,coarse,resize,b
     }catch(e){console.error(e);}
     resize();
     if(!url){toast('写真をとれませんでした\nもう一度ためしてね');return;}
-    last.id=album.add(url,rig.selfie?'selfie':'free');
-    $('photoImg').src=url;$('btnFrameTog').hidden=false;$('btnFrameTog').textContent=last.framed?'わくを はずす':'わくを つける';
-    const note=$('photoNote'),first=store.get(K_GUIDE)!=='1';store.set(K_GUIDE,'1');note.classList.toggle('first',first);
+    const capture=last;
+    note.textContent='アルバムに保存中…';
+    capture.id=album.add(url,rig.selfie?'selfie':'free');
+    capture.id.then(id=>{if(last===capture)note.textContent=id?savedMessage:failedMessage;});
+    $('photoImg').src=url;frameToggle.hidden=false;frameToggle.disabled=false;
+    frameToggle.textContent=capture.framed?'わくを はずす':'わくを つける';
+    const first=store.get(K_GUIDE)!=='1';store.set(K_GUIDE,'1');note.classList.toggle('first',first);
     const fl=$('flash');fl.classList.add('on');requestAnimationFrame(()=>requestAnimationFrame(()=>fl.classList.remove('on')));
     openModal('mPhoto');
   }
-  $('btnFrameTog').addEventListener('click',async()=>{
-    if(!last)return;
-    last.framed=!last.framed;store.set(K_FRAME,last.framed?'1':'0');
-    const url=last.framed?frame(last.shot,last.IW,last.IH,last.selfie):last.shot.toDataURL('image/jpeg',.92);
-    $('photoImg').src=url;$('btnFrameTog').textContent=last.framed?'わくを はずす':'わくを つける';
-    const id=await last.id;if(id)album.replace(id,url);
+  frameToggle.addEventListener('click',async()=>{
+    const capture=last;
+    if(!capture)return;
+    capture.framed=!capture.framed;store.set(K_FRAME,capture.framed?'1':'0');
+    const url=capture.framed?frame(capture.shot,capture.IW,capture.IH,capture.selfie):capture.shot.toDataURL('image/jpeg',.92);
+    $('photoImg').src=url;frameToggle.textContent=capture.framed?'わくを はずす':'わくを つける';
+    frameToggle.disabled=true;
+    const id=await capture.id;
+    if(last===capture&&id)note.textContent='アルバムに保存中…';
+    const saved=id&&await album.replace(id,url);
+    if(last===capture){
+      note.textContent=saved?savedMessage:failedMessage;
+      frameToggle.disabled=false;
+    }
   });
   $('btnSave').addEventListener('click',()=>album.save($('photoImg').src));
   $('btnRetake').addEventListener('click',()=>closeModal('mPhoto'));

@@ -131,7 +131,8 @@ export function createChristmasSeason({scene,camera,player,walkHeight,hud,outfit
     const p=player.position;
     const nearGuide=Math.hypot(p.x-guide.position.x,p.z-guide.position.z)<3.3;
     const interactive=canInteract()&&!leaving;
-    if(!retired&&p.z<-66.9&&Math.hypot(p.x-4.4,p.z+69.98)<4){
+    const atPlaza=p.z<-66.9&&Math.hypot(p.x-4.4,p.z+69.98)<4;
+    if(!retired&&atPlaza&&(!guiding||guideMotion.arrived())){
       retired=true;
       if(!dressed){
         dressed=true;outfit.show(true);
@@ -143,7 +144,7 @@ export function createChristmasSeason({scene,camera,player,walkHeight,hud,outfit
     if(interactive&&nearGuide&&!guideCalled&&!guideDone){
       guideCalled=true;guideMotion.greet();
     }
-    guideMotion.update(dt,p,(interactive||meeting.active())&&!guideDone&&!retired);
+    guideMotion.update(dt,p,(interactive||meeting.active())&&!guideDone&&!retired,atPlaza);
     if(delivered||retired)guide.visible=false;
     lanternButton.hidden=!interactive||!delivered||complete||Math.hypot(p.x-lantern.x,p.z-lantern.z)>4.5;
     broomButton.hidden=!interactive||!complete;

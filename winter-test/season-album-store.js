@@ -15,7 +15,6 @@
   }
   function create(){
     const connections=Object.fromEntries(Object.entries(databases).map(([season,name])=>[season,connect(name)]));
-    const memory=new Map();
     const identify=id=>[id.slice(0,id.indexOf(':')),id.slice(id.indexOf(':')+1)];
     const request=(db,store,read,fallback)=>new Promise(resolve=>{
       try{
@@ -37,21 +36,24 @@
       async put(meta,url){
         const [season,id]=identify(meta.id);
         const db=await connections[season];
-        if(!db){if(url)memory.set(meta.id,url);return;}
+        if(!db)return false;
+        let tx;
         try{
-          const tx=db.transaction(url?['meta','full']:['meta'],'readwrite');
+          tx=db.transaction(url?['meta','full']:['meta'],'readwrite');
           const record={...meta,id};
           delete record.season;
           tx.objectStore('meta').put(record);
           if(url)tx.objectStore('full').put({id,url});
-          await new Promise(resolve=>{
-            tx.oncomplete=resolve;
-            tx.onabort=()=>{if(url)memory.set(meta.id,url);resolve();};
+          return await new Promise(resolve=>{
+            tx.oncomplete=()=>resolve(true);
+            tx.onabort=()=>resolve(false);
           });
-        }catch{if(url)memory.set(meta.id,url);}
+        }catch{
+          try{tx?.abort();}catch{}
+          return false;
+        }
       },
       async remove(key){
-        memory.delete(key);
         const [season,id]=identify(key);
         const db=await connections[season];
         if(!db)return;
@@ -61,7 +63,6 @@
         }catch{}
       },
       async full(key){
-        if(memory.has(key))return memory.get(key);
         const [season,id]=identify(key);
         const db=await connections[season];
         if(!db)return null;

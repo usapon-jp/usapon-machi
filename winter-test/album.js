@@ -24,16 +24,21 @@ export function createAlbum({toast,openModal,closeModal}) {
     const id='christmas:'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),t=await thumb(url);
     if(!t)return null;
     const meta={id,season:'christmas',kind:kind||'free',ts:Date.now(),thumb:t};
-    A.list.unshift(meta);await album.put(meta,url);
+    if(!await album.put(meta,url))return null;
+    A.list.unshift(meta);
     while(A.list.filter(m=>m.season==='christmas').length>MAX){ // drop the oldest picture that is not a favourite
       let k=-1;for(let i=A.list.length-1;i>=0;i--)if(A.list[i].season==='christmas'&&!A.list[i].fav){k=i;break;}
       if(k<0)break;album.remove(A.list.splice(k,1)[0].id);
     }
+    if($('mAlbumList').classList.contains('on'))render();
     return id;
   }
   async function replace(id,url){ // the frame was switched on/off after the shot
-    const m=A.list.find(q=>q.id===id);if(!m)return;
-    const t=await thumb(url);if(t)m.thumb=t;album.put(m,url);
+    const t=await thumb(url),m=A.list.find(q=>q.id===id);
+    if(!t||!m||!await album.put({...m,thumb:t},url))return false;
+    m.thumb=t;
+    if($('mAlbumList').classList.contains('on'))render();
+    return true;
   }
   async function save(src){
     try{
@@ -80,7 +85,17 @@ export function createAlbum({toast,openModal,closeModal}) {
   $('albumGrid').addEventListener('click',e=>{const b=e.target.closest('.at');if(b)show(b.dataset.id);});
   $('btnAlbumClose').addEventListener('click',back);
   $('btnAlbumSave').addEventListener('click',()=>save($('albumImg').src));
-  $('btnAlbumFav').addEventListener('click',()=>{const m=A.list.find(q=>q.id===current);if(!m)return;m.fav=!m.fav;album.put(m);setFav(m.fav);});
+  $('btnAlbumFav').addEventListener('click',async event=>{
+    const m=A.list.find(q=>q.id===current);if(!m)return;
+    const button=event.currentTarget,fav=!m.fav;
+    button.disabled=true;
+    if(await album.put({...m,fav})){
+      m.fav=fav;
+      if(current===m.id)setFav(fav);
+      if($('mAlbumList').classList.contains('on'))render();
+    }else toast('お気に入りを保存できませんでした');
+    button.disabled=false;
+  });
   $('btnAlbumDel').addEventListener('click',()=>{
     if(!delArmed){setDel(true);return;}
     const k=A.list.findIndex(q=>q.id===current);if(k>=0)A.list.splice(k,1);

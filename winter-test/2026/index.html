@@ -731,7 +731,7 @@ body.dressing #quest,body.dressing #mini,body.dressing #joy{visibility:hidden} /
 <div class="modal" id="mPhoto">
   <div class="sheet" id="photoSheet">
     <img id="photoImg" alt="撮影した写真">
-    <div id="photoNote"><span class="nb">「ずかん → アルバム」</span>に 保存しました</div>
+    <div id="photoNote" role="status"></div>
     <button type="button" id="btnFrameTog" hidden>わくを つける</button>
     <div class="actions"><button class="btn dlbtn" id="btnSave" type="button"><svg class="dlic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>ダウンロード</button><button class="btn sub" id="btnRetake" type="button">ポーズをかえてもう1枚</button><button class="btn sub" id="btnCamEnd" type="button" hidden>カメラをおわる</button><button class="btn sub" id="btnToCam" type="button" hidden>カメラモードでとる</button><button class="btn sub" id="btnToPanel" type="button" hidden>パネルでとる</button><button class="btn sub" id="btnPhotoClose" type="button">とじる</button></div>
   </div>
@@ -3079,11 +3079,6 @@ save.candPos={};save.candBag=[];try{const s=JSON.parse(localStorage.getItem(SAVE
 function persist(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(save))}catch(e){}}
 
 /* ---------- data ---------- */
-async function loadData(){
-  try{const r=await fetch('panels.json?v='+Date.now(),{cache:'no-store'});if(r.ok){const j=await r.json();if(j&&Array.isArray(j.panels))return j}}catch(e){}
-  return JSON.parse($('panel-data').textContent);
-}
-
 /* ---------- rabbit drawing (dummy panels & silhouettes) ---------- */
 function ell(g,x,y,rx,ry,rot){g.beginPath();g.ellipse(x,y,rx,ry,rot||0,0,6.2832);g.fill()}
 function drawRabbit(g,cx,cy,s,col,style,sil){
@@ -3665,8 +3660,10 @@ async function albumAdd(url,pid,kind){
   const id=albumCategory+':'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),thumb=await albumThumb(url);
   if(!thumb)return;
   const meta={id,season:albumCategory,pid:pid||'',kind:kind||'panel',ts:Date.now(),thumb};
-  ALBUM.list.unshift(meta);await albumPut(meta,url);
+  if(!await albumPut(meta,url))return null;
+  ALBUM.list.unshift(meta);
   while(ALBUM.list.filter(m=>m.season===albumCategory).length>ALBUM.max){let k=-1;for(let i=ALBUM.list.length-1;i>=0;i--)if(ALBUM.list[i].season===albumCategory&&!ALBUM.list[i].fav){k=i;break}if(k<0)break;albumRemove(ALBUM.list.splice(k,1)[0].id)}
+  if($('mBook').classList.contains('on'))refreshBook();
   return id;
 }
 function albumGetFull(id){return albumStore.full(id)}
@@ -3819,6 +3816,16 @@ function ghostChanTick(dt,t){
 
 /* ---------- photo ---------- */
 let lastShot={p:null,k:0};
+const photoSavedMessage='「ずかん → アルバム」に 保存しました';
+const photoFailedMessage='アルバムに保存できませんでした。写真を端末に保存できます。';
+function savePhotoToAlbum(url,pid,kind){
+  const shot=lastShot,note=$('photoNote');
+  if(!note.dataset.inapp)note.textContent='アルバムに保存中…';
+  return albumAdd(url,pid,kind).then(id=>{
+    if(lastShot===shot&&!note.dataset.inapp)note.textContent=id?photoSavedMessage:photoFailedMessage;
+    return id;
+  });
+}
 function setWings(up,t){piyo.wings[0].rotation.z=up?(-1.9+Math.sin(t*14)*.1):-.15;piyo.wings[1].rotation.z=up?(1.9-Math.sin(t*14)*.1):.15}
 function takePhoto(p,k){
   try{AUDIO.sfx('shutter')}catch(e){}
@@ -3862,7 +3869,7 @@ function takePhoto(p,k){
   piyo.group.rotation.y=sv.ry;setWings(false,0);if(broomG)broomG.visible=bv;
   if(url){
     $('btnRetake').textContent='ポーズをかえてもう1枚';$('btnToCam').hidden=false;$('btnToPanel').hidden=true;$('btnPhotoClose').hidden=false;$('btnFrameTog').hidden=true;$('btnCamEnd').hidden=true;
-    $('photoImg').src=url;save.photos[p.id]=(save.photos[p.id]||0)+1;persist();albumAdd(url,p.id,'panel');
+    $('photoImg').src=url;save.photos[p.id]=(save.photos[p.id]||0)+1;persist();savePhotoToAlbum(url,p.id,'panel');
     const fl=$('flash');fl.classList.add('on');requestAnimationFrame(()=>requestAnimationFrame(()=>fl.classList.remove('on')));
     burst(px,pgy+1.6,pz,40,SPARK,3.5,2);openModal('mPhoto');
   }else toast('写真をとれませんでした\nもう一度ためしてね');
@@ -3947,7 +3954,7 @@ function takeFreePhoto(story=!!(MAGIC&&MAGIC.story())){
   }catch(e){console.error(e)}
   camera.fov=originalFov;renderer.setPixelRatio(oldPR);onResize();
   if(url){
-    $('photoImg').src=url;lastFree.idP=albumAdd(url,'',state.selfie?'selfie':'free');$('btnFrameTog').hidden=story;updateFrameTog();$('btnRetake').textContent='つづけてとる';$('btnToCam').hidden=true;$('btnToPanel').hidden=!lastShot.panel;$('btnPhotoClose').hidden=true;$('btnCamEnd').hidden=!state.camMode;
+    $('photoImg').src=url;lastFree.idP=savePhotoToAlbum(url,'',state.selfie?'selfie':'free');$('btnFrameTog').hidden=story;$('btnFrameTog').disabled=false;updateFrameTog();$('btnRetake').textContent='つづけてとる';$('btnToCam').hidden=true;$('btnToPanel').hidden=!lastShot.panel;$('btnPhotoClose').hidden=true;$('btnCamEnd').hidden=!state.camMode;
     const fl=$('flash');fl.classList.add('on');requestAnimationFrame(()=>requestAnimationFrame(()=>fl.classList.remove('on')));
     burst(player.pos.x,player.pos.y+1.6,player.pos.z,30,SPARK,3.5,2);openModal('mPhoto');
   }else toast('写真をとれませんでした\nもう一度ためしてね');
@@ -4050,11 +4057,19 @@ $('camTour').addEventListener('click',hideCamTour);
 $('camHelp').addEventListener('click',()=>{if(state.mode==='play'&&state.camMode)showCamTour()});
 $('camBack').addEventListener('click',()=>{if(state.mode==='play')setCamMode(false)});
 $('btnFrameTog').addEventListener('click',async()=>{
-  const f=lastFree;if(!f)return;
+  const f=lastFree,shot=lastShot,note=$('photoNote'),button=$('btnFrameTog');if(!f)return;
   f.framed=!f.framed;
   const url=f.framed?frameCanvas(f.cv,f.IW,f.IH,f.selfie):f.cv.toDataURL('image/jpeg',.92);
-  $('photoImg').src=url;updateFrameTog();
-  const id=await f.idP;if(id){const m=ALBUM.list.find(q=>q.id===id);if(m){const t=await albumThumb(url);if(t)m.thumb=t;albumPut(m,url)}}
+  $('photoImg').src=url;updateFrameTog();button.disabled=true;
+  const id=await f.idP,m=ALBUM.list.find(q=>q.id===id);
+  if(lastShot===shot&&m&&!note.dataset.inapp)note.textContent='アルバムに保存中…';
+  const t=m&&await albumThumb(url);
+  const saved=t&&await albumPut({...m,thumb:t},url);
+  if(saved)m.thumb=t;
+  if(lastShot===shot){
+    if(!note.dataset.inapp)note.textContent=saved?photoSavedMessage:photoFailedMessage;
+    button.disabled=false;
+  }
 });
 $('btnCamEnd').addEventListener('click',()=>{closeModal('mPhoto');setCamMode(false);if(state.pendingDone){state.pendingDone=false;setTimeout(showComplete,500)}});
 $('btnToCam').addEventListener('click',()=>{closeModal('mPhoto');setCamMode(true)});
@@ -4088,10 +4103,16 @@ $('selDel').addEventListener('click',()=>{
   albumSel.forEach(id=>{const k=ALBUM.list.findIndex(q=>q.id===id);if(k>=0)ALBUM.list.splice(k,1);albumRemove(id)});
   albumSel.clear();albumSelDelArmed=false;albumSelMode=false;renderAlbum();toast(n+'まい けしたよ');
 });
-$('btnAlbumFav').addEventListener('click',()=>{
+$('btnAlbumFav').addEventListener('click',async event=>{
   const m=ALBUM.list.find(q=>q.id===albumCur);if(!m)return;
-  m.fav=!m.fav;albumPutMeta(m);setAlbumFavBtn(m.fav);
-  if($('mBook').classList.contains('on'))renderAlbum();
+  const button=event.currentTarget,fav=!m.fav;
+  button.disabled=true;
+  if(await albumPutMeta({...m,fav})){
+    m.fav=fav;
+    if(albumCur===m.id)setAlbumFavBtn(fav);
+    if($('mBook').classList.contains('on'))renderAlbum();
+  }else toast('お気に入りを保存できませんでした');
+  button.disabled=false;
 });
 $('grid').addEventListener('click',e=>{const c=e.target.closest('.pc[data-pid]');if(c){albumFilter=c.dataset.pid;setBookTab('album')}});
 $('actBtn').addEventListener('click',doAct);
@@ -6901,7 +6922,7 @@ function updateSeason(dt){
 let MAGIC=null,CAMFX=null;
 /* ---------- boot ---------- */
 (async function boot(){
-  DATA=winterVillage?JSON.parse($('panel-data').textContent):await loadData();
+  DATA=JSON.parse($('panel-data').textContent);
   $('qTitle').textContent=DATA.mission||'うさぎたちを探して撮影しよう';
 
   $('introMission').textContent=DATA.mission||'';$('introTeaser').textContent=DATA.teaser||'';

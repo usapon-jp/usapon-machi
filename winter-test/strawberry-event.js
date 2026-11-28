@@ -398,6 +398,13 @@ function createStrawberryEvent({scene,camera,player,walkHeight,letterDoor,hud,ca
   return {update,active,frameCamera,reset,begin,advance,cancel,finish,destination,
     hint:definition.hint,gap,ready:()=>state==='waiting'&&actor.visible&&gap()<=2.22&&canStart()&&(mixer||failed),
     companion:()=>state==='escort'?actor.position:null,
+    arrivalActive:()=>state==='arrival',
+    showEscort(show){
+      if(state==='escort'){
+        actor.visible=show;
+        if(!show)for(const sprite of doorStars)sprite.visible=false;
+      }
+    },
     locationLabel:()=>state==='arrival'?destination:null,
     inspect:()=>({state,loaded:!!mixer,actor:actor.position.toArray(),visible:actor.visible,phaseTime})};
 }
@@ -463,6 +470,8 @@ export function createSantaParty({definitions,doors,completed,canMeet,onDelivere
       for(const event of events)if(!party.includes(event))event.update(dt);
       const point=track();
       [...party].forEach((event,index)=>event.update(dt,slotFor(index,point)));
+      const showingArrival=party.some(event=>event.arrivalActive());
+      for(const event of party)event.showEscort(!showingArrival);
       candidate=events.filter(event=>event.ready()).sort((a,b)=>a.gap()-b.gap())[0];
       talk.hidden=!candidate;
       const canShowRoute=party.length>0&&options.canInteract()&&!options.hud.anyModal();

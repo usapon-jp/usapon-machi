@@ -27,14 +27,14 @@
       paint(text);visibleTime=duration;captionDuration=duration;phase=.05;
     }
     let captionDuration=2.4;
-    function update(dt,player,enabled){
+    function update(dt,player,enabled,playerAtDestination=false){
       if(!enabled){sprite.visible=false;return;}
       clock+=dt;
       const p=actor.position, dx=player.x-p.x,dz=player.z-p.z,distance=Math.hypot(dx,dz);
       if(distance>5.4)waitForPlayer=true;
       if(distance<3.5)waitForPlayer=false;
       const target=route[index];
-      const moving=started&&!!target&&!waitForPlayer&&lookout<=0;
+      const moving=started&&!!target&&(!waitForPlayer||playerAtDestination)&&lookout<=0;
       let heading=Math.atan2(dx,dz);
       if(moving){
         const x=target[0]-p.x,z=target[1]-p.z,length=Math.hypot(x,z);
@@ -69,6 +69,7 @@
     }
     return {
       update,
+      arrived:()=>index>=route.length,
       greet(){if(!started)speak('こっちこっち！',2);},
       greetClose(){visibleTime=0;phase=.05;},
       start(line){
